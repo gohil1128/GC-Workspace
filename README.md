@@ -2,6 +2,18 @@
 
 A production-ready back-office MVP for small-to-growing restaurant operators. Inspired by CLEARVIEW, scoped for the controllable levers that drive P&L: **food cost, labor cost, inventory variance, cash variance**.
 
+## Deploy to the internet (no local setup needed)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgohil1128%2FGC-Workspace&env=AUTH_SECRET,AUTH_TRUST_HOST&envDescription=A%20random%2032%2B%20char%20string%20for%20AUTH_SECRET%2C%20and%20%22true%22%20for%20AUTH_TRUST_HOST&project-name=northwind-eats-ops&repository-name=northwind-eats-ops)
+
+After Vercel imports the repo:
+1. **Storage tab → Create Database → Neon** (one click; sets `DATABASE_URL` automatically)
+2. **Settings → Environment Variables** — add:
+   - `AUTH_SECRET` — any random 32+ character string (e.g. from https://generate-secret.vercel.app/32)
+   - `AUTH_TRUST_HOST` — `true`
+3. **Deployments tab → … menu → Redeploy** the latest. The build automatically runs Prisma migrations and loads demo data.
+4. Open the deployment URL. Log in: `owner@demo.test` / `demo1234`
+
 ## Stack
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript** (strict)
