@@ -1,0 +1,494 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  MANAGER
+}
+
+enum LocationKind {
+  STORE
+  EVENT
+}
+
+enum POStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELLED
+}
+
+enum CountType {
+  OPEN
+  MID
+  CLOSE
+  WEEKLY
+}
+
+enum MovementType {
+  PURCHASE
+  USAGE
+  WASTE
+  ADJUSTMENT
+  COUNT_RECONCILE
+}
+
+enum ShiftStatus {
+  SCHEDULED
+  COMPLETED
+  MISSED
+}
+
+enum SalesSource {
+  MANUAL
+  CSV
+  POS
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Tenant
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("America/New_York")
+  currency  String   @default("USD")
+  laborTargetPct Int @default(30) // labor cost target as percent
+  foodTargetPct  Int @default(32)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations       Location[]
+  users           User[]
+  suppliers       Supplier[]
+  ingredients     Ingredient[]
+  recipes         Recipe[]
+  employees       Employee[]
+  reportSnapshots ReportSnapshot[]
+  auditLogs       AuditLog[]
+}
+
+model Location {
+  id         String       @id @default(cuid())
+  businessId String
+  name       String
+  kind       LocationKind @default(STORE)
+  address    String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  business         Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  users            UserLocation[]
+  inventoryCounts  InventoryCount[]
+  movements        InventoryMovement[]
+  purchaseOrders   PurchaseOrder[]
+  shifts           Shift[]
+  dailySales       DailySales[]
+  cashCloses       CashClose[]
+  deposits         Deposit[]
+  reportSnapshots  ReportSnapshot[]
+
+  @@index([businessId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Auth
+// ──────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(MANAGER)
+  businessId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locations       UserLocation[]
+  inventoryCounts InventoryCount[]
+  purchaseOrders  PurchaseOrder[]
+  cashCloses      CashClose[]
+  auditLogs       AuditLog[]
+
+  @@index([businessId])
+}
+
+model UserLocation {
+  userId     String
+  locationId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, locationId])
+  @@index([locationId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Suppliers & Ingredients
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id           String   @id @default(cuid())
+  businessId   String
+  name         String
+  email        String?
+  phone        String?
+  terms        String?
+  leadTimeDays Int      @default(2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ingredients    Ingredient[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([businessId])
+}
+
+model Ingredient {
+  id             String   @id @default(cuid())
+  businessId     String
+  name           String
+  sku            String?
+  category       String?
+  unit           String   // primary inventory unit (e.g. "lb", "ea", "oz", "gal")
+  parLevel       Float    @default(0)
+  reorderPoint   Float    @default(0)
+  reorderQty     Float    @default(0)
+  onHand         Float    @default(0)
+  lastCostCents  Int      @default(0)
+  avgCostCents   Int      @default(0)
+  supplierId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business         Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  supplier         Supplier?           @relation(fields: [supplierId], references: [id])
+  conversions      UnitConversion[]
+  recipeIngredients RecipeIngredient[]
+  movements        InventoryMovement[]
+  countLines       InventoryCountLine[]
+  poItems          PurchaseOrderItem[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
+  @@index([supplierId])
+}
+
+model UnitConversion {
+  id           String @id @default(cuid())
+  ingredientId String
+  fromUnit     String
+  toUnit       String
+  factor       Float
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Recipes
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Recipe {
+  id             String   @id @default(cuid())
+  businessId     String
+  name           String
+  category       String?
+  menuPriceCents Int      @default(0)
+  yieldQty       Float    @default(1)
+  yieldUnit      String   @default("ea")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business    Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
+}
+
+model RecipeIngredient {
+  id           String @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  qty          Float
+  unit         String
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Inventory counts & movements
+// ──────────────────────────────────────────────────────────────────────────────
+
+model InventoryCount {
+  id            String    @id @default(cuid())
+  locationId    String
+  type          CountType @default(WEEKLY)
+  countedAt     DateTime  @default(now())
+  countedById   String
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  location  Location              @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  countedBy User                  @relation(fields: [countedById], references: [id])
+  lines     InventoryCountLine[]
+
+  @@index([locationId, countedAt])
+}
+
+model InventoryCountLine {
+  id                 String @id @default(cuid())
+  countId            String
+  ingredientId       String
+  qtyCounted         Float
+  unit               String
+  theoreticalQty     Float
+  varianceQty        Float
+  varianceCostCents  Int
+
+  count      InventoryCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+  ingredient Ingredient     @relation(fields: [ingredientId], references: [id])
+
+  @@index([countId])
+  @@index([ingredientId])
+}
+
+model InventoryMovement {
+  id            String       @id @default(cuid())
+  locationId    String
+  ingredientId  String
+  type          MovementType
+  qty           Float        // positive: in; negative: out
+  unit          String
+  unitCostCents Int          @default(0)
+  occurredAt    DateTime     @default(now())
+  sourceType    String?      // 'PO' | 'SALE' | 'WASTE' | 'ADJUST' | 'COUNT'
+  sourceId      String?
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  location   Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([ingredientId, occurredAt])
+  @@index([locationId, occurredAt])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Purchasing
+// ──────────────────────────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id            String    @id @default(cuid())
+  locationId    String
+  supplierId    String
+  status        POStatus  @default(DRAFT)
+  orderedAt     DateTime  @default(now())
+  expectedAt    DateTime?
+  receivedAt    DateTime?
+  subtotalCents Int       @default(0)
+  totalCents    Int       @default(0)
+  notes         String?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  location  Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  supplier  Supplier            @relation(fields: [supplierId], references: [id])
+  createdBy User                @relation(fields: [createdById], references: [id])
+  items     PurchaseOrderItem[]
+
+  @@index([locationId, status])
+  @@index([supplierId])
+}
+
+model PurchaseOrderItem {
+  id             String @id @default(cuid())
+  poId           String
+  ingredientId   String
+  qtyOrdered     Float
+  qtyReceived    Float  @default(0)
+  unit           String
+  unitCostCents  Int
+  lineTotalCents Int
+
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@index([poId])
+  @@index([ingredientId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Labor
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Employee {
+  id              String   @id @default(cuid())
+  businessId      String
+  name            String
+  email           String?
+  position        String
+  hourlyRateCents Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  shifts   Shift[]
+
+  @@index([businessId])
+}
+
+model Shift {
+  id               String      @id @default(cuid())
+  locationId       String
+  employeeId       String
+  position         String
+  start            DateTime
+  end              DateTime
+  scheduledMinutes Int
+  status           ShiftStatus @default(SCHEDULED)
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  location  Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  employee  Employee    @relation(fields: [employeeId], references: [id])
+  timeEntry TimeEntry?
+
+  @@index([locationId, start])
+  @@index([employeeId, start])
+}
+
+model TimeEntry {
+  id             String   @id @default(cuid())
+  shiftId        String   @unique
+  clockIn        DateTime
+  clockOut       DateTime
+  actualMinutes  Int
+  breakMinutes   Int      @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Sales & Cash
+// ──────────────────────────────────────────────────────────────────────────────
+
+model DailySales {
+  id            String      @id @default(cuid())
+  locationId    String
+  businessDate  DateTime    // date only, midnight in business tz
+  netSalesCents Int
+  taxCents      Int         @default(0)
+  guestCount    Int         @default(0)
+  source        SalesSource @default(MANUAL)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, businessDate])
+  @@index([locationId, businessDate])
+}
+
+model CashClose {
+  id              String   @id @default(cuid())
+  locationId      String
+  businessDate    DateTime
+  openingCents    Int
+  closingCents    Int
+  safeCountCents  Int      @default(0)
+  depositCents    Int      @default(0)
+  paidInCents     Int      @default(0)
+  paidOutCents    Int      @default(0)
+  expectedCents   Int      // expected closing based on sales + opening
+  overShortCents  Int      // closing + deposit - opening - expected
+  checklistJson   Json?
+  notes           String?
+  closedById      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  closedBy User     @relation(fields: [closedById], references: [id])
+
+  @@unique([locationId, businessDate])
+  @@index([locationId, businessDate])
+}
+
+model Deposit {
+  id           String   @id @default(cuid())
+  locationId   String
+  businessDate DateTime
+  amountCents  Int
+  reference    String?
+  createdAt    DateTime @default(now())
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, businessDate])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Reports & Audit
+// ──────────────────────────────────────────────────────────────────────────────
+
+model ReportSnapshot {
+  id          String   @id @default(cuid())
+  businessId  String
+  locationId  String?
+  kind        String
+  periodStart DateTime
+  periodEnd   DateTime
+  dataJson    Json
+  createdAt   DateTime @default(now())
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id])
+
+  @@index([businessId, kind, periodStart])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  diffJson   Json?
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([businessId, createdAt])
+  @@index([entityType, entityId])
+}

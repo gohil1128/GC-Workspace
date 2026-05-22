@@ -1,0 +1,50 @@
+import { getScope } from "@/lib/scope";
+import { listSuppliers } from "@/modules/purchasing/queries";
+import { PageHeader } from "@/components/page-header";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { NewSupplierButton } from "./_components/new-supplier";
+
+export const dynamic = "force-dynamic";
+
+export default async function SuppliersPage() {
+  const scope = await getScope();
+  const suppliers = await listSuppliers(scope.businessId);
+  return (
+    <div>
+      <PageHeader title="Suppliers" description={`${suppliers.length} suppliers`} actions={<NewSupplierButton />} />
+      <div className="p-4 sm:p-6">
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Terms</TableHead>
+                <TableHead className="text-right">Lead Time</TableHead>
+                <TableHead className="text-right">Ingredients</TableHead>
+                <TableHead className="text-right">POs</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {suppliers.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {[s.email, s.phone].filter(Boolean).join(" · ") || "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{s.terms ?? "—"}</TableCell>
+                  <TableCell className="text-right num">{s.leadTimeDays}d</TableCell>
+                  <TableCell className="text-right num">{s._count.ingredients}</TableCell>
+                  <TableCell className="text-right num">{s._count.purchaseOrders}</TableCell>
+                </TableRow>
+              ))}
+              {suppliers.length === 0 && (
+                <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No suppliers yet.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </div>
+  );
+}
