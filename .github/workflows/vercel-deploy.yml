@@ -1,0 +1,29 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - claude/restaurant-ops-mvp-NC8iA
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deployment
+        run: |
+          curl -s -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=team_3DKVAzvgNM5RAnO8zNG6llDN" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "northwind-eats-ops",
+              "project": "prj_ZpCKR1cayTF9ebGB6dYkussM2gEc",
+              "target": "production",
+              "gitSource": {
+                "type": "github",
+                "repoId": 1247024177,
+                "ref": "${{ github.ref_name }}",
+                "sha": "${{ github.sha }}"
+              }
+            }'
