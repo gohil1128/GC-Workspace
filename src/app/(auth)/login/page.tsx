@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import { UtensilsCrossed } from "lucide-react";
@@ -19,13 +20,24 @@ function Submit() {
 
 export default function LoginPage() {
   const [state, formAction] = useFormState(loginAction, null as { error?: string } | null);
+  const [logoFailed, setLogoFailed] = React.useState(false);
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center pb-4">
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded bg-primary text-primary-foreground">
-            <UtensilsCrossed className="h-5 w-5" />
-          </div>
+          {!logoFailed ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/logo.png"
+              alt="God's Chai Operations"
+              className="mb-3 max-h-24 w-auto"
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded bg-primary text-primary-foreground">
+              <UtensilsCrossed className="h-5 w-5" />
+            </div>
+          )}
           <CardTitle className="text-base">God&apos;s Chai Operations</CardTitle>
           <CardDescription>Sign in to your back-office</CardDescription>
         </CardHeader>
