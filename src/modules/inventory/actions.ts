@@ -172,3 +172,19 @@ export async function recordWasteAction(formData: FormData) {
   revalidatePath(`/inventory/${ing.id}`);
   return { ok: true };
 }
+
+export async function deleteIngredientAction(id: string) {
+  const scope = await getScope();
+  const ing = await prisma.ingredient.findFirst({ where: { id, businessId: scope.businessId } });
+  if (!ing) throw new Error("Not found");
+  await prisma.$transaction([
+    prisma.inventoryMovement.deleteMany({ where: { ingredientId: id } }),
+    prisma.inventoryCountLine.deleteMany({ where: { ingredientId: id } }),
+    prisma.recipeIngredient.deleteMany({ where: { ingredientId: id } }),
+    prisma.purchaseOrderItem.deleteMany({ where: { ingredientId: id } }),
+    prisma.unitConversion.deleteMany({ where: { ingredientId: id } }),
+    prisma.ingredient.delete({ where: { id } }),
+  ]);
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "ingredient.delete", entityType: "Ingredient", entityId: id, diff: { name: ing.name } });
+  revalidatePath("/inventory");
+}

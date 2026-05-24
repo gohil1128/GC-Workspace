@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatPercent, safeDivide } from "@/lib/money";
 import { NewRecipeButton } from "./_components/new-recipe";
+import { DeleteButton } from "@/components/delete-button";
+import { deleteRecipeAction } from "@/modules/recipes/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ export default async function RecipesPage() {
                 <TableHead className="text-right">Plate Cost</TableHead>
                 <TableHead className="text-right">Food Cost %</TableHead>
                 <TableHead className="text-right">Status</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -44,11 +47,14 @@ export default async function RecipesPage() {
                       <Badge variant={tone as any}>{formatPercent(pct)}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{r.isActive ? <Badge variant="success">Active</Badge> : <Badge variant="muted">Inactive</Badge>}</TableCell>
+                    <TableCell>
+                      <DeleteButton action={deleteRecipeAction.bind(null, r.id)} itemLabel="recipe" itemName={r.name} />
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {recipes.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No recipes yet.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">No recipes yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -25,7 +25,7 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
 
-export function Sidebar({ role }: { role: "OWNER" | "MANAGER" }) {
+export function Sidebar({ role, businessName }: { role: "OWNER" | "MANAGER"; businessName: string }) {
   const pathname = usePathname();
   return (
     <aside className="hidden md:flex md:w-56 lg:w-60 shrink-0 flex-col border-r bg-card">
@@ -33,8 +33,8 @@ export function Sidebar({ role }: { role: "OWNER" | "MANAGER" }) {
         <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
           <UtensilsCrossed className="h-4 w-4" />
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold">Northwind Eats</span>
+        <div className="flex flex-col leading-tight min-w-0">
+          <span className="text-sm font-semibold truncate">{businessName}</span>
           <span className="text-2xs text-muted-foreground">Operations</span>
         </div>
       </div>

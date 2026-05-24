@@ -26,7 +26,7 @@ export default function LoginPage() {
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded bg-primary text-primary-foreground">
             <UtensilsCrossed className="h-5 w-5" />
           </div>
-          <CardTitle className="text-base">Northwind Eats Operations</CardTitle>
+          <CardTitle className="text-base">God&apos;s Chai Operations</CardTitle>
           <CardDescription>Sign in to your back-office</CardDescription>
         </CardHeader>
         <CardContent>

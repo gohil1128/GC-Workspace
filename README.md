@@ -1,4 +1,4 @@
-# Northwind Eats — Restaurant Operations MVP
+# God's Chai Operations — Restaurant Operations MVP
 
 A production-ready back-office MVP for small-to-growing restaurant operators. Inspired by CLEARVIEW, scoped for the controllable levers that drive P&L: **food cost, labor cost, inventory variance, cash variance**.
 

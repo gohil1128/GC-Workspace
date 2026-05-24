@@ -59,3 +59,17 @@ export async function deleteShiftAction(id: string) {
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "shift.delete", entityType: "Shift", entityId: id });
   revalidatePath("/labor");
 }
+
+export async function deleteEmployeeAction(id: string) {
+  const scope = await getScope();
+  const e = await prisma.employee.findFirst({ where: { id, businessId: scope.businessId } });
+  if (!e) throw new Error("Not found");
+  // Shifts and TimeEntry: cascade shifts manually, TimeEntry cascades on Shift
+  await prisma.$transaction([
+    prisma.shift.deleteMany({ where: { employeeId: id } }),
+    prisma.employee.delete({ where: { id } }),
+  ]);
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "employee.delete", entityType: "Employee", entityId: id, diff: { name: e.name } });
+  revalidatePath("/labor/employees");
+  revalidatePath("/labor");
+}

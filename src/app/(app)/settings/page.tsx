@@ -6,7 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { LocationsManager } from "./_components/locations-manager";
+import { DangerZone } from "./_components/danger-zone";
+import { BusinessForm } from "./_components/business-form";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +16,20 @@ export default async function SettingsPage() {
   const scope = await getScope();
   if (scope.role !== "OWNER") redirect("/dashboard");
 
-  const [business, locations] = await Promise.all([
+  const [business, locations, counts] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId } }),
     prisma.location.findMany({ where: { businessId: scope.businessId }, orderBy: { name: "asc" } }),
+    Promise.all([
+      prisma.ingredient.count({ where: { businessId: scope.businessId } }),
+      prisma.recipe.count({ where: { businessId: scope.businessId } }),
+      prisma.supplier.count({ where: { businessId: scope.businessId } }),
+      prisma.employee.count({ where: { businessId: scope.businessId } }),
+      prisma.purchaseOrder.count({ where: { location: { businessId: scope.businessId } } }),
+      prisma.dailySales.count({ where: { location: { businessId: scope.businessId } } }),
+      prisma.cashClose.count({ where: { location: { businessId: scope.businessId } } }),
+    ]).then(([ingredients, recipes, suppliers, employees, pos, sales, cashCloses]) => ({
+      ingredients, recipes, suppliers, employees, pos, sales, cashCloses,
+    })),
   ]);
 
   return (
@@ -34,27 +47,43 @@ export default async function SettingsPage() {
       <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>{business?.name}</CardTitle>
-            <CardDescription>{business?.timezone} · {business?.currency}</CardDescription>
+            <CardTitle>Business</CardTitle>
+            <CardDescription>{business?.timezone} · {business?.currency} · created {business?.createdAt.toDateString() ?? "—"}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <Row label="Food target %" value={`${business?.foodTargetPct ?? 32}%`} />
-            <Row label="Labor target %" value={`${business?.laborTargetPct ?? 30}%`} />
-            <Row label="Created" value={business?.createdAt.toDateString() ?? "—"} />
+          <CardContent>
+            {business && (
+              <BusinessForm initial={{
+                name: business.name,
+                foodTargetPct: business.foodTargetPct,
+                laborTargetPct: business.laborTargetPct,
+              }} />
+            )}
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader><CardTitle>Locations</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {locations.map((l) => (
-              <div key={l.id} className="flex items-center justify-between rounded-md border p-2">
-                <div>
-                  <div className="font-medium text-sm">{l.name}</div>
-                  <div className="text-2xs text-muted-foreground">{l.address ?? "—"}</div>
-                </div>
-                <Badge variant="muted">{l.kind}</Badge>
-              </div>
-            ))}
+          <CardHeader>
+            <CardTitle>Locations</CardTitle>
+            <CardDescription>Stores and event channels you operate</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LocationsManager
+              locations={locations.map((l) => ({ id: l.id, name: l.name, kind: l.kind, address: l.address }))}
+              activeLocationId={scope.locationId}
+              canDelete={locations.length > 1}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2 border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger zone</CardTitle>
+            <CardDescription>
+              Permanent actions. These can&apos;t be undone — read the dialog carefully.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DangerZone counts={counts} />
           </CardContent>
         </Card>
       </div>

@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "Northwind Eats Ops",
+  title: "God's Chai Operations",
   description: "Restaurant operations platform — inventory, labor, cash, reporting.",
 };
 

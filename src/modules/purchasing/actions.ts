@@ -138,3 +138,27 @@ export async function receivePoAction(poId: string, payload: unknown) {
   revalidatePath("/inventory");
   revalidatePath(`/purchasing/${po.id}`);
 }
+
+export async function deleteSupplierAction(id: string) {
+  const scope = await getScope();
+  const s = await prisma.supplier.findFirst({ where: { id, businessId: scope.businessId } });
+  if (!s) throw new Error("Not found");
+  // Unlink ingredients, delete POs (cascades items)
+  await prisma.$transaction([
+    prisma.ingredient.updateMany({ where: { supplierId: id }, data: { supplierId: null } }),
+    prisma.purchaseOrder.deleteMany({ where: { supplierId: id } }),
+    prisma.supplier.delete({ where: { id } }),
+  ]);
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "supplier.delete", entityType: "Supplier", entityId: id, diff: { name: s.name } });
+  revalidatePath("/purchasing/suppliers");
+  revalidatePath("/purchasing");
+}
+
+export async function deletePoAction(id: string) {
+  const scope = await getScope();
+  const po = await prisma.purchaseOrder.findFirst({ where: { id, locationId: scope.locationId } });
+  if (!po) throw new Error("Not found");
+  await prisma.purchaseOrder.delete({ where: { id } });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "po.delete", entityType: "PurchaseOrder", entityId: id });
+  revalidatePath("/purchasing");
+}

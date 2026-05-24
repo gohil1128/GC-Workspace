@@ -79,3 +79,13 @@ export async function updateBomAction(recipeId: string, payload: unknown) {
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${recipeId}`);
 }
+
+export async function deleteRecipeAction(id: string) {
+  const scope = await getScope();
+  const r = await prisma.recipe.findFirst({ where: { id, businessId: scope.businessId } });
+  if (!r) throw new Error("Not found");
+  // RecipeIngredient cascades on Recipe delete (set in schema)
+  await prisma.recipe.delete({ where: { id } });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "recipe.delete", entityType: "Recipe", entityId: id, diff: { name: r.name } });
+  revalidatePath("/recipes");
+}

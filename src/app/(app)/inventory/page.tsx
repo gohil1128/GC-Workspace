@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney } from "@/lib/money";
 import { NewIngredientButton } from "./_components/new-ingredient";
+import { DeleteButton } from "@/components/delete-button";
+import { deleteIngredientAction } from "@/modules/inventory/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,7 @@ export default async function InventoryPage() {
                 <TableHead className="text-right">Reorder Pt</TableHead>
                 <TableHead className="text-right">Last Cost</TableHead>
                 <TableHead className="text-right">Status</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -63,12 +66,19 @@ export default async function InventoryPage() {
                     <TableCell className="text-right">
                       {low ? <Badge variant="danger">Low</Badge> : <Badge variant="muted">OK</Badge>}
                     </TableCell>
+                    <TableCell>
+                      <DeleteButton
+                        action={deleteIngredientAction.bind(null, i.id)}
+                        itemLabel="ingredient"
+                        itemName={i.name}
+                      />
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">No ingredients yet. Click "New ingredient".</TableCell>
+                  <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-8">No ingredients yet. Click &quot;New ingredient&quot;.</TableCell>
                 </TableRow>
               )}
             </TableBody>

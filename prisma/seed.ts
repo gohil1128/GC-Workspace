@@ -52,14 +52,23 @@ async function main() {
   // Detect existing
   let business = await prisma.business.findFirst();
   if (business) {
-    console.log(`Business already exists (${business.name}). Skipping seed. Set SEED_RESET=1 to rebuild.`);
+    // One-time rename if the old seeded name is still in place
+    if (business.name === "Northwind Eats") {
+      business = await prisma.business.update({
+        where: { id: business.id },
+        data: { name: "God's Chai Operations" },
+      });
+      console.log(`Renamed business to "${business.name}".`);
+    } else {
+      console.log(`Business already exists (${business.name}). Skipping seed. Set SEED_RESET=1 to rebuild.`);
+    }
     return;
   }
 
   console.log("Seeding demo data...");
   business = await prisma.business.create({
     data: {
-      name: "Northwind Eats",
+      name: "God's Chai Operations",
       timezone: "America/New_York",
       currency: "USD",
       foodTargetPct: 32,
