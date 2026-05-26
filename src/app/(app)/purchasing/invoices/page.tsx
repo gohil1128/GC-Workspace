@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteInvoiceAction } from "@/modules/invoices/actions";
+import { ReopenInvoiceButton } from "../_components/reopen-invoice-button";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
 
@@ -60,7 +61,16 @@ export default async function InvoicesPage() {
                   <TableCell className="text-right num">{i._count.items}</TableCell>
                   <TableCell className="text-right num">{formatMoney(i.subtotalCents)}</TableCell>
                   <TableCell className="text-right num font-medium">{formatMoney(i.totalCents)}</TableCell>
-                  <TableCell>{i.closedAt ? <Badge variant="success">Closed</Badge> : <Badge variant="muted">Open</Badge>}</TableCell>
+                  <TableCell>
+                    {i.closedAt ? (
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="success">Closed</Badge>
+                        <ReopenInvoiceButton id={i.id} />
+                      </div>
+                    ) : (
+                      <Badge variant="muted">Open</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{i.createdBy.name}</TableCell>
                   <TableCell>
                     <DeleteButton

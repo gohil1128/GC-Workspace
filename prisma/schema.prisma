@@ -66,6 +66,7 @@ model Business {
   currency  String   @default("USD")
   laborTargetPct Int @default(30) // labor cost target as percent
   foodTargetPct  Int @default(32)
+  recipesPinHash String?  // bcrypt hash of 4-digit PIN; null = unlocked
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -77,6 +78,7 @@ model Business {
   employees       Employee[]
   reportSnapshots ReportSnapshot[]
   auditLogs       AuditLog[]
+  events          Event[]
 }
 
 model Location {
@@ -117,13 +119,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  locations       UserLocation[]
-  inventoryCounts InventoryCount[]
-  purchaseOrders  PurchaseOrder[]
-  cashCloses      CashClose[]
-  auditLogs       AuditLog[]
-  invoices        Invoice[]
+  business         Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  locations        UserLocation[]
+  inventoryCounts  InventoryCount[]
+  purchaseOrders   PurchaseOrder[]
+  cashCloses       CashClose[]
+  verifiedCloses   CashClose[]      @relation("CashCloseVerifier")
+  auditLogs        AuditLog[]
+  invoices         Invoice[]
 
   @@index([businessId])
 }
@@ -414,13 +417,16 @@ model DailySales {
   taxCents      Int         @default(0)
   guestCount    Int         @default(0)
   source        SalesSource @default(MANUAL)
+  eventId       String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  event    Event?   @relation(fields: [eventId], references: [id])
 
   @@unique([locationId, businessDate])
   @@index([locationId, businessDate])
+  @@index([eventId])
 }
 
 model CashClose {
@@ -429,23 +435,33 @@ model CashClose {
   businessDate    DateTime
   openingCents    Int
   closingCents    Int
+  cashCents       Int      @default(0)   // cash portion of closing
+  creditCents     Int      @default(0)   // credit/debit card portion
   safeCountCents  Int      @default(0)
   depositCents    Int      @default(0)
   paidInCents     Int      @default(0)
   paidOutCents    Int      @default(0)
   expectedCents   Int      // expected closing based on sales + opening
   overShortCents  Int      // closing + deposit - opening - expected
+  weather         String?
+  specialEvents   String?
+  verifiedById    String?
+  verifiedAt      DateTime?
+  eventId         String?
   checklistJson   Json?
   notes           String?
   closedById      String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  closedBy User     @relation(fields: [closedById], references: [id])
+  location   Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  closedBy   User      @relation(fields: [closedById], references: [id])
+  verifiedBy User?     @relation("CashCloseVerifier", fields: [verifiedById], references: [id])
+  event      Event?    @relation(fields: [eventId], references: [id])
 
   @@unique([locationId, businessDate])
   @@index([locationId, businessDate])
+  @@index([eventId])
 }
 
 model Deposit {
@@ -453,12 +469,39 @@ model Deposit {
   locationId   String
   businessDate DateTime
   amountCents  Int
+  sequence     Int?
+  bagCode      String?
+  preparedBy   String?
+  notes        String?
   reference    String?
   createdAt    DateTime @default(now())
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@index([locationId, businessDate])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Events (promo / pop-up tags for analysis filters)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Event {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  startDate  DateTime
+  endDate    DateTime
+  color      String?  // hex like #f97316
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  dailySales  DailySales[]
+  cashCloses  CashClose[]
+
+  @@index([businessId, startDate])
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

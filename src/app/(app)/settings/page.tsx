@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { LocationsManager } from "./_components/locations-manager";
 import { DangerZone } from "./_components/danger-zone";
 import { BusinessForm } from "./_components/business-form";
+import { RecipesLockCard } from "./_components/recipes-lock-card";
+import { EventsManager } from "./_components/events-manager";
+import { Lock, Calendar } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +19,10 @@ export default async function SettingsPage() {
   const scope = await getScope();
   if (scope.role !== "OWNER") redirect("/dashboard");
 
-  const [business, locations, counts] = await Promise.all([
+  const [business, locations, events, counts] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId } }),
     prisma.location.findMany({ where: { businessId: scope.businessId }, orderBy: { name: "asc" } }),
+    prisma.event.findMany({ where: { businessId: scope.businessId }, orderBy: { startDate: "desc" } }),
     Promise.all([
       prisma.ingredient.count({ where: { businessId: scope.businessId } }),
       prisma.recipe.count({ where: { businessId: scope.businessId } }),
@@ -72,6 +76,31 @@ export default async function SettingsPage() {
               activeLocationId={scope.locationId}
               canDelete={locations.length > 1}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Recipes lock</CardTitle>
+            <CardDescription>Hide recipes and BOM costs behind a 4-digit PIN</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecipesLockCard hasPin={!!business?.recipesPinHash} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Events</CardTitle>
+            <CardDescription>Tag sales and closes with an event for dashboard analysis</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EventsManager events={events.map((e) => ({
+              id: e.id, name: e.name, color: e.color,
+              startDate: e.startDate.toISOString().slice(0, 10),
+              endDate: e.endDate.toISOString().slice(0, 10),
+              isActive: e.isActive,
+            }))} />
           </CardContent>
         </Card>
 

@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   UtensilsCrossed,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +27,7 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
 
-export function Sidebar({ role, businessName }: { role: "OWNER" | "MANAGER"; businessName: string }) {
+export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" | "MANAGER"; businessName: string; recipesLocked: boolean }) {
   const pathname = usePathname();
   const [logoFailed, setLogoFailed] = React.useState(false);
   return (
@@ -68,7 +69,10 @@ export function Sidebar({ role, businessName }: { role: "OWNER" | "MANAGER"; bus
               )}
             >
               <Icon className="h-4 w-4" />
-              {n.label}
+              <span className="flex-1">{n.label}</span>
+              {n.href === "/recipes" && recipesLocked && (
+                <Lock className="h-3 w-3 text-warning" aria-label="PIN protected" />
+              )}
             </Link>
           );
         })}

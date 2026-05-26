@@ -4,13 +4,24 @@ import { safeDivide } from "@/lib/money";
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
 
-export async function getDashboard(params: { businessId: string; locationId: string; days?: number }) {
+export async function getDashboard(params: {
+  businessId: string;
+  locationId: string;
+  days?: number;
+  eventId?: string | null;
+  eventRange?: { start: Date; end: Date } | null;
+}) {
   const days = params.days ?? 14;
-  const { from, to } = lastNDays(days);
+  const baseRange = lastNDays(days);
+  const { from, to } = params.eventRange
+    ? { from: params.eventRange.start, to: params.eventRange.end }
+    : baseRange;
+
+  const eventFilter = params.eventId ? { eventId: params.eventId } : {};
 
   const [sales, shifts, cashCloses, recentVariance, lowStock, openPos, ingredientsCount, business] = await Promise.all([
     prisma.dailySales.findMany({
-      where: { locationId: params.locationId, businessDate: { gte: from, lte: to } },
+      where: { locationId: params.locationId, businessDate: { gte: from, lte: to }, ...eventFilter },
       orderBy: { businessDate: "asc" },
     }),
     prisma.shift.findMany({
@@ -18,7 +29,7 @@ export async function getDashboard(params: { businessId: string; locationId: str
       include: { employee: true, timeEntry: true },
     }),
     prisma.cashClose.findMany({
-      where: { locationId: params.locationId, businessDate: { gte: from, lte: to } },
+      where: { locationId: params.locationId, businessDate: { gte: from, lte: to }, ...eventFilter },
       orderBy: { businessDate: "desc" },
     }),
     prisma.inventoryCount.findFirst({

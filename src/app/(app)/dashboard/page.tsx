@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Banknote, Boxes, Clock, ShoppingCart } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard } from "@/modules/dashboard/queries";
+import { getActiveEvent } from "@/modules/events/queries";
 import { fmtDate, fmtDateTime } from "@/lib/date";
 import { formatMoney, formatPercent } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -16,7 +17,14 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const scope = await getScope();
-  const data = await getDashboard({ businessId: scope.businessId, locationId: scope.locationId, days: 14 });
+  const activeEvent = await getActiveEvent(scope.businessId);
+  const data = await getDashboard({
+    businessId: scope.businessId,
+    locationId: scope.locationId,
+    days: 14,
+    eventId: activeEvent?.id ?? null,
+    eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
+  });
 
   const foodTone = data.kpis.foodPct > data.kpis.foodTarget ? "bad" : data.kpis.foodPct > data.kpis.foodTarget - 2 ? "warn" : "good";
   const laborTone = data.kpis.laborPct > data.kpis.laborTarget ? "bad" : data.kpis.laborPct > data.kpis.laborTarget - 2 ? "warn" : "good";
@@ -68,7 +76,11 @@ export default async function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description={`${scope.locationName} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)} (${data.period.days} days)`}
+        description={
+          activeEvent
+            ? `${scope.locationName} · event: ${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
+            : `${scope.locationName} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)} (${data.period.days} days)`
+        }
       />
       <div className="p-4 sm:p-6 space-y-6">
         {/* Hero KPI strip — controllable levers first */}
