@@ -26,6 +26,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           user={{ name: session.user.name ?? "User", email: session.user.email ?? "" }}
           events={events}
           activeEventId={activeEvent?.id ?? null}
+          businessName={business?.name ?? "Operations"}
+          recipesLocked={recipesLocked}
         />
         <main className="flex-1 overflow-x-hidden">{children}</main>
       </div>
