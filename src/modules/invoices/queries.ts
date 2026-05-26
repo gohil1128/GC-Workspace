@@ -1,8 +1,27 @@
 import { prisma } from "@/lib/prisma";
+import { startOfDay, endOfDay } from "@/lib/date";
 
-export async function listInvoices(locationId: string) {
+export type InvoiceFilters = {
+  supplierId?: string;
+  invoiceNumber?: string;
+  status?: "open" | "closed" | "all";
+  from?: string; // YYYY-MM-DD on invoiceDate
+  to?: string;
+};
+
+export async function listInvoices(locationId: string, filters: InvoiceFilters = {}) {
+  const where: any = { locationId };
+  if (filters.supplierId) where.supplierId = filters.supplierId;
+  if (filters.invoiceNumber) where.invoiceNumber = { contains: filters.invoiceNumber.trim(), mode: "insensitive" };
+  if (filters.status === "open") where.closedAt = null;
+  if (filters.status === "closed") where.closedAt = { not: null };
+  if (filters.from || filters.to) {
+    where.invoiceDate = {};
+    if (filters.from) where.invoiceDate.gte = startOfDay(new Date(filters.from));
+    if (filters.to) where.invoiceDate.lte = endOfDay(new Date(filters.to));
+  }
   return prisma.invoice.findMany({
-    where: { locationId },
+    where,
     include: {
       supplier: { select: { name: true } },
       createdBy: { select: { name: true } },

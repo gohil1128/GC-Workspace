@@ -26,7 +26,7 @@ export default async function PurchasingPage() {
           <>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><FileText className="h-3.5 w-3.5" /> Invoices</Link></Button>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/suppliers"><Users className="h-3.5 w-3.5" /> Suppliers</Link></Button>
-            <Button asChild size="sm"><Link href="/purchasing/new"><Plus className="h-3.5 w-3.5" /> New PO</Link></Button>
+            <Button asChild size="sm"><Link href="/purchasing/invoices/new"><Plus className="h-3.5 w-3.5" /> New invoice</Link></Button>
           </>
         }
       />
