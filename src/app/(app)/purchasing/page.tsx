@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, FileText } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listPurchaseOrders } from "@/modules/purchasing/queries";
 import { PageHeader } from "@/components/page-header";
@@ -24,6 +24,7 @@ export default async function PurchasingPage() {
         description={`${pos.length} purchase orders · ${pos.filter((p) => p.status === "DRAFT" || p.status === "SENT").length} open`}
         actions={
           <>
+            <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><FileText className="h-3.5 w-3.5" /> Invoices</Link></Button>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/suppliers"><Users className="h-3.5 w-3.5" /> Suppliers</Link></Button>
             <Button asChild size="sm"><Link href="/purchasing/new"><Plus className="h-3.5 w-3.5" /> New PO</Link></Button>
           </>

@@ -98,6 +98,7 @@ model Location {
   cashCloses       CashClose[]
   deposits         Deposit[]
   reportSnapshots  ReportSnapshot[]
+  invoices         Invoice[]
 
   @@index([businessId])
 }
@@ -122,6 +123,7 @@ model User {
   purchaseOrders  PurchaseOrder[]
   cashCloses      CashClose[]
   auditLogs       AuditLog[]
+  invoices        Invoice[]
 
   @@index([businessId])
 }
@@ -155,6 +157,7 @@ model Supplier {
   business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
   ingredients    Ingredient[]
   purchaseOrders PurchaseOrder[]
+  invoices       Invoice[]
 
   @@index([businessId])
 }
@@ -183,6 +186,7 @@ model Ingredient {
   movements        InventoryMovement[]
   countLines       InventoryCountLine[]
   poItems          PurchaseOrderItem[]
+  invoiceItems     InvoiceItem[]
 
   @@unique([businessId, name])
   @@index([businessId])
@@ -320,6 +324,7 @@ model PurchaseOrder {
   supplier  Supplier            @relation(fields: [supplierId], references: [id])
   createdBy User                @relation(fields: [createdById], references: [id])
   items     PurchaseOrderItem[]
+  invoices  Invoice[]
 
   @@index([locationId, status])
   @@index([supplierId])
@@ -491,4 +496,55 @@ model AuditLog {
 
   @@index([businessId, createdAt])
   @@index([entityType, entityId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Invoices (supplier billing — supports create-from-PO and standalone)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id            String    @id @default(cuid())
+  locationId    String
+  supplierId    String
+  poId          String?
+  invoiceNumber String
+  invoiceDate   DateTime
+  dateReceived  DateTime
+  subtotalCents Int       @default(0)
+  gstCents      Int       @default(0)
+  pstCents      Int       @default(0)
+  shippingCents Int       @default(0)
+  rebateCents   Int       @default(0)
+  totalCents    Int       @default(0)
+  internalMemo  String?
+  closedAt      DateTime?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  location  Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  supplier  Supplier       @relation(fields: [supplierId], references: [id])
+  po        PurchaseOrder? @relation(fields: [poId], references: [id])
+  createdBy User           @relation(fields: [createdById], references: [id])
+  items     InvoiceItem[]
+
+  @@unique([supplierId, invoiceNumber])
+  @@index([locationId, invoiceDate])
+  @@index([supplierId])
+}
+
+model InvoiceItem {
+  id             String @id @default(cuid())
+  invoiceId      String
+  ingredientId   String
+  qty            Float
+  unit           String
+  unitCostCents  Int
+  lineTotalCents Int
+
+  invoice    Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([invoiceId])
+  @@index([ingredientId])
 }
