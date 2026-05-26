@@ -34,6 +34,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><ArrowLeft className="h-3.5 w-3.5" /> All invoices</Link></Button>
+            {inv.closedAt
+              ? <Badge variant="muted" className="gap-1"><Lock className="h-3 w-3" /> Closed</Badge>
+              : <Badge variant="success" className="gap-1"><Unlock className="h-3 w-3" /> Editable</Badge>}
             <CloseInvoiceButton id={inv.id} closed={!!inv.closedAt} />
             <DeleteButton
               action={deleteInvoiceAction.bind(null, inv.id)}
@@ -49,9 +52,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         }
       />
       <div className="p-4 sm:p-6 space-y-4">
-        {inv.closedAt && (
+        {inv.closedAt ? (
+          <div className="rounded-lg border border-muted-foreground/30 bg-muted/30 text-muted-foreground px-3 py-2 text-xs flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5" /> Closed {fmtDateTime(inv.closedAt)}. Fields are locked. Click <span className="font-medium">Re-open</span> above to edit.
+          </div>
+        ) : (
           <div className="rounded-lg border border-success/40 bg-success/10 text-success px-3 py-2 text-xs flex items-center gap-2">
-            <Lock className="h-3.5 w-3.5" /> Closed {fmtDateTime(inv.closedAt)} — re-open to edit.
+            <Unlock className="h-3.5 w-3.5" /> Open for editing. Change any field below and click <span className="font-medium">Update</span> at the bottom to save. Add line items in the Line items section.
           </div>
         )}
 

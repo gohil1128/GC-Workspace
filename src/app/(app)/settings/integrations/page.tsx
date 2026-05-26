@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SalesImporter } from "./_components/sales-importer";
+import { SquareImporter } from "./_components/square-importer";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,22 @@ export default async function IntegrationsPage() {
       <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Sales CSV import <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
-            <CardDescription>Columns: date, net_sales, tax, guests</CardDescription>
+            <CardTitle>Square sales import <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
+            <CardDescription>
+              Upload Square&apos;s &quot;Sales Summary by Day&quot; CSV. Auto-detects Date, Net Sales,
+              Gross Sales, Tax, Cash, Card, and Guests columns; cash/card totals also pre-fill the
+              matching day&apos;s cash close.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SquareImporter />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Generic sales CSV <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
+            <CardDescription>Manual format · Columns: date, net_sales, tax, guests</CardDescription>
           </CardHeader>
           <CardContent>
             <SalesImporter />
@@ -27,8 +42,8 @@ export default async function IntegrationsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>POS sync <Badge variant="muted" className="ml-2">Placeholder</Badge></CardTitle>
-            <CardDescription>Connect Square or Toast to sync net sales automatically</CardDescription>
+            <CardTitle>Square POS sync <Badge variant="muted" className="ml-2">Coming soon</Badge></CardTitle>
+            <CardDescription>Direct OAuth sync (no CSV upload needed) — requires Square developer approval</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button variant="outline" size="sm" disabled>Connect Square</Button>

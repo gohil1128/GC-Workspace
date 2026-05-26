@@ -108,8 +108,11 @@ export function InvoiceDetailForm({ invoiceId, initial, readOnly }: { invoiceId:
         <Textarea id="memo" rows={2} value={internalMemo} onChange={(e) => setInternalMemo(e.target.value)} disabled={readOnly} />
       </div>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pending || readOnly}>{pending ? "Saving..." : "Update"}</Button>
+      <div className="flex justify-end items-center gap-2 border-t pt-3 mt-2">
+        {readOnly && <span className="text-xs text-muted-foreground">Re-open the invoice to save changes</span>}
+        <Button type="submit" disabled={pending || readOnly} size="default">
+          {pending ? "Saving..." : "Update invoice"}
+        </Button>
       </div>
     </form>
   );
