@@ -31,8 +31,8 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
   const pathname = usePathname();
   const [logoFailed, setLogoFailed] = React.useState(false);
   return (
-    <aside className="hidden md:flex md:w-56 lg:w-60 shrink-0 flex-col border-r bg-card">
-      <div className="flex h-16 items-center justify-center border-b px-3">
+    <aside className="hidden md:flex md:w-56 lg:w-60 shrink-0 flex-col border-r border-border/60 bg-background/80">
+      <div className="flex h-14 items-center border-b border-border/60 px-4">
         {!logoFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -43,7 +43,7 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
           />
         ) : (
           <div className="flex items-center gap-2 w-full">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/12 text-primary">
               <UtensilsCrossed className="h-4 w-4" />
             </div>
             <div className="flex flex-col leading-tight min-w-0">
@@ -53,7 +53,7 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
           </div>
         )}
       </div>
-      <nav className="flex flex-col gap-0.5 p-2">
+      <nav className="flex flex-col gap-px p-2">
         {NAV.filter((n) => !n.ownerOnly || role === "OWNER").map((n) => {
           const active = pathname === n.href || pathname.startsWith(n.href + "/");
           const Icon = n.icon;
@@ -77,7 +77,7 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
           );
         })}
       </nav>
-      <div className="mt-auto p-3 text-2xs text-muted-foreground">
+      <div className="mt-auto px-4 py-3 text-2xs text-muted-foreground/70">
         v0.1 · Restaurant Ops MVP
       </div>
     </aside>
