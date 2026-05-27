@@ -26,6 +26,16 @@ export function LocationSwitcher({ active, options }: { active: Loc; options: Lo
     });
   };
 
+  // Only one location — show as static label, no need for a dropdown
+  if (options.length <= 1) {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-md border bg-card px-3 h-9 text-sm font-medium">
+        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+        <span>{active.name}</span>
+      </div>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
