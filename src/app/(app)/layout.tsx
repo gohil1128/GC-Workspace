@@ -6,6 +6,7 @@ import { isRecipesLocked } from "@/modules/recipes-lock/actions";
 import { getActiveEvent, listActiveEvents } from "@/modules/events/queries";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { PageTransition } from "@/components/shell/page-transition";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -18,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getActiveEvent(scope.businessId),
   ]);
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar role={scope.role} businessName={business?.name ?? "Operations"} recipesLocked={recipesLocked} />
       <div className="flex flex-1 flex-col min-w-0">
         <Topbar
@@ -29,7 +30,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           businessName={business?.name ?? "Operations"}
           recipesLocked={recipesLocked}
         />
-        <main className="flex-1 overflow-x-hidden">{children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-fluid">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

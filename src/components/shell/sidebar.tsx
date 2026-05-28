@@ -31,29 +31,29 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
   const pathname = usePathname();
   const [logoFailed, setLogoFailed] = React.useState(false);
   return (
-    <aside className="hidden md:flex md:w-56 lg:w-60 shrink-0 flex-col border-r border-border/60 bg-background/80">
-      <div className="flex h-14 items-center border-b border-border/60 px-4">
+    <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 flex-col border-r bg-card/60">
+      <div className="flex h-16 items-center px-5">
         {!logoFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src="/logo.png"
             alt={businessName}
-            className="max-h-12 w-auto"
+            className="max-h-11 w-auto"
             onError={() => setLogoFailed(true)}
           />
         ) : (
-          <div className="flex items-center gap-2 w-full">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/12 text-primary">
+          <div className="flex items-center gap-2.5 w-full">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-brand-foreground shadow-soft">
               <UtensilsCrossed className="h-4 w-4" />
             </div>
             <div className="flex flex-col leading-tight min-w-0">
-              <span className="text-sm font-semibold truncate">{businessName}</span>
+              <span className="text-sm font-semibold truncate tracking-tight">{businessName}</span>
               <span className="text-2xs text-muted-foreground">Operations</span>
             </div>
           </div>
         )}
       </div>
-      <nav className="flex flex-col gap-px p-2">
+      <nav className="flex flex-col gap-1 px-3 pt-2">
         {NAV.filter((n) => !n.ownerOnly || role === "OWNER").map((n) => {
           const active = pathname === n.href || pathname.startsWith(n.href + "/");
           const Icon = n.icon;
@@ -62,13 +62,14 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
               key={n.href}
               href={n.href}
               className={cn(
-                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150",
                 active
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
               )}
             >
-              <Icon className="h-4 w-4" />
+              {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand" />}
+              <Icon className={cn("h-[1.05rem] w-[1.05rem] transition-colors", active ? "text-brand" : "text-muted-foreground group-hover:text-foreground")} />
               <span className="flex-1">{n.label}</span>
               {n.href === "/recipes" && recipesLocked && (
                 <Lock className="h-3 w-3 text-warning" aria-label="PIN protected" />
@@ -77,8 +78,8 @@ export function Sidebar({ role, businessName, recipesLocked }: { role: "OWNER" |
           );
         })}
       </nav>
-      <div className="mt-auto px-4 py-3 text-2xs text-muted-foreground/70">
-        v0.1 · Restaurant Ops MVP
+      <div className="mt-auto p-4 text-2xs text-muted-foreground/70">
+        God&apos;s Chai Ops · v1.0
       </div>
     </aside>
   );

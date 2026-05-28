@@ -30,7 +30,7 @@ export function Topbar({
 }) {
   const active = scope.availableLocations.find((l) => l.id === scope.locationId)!;
   return (
-    <header className="flex h-14 items-center gap-2 border-b border-border/60 bg-background/90 backdrop-blur-sm px-4">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b glass px-4 sm:px-6">
       <MobileNav role={scope.role} businessName={businessName} recipesLocked={recipesLocked} />
       <LocationSwitcher active={active} options={scope.availableLocations} />
       <EventSwitcher events={events} activeEventId={activeEventId} />
