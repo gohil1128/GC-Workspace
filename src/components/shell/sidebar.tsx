@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Clock,
   Banknote,
+  Receipt,
   BarChart3,
   Settings,
   UtensilsCrossed,
@@ -23,6 +24,7 @@ const NAV = [
   { href: "/purchasing", label: "Purchasing", icon: ShoppingCart },
   { href: "/labor", label: "Labor", icon: Clock },
   { href: "/cash", label: "Cash", icon: Banknote },
+  { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];

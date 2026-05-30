@@ -55,6 +55,17 @@ enum SalesSource {
   POS
 }
 
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  MARKETING
+  INSURANCE
+  EQUIPMENT
+  REPAIRS
+  ADMIN
+  OTHER
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Tenant
 // ──────────────────────────────────────────────────────────────────────────────
@@ -67,6 +78,8 @@ model Business {
   laborTargetPct Int @default(30) // labor cost target as percent
   foodTargetPct  Int @default(32)
   recipesPinHash String?  // bcrypt hash of 4-digit PIN; null = unlocked
+  ebitdaMultiplier  Float @default(4.0) // applied when EBITDA > 0
+  revenueMultiplier Float @default(1.5) // fallback when EBITDA <= 0
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -79,6 +92,7 @@ model Business {
   reportSnapshots ReportSnapshot[]
   auditLogs       AuditLog[]
   events          Event[]
+  expenses        Expense[]
 }
 
 model Location {
@@ -101,6 +115,7 @@ model Location {
   deposits         Deposit[]
   reportSnapshots  ReportSnapshot[]
   invoices         Invoice[]
+  expenses         Expense[]
 
   @@index([businessId])
 }
@@ -127,6 +142,7 @@ model User {
   verifiedCloses   CashClose[]      @relation("CashCloseVerifier")
   auditLogs        AuditLog[]
   invoices         Invoice[]
+  expenses         Expense[]
 
   @@index([businessId])
 }
@@ -500,6 +516,7 @@ model Event {
   business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   dailySales  DailySales[]
   cashCloses  CashClose[]
+  expenses    Expense[]
 
   @@index([businessId, startDate])
 }
@@ -590,4 +607,33 @@ model InvoiceItem {
 
   @@index([invoiceId])
   @@index([ingredientId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Operating expenses (non-COGS) — rent, utilities, marketing, etc.
+// COGS is captured separately via Invoice/PurchaseOrder line items.
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Expense {
+  id           String          @id @default(cuid())
+  businessId   String
+  locationId   String
+  eventId      String?
+  category     ExpenseCategory
+  businessDate DateTime
+  amountCents  Int
+  description  String?
+  createdById  String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@index([businessId, businessDate])
+  @@index([locationId, businessDate])
+  @@index([eventId])
+  @@index([category])
 }

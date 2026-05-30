@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Menu, X, UtensilsCrossed,
-  LayoutDashboard, Package, ChefHat, ShoppingCart, Clock, Banknote, BarChart3, Settings, Lock,
+  LayoutDashboard, Package, ChefHat, ShoppingCart, Clock, Banknote, Receipt, BarChart3, Settings, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ const NAV = [
   { href: "/purchasing", label: "Purchasing", icon: ShoppingCart },
   { href: "/labor", label: "Labor", icon: Clock },
   { href: "/cash", label: "Cash", icon: Banknote },
+  { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];

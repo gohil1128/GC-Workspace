@@ -8,7 +8,13 @@ import { updateBusinessAction } from "@/modules/admin/actions";
 import { toast } from "@/components/ui/use-toast";
 
 type Props = {
-  initial: { name: string; foodTargetPct: number; laborTargetPct: number };
+  initial: {
+    name: string;
+    foodTargetPct: number;
+    laborTargetPct: number;
+    ebitdaMultiplier: number;
+    revenueMultiplier: number;
+  };
 };
 
 export function BusinessForm({ initial }: Props) {
@@ -43,6 +49,23 @@ export function BusinessForm({ initial }: Props) {
         <div className="grid gap-1.5">
           <Label htmlFor="biz-labor">Labor cost target (%)</Label>
           <Input id="biz-labor" name="laborTargetPct" type="number" min="0" max="100" defaultValue={initial.laborTargetPct} />
+        </div>
+      </div>
+      <div className="border-t pt-3 mt-1">
+        <div className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+          Valuation multipliers
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="biz-ebitda-mult">EBITDA × multiple</Label>
+            <Input id="biz-ebitda-mult" name="ebitdaMultiplier" type="number" min="0" step="0.1" defaultValue={initial.ebitdaMultiplier} />
+            <span className="text-2xs text-muted-foreground">Applied when EBITDA &gt; 0. Typical: 3–6× for food businesses.</span>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="biz-rev-mult">Revenue × multiple</Label>
+            <Input id="biz-rev-mult" name="revenueMultiplier" type="number" min="0" step="0.1" defaultValue={initial.revenueMultiplier} />
+            <span className="text-2xs text-muted-foreground">Fallback when EBITDA ≤ 0. Typical: 1–2× of revenue.</span>
+          </div>
         </div>
       </div>
       <div className="flex justify-end">

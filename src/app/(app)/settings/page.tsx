@@ -60,6 +60,8 @@ export default async function SettingsPage() {
                 name: business.name,
                 foodTargetPct: business.foodTargetPct,
                 laborTargetPct: business.laborTargetPct,
+                ebitdaMultiplier: business.ebitdaMultiplier,
+                revenueMultiplier: business.revenueMultiplier,
               }} />
             )}
           </CardContent>

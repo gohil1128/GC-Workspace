@@ -63,6 +63,8 @@ const businessSchema = z.object({
   name: z.string().min(1, "Name is required"),
   foodTargetPct: z.coerce.number().int().min(0).max(100),
   laborTargetPct: z.coerce.number().int().min(0).max(100),
+  ebitdaMultiplier: z.coerce.number().min(0).max(50).default(4),
+  revenueMultiplier: z.coerce.number().min(0).max(20).default(1.5),
 });
 
 export async function updateBusinessAction(formData: FormData) {
@@ -72,10 +74,18 @@ export async function updateBusinessAction(formData: FormData) {
     name: formData.get("name"),
     foodTargetPct: formData.get("foodTargetPct"),
     laborTargetPct: formData.get("laborTargetPct"),
+    ebitdaMultiplier: formData.get("ebitdaMultiplier"),
+    revenueMultiplier: formData.get("revenueMultiplier"),
   });
   await prisma.business.update({
     where: { id: scope.businessId },
-    data: { name: parsed.name, foodTargetPct: parsed.foodTargetPct, laborTargetPct: parsed.laborTargetPct },
+    data: {
+      name: parsed.name,
+      foodTargetPct: parsed.foodTargetPct,
+      laborTargetPct: parsed.laborTargetPct,
+      ebitdaMultiplier: parsed.ebitdaMultiplier,
+      revenueMultiplier: parsed.revenueMultiplier,
+    },
   });
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "business.update", entityType: "Business", entityId: scope.businessId, diff: { name: parsed.name } });
   revalidatePath("/", "layout");

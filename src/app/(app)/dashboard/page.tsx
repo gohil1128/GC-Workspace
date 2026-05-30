@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowUpRight, Banknote, Boxes, Clock, ShoppingCart } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Banknote, Boxes, Clock, ShoppingCart, TrendingUp, Users, Gem } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard } from "@/modules/dashboard/queries";
 import { getActiveEvent } from "@/modules/events/queries";
+import { getFinanceSummary } from "@/modules/finance/queries";
 import { fmtDate, fmtDateTime } from "@/lib/date";
 import { formatMoney, formatPercent } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -18,13 +19,21 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const scope = await getScope();
   const activeEvent = await getActiveEvent(scope.businessId);
-  const data = await getDashboard({
-    businessId: scope.businessId,
-    locationId: scope.locationId,
-    days: 14,
-    eventId: activeEvent?.id ?? null,
-    eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
-  });
+  const [data, finance] = await Promise.all([
+    getDashboard({
+      businessId: scope.businessId,
+      locationId: scope.locationId,
+      days: 14,
+      eventId: activeEvent?.id ?? null,
+      eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
+    }),
+    getFinanceSummary({
+      businessId: scope.businessId,
+      locationId: scope.locationId,
+      eventId: activeEvent?.id ?? null,
+      eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
+    }),
+  ]);
 
   const foodTone = data.kpis.foodPct > data.kpis.foodTarget ? "bad" : data.kpis.foodPct > data.kpis.foodTarget - 2 ? "warn" : "good";
   const laborTone = data.kpis.laborPct > data.kpis.laborTarget ? "bad" : data.kpis.laborPct > data.kpis.laborTarget - 2 ? "warn" : "good";
@@ -97,6 +106,59 @@ export default async function DashboardPage() {
           <KpiCard label="Low Stock Items" value={String(data.lowStockItems.length)} tone={data.lowStockItems.length > 0 ? "warn" : "good"} delta={`of ${data.ingredientsCount} tracked`} />
           <KpiCard label="Open POs" value={String(data.openPos.length)} delta="draft + sent" />
           <KpiCard label="Food Cost (period)" value={formatMoney(data.kpis.foodCostCents)} delta="theoretical usage" />
+        </div>
+
+        {/* Financial KPIs — EBITDA, Valuation, CAC (YTD or event-scoped) */}
+        <div className="space-y-2">
+          <div className="flex items-end justify-between">
+            <h2 className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground">Financial · {finance.range.label}</h2>
+            <span className="text-2xs text-muted-foreground">
+              Revenue {formatMoney(finance.netSalesCents)} · Costs {formatMoney(finance.cogsCents + finance.laborCostCents + finance.operatingExpensesCents)}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <KpiCard
+              label="EBITDA"
+              value={formatMoney(finance.ebitdaCents, { signed: true })}
+              tone={finance.ebitdaCents < 0 ? "bad" : finance.ebitdaMarginPct > 15 ? "good" : "warn"}
+              delta={`${formatPercent(finance.ebitdaMarginPct)} margin`}
+              hint="Sales − COGS − Labor − Opex"
+            />
+            <KpiCard
+              label="Valuation"
+              value={formatMoney(finance.valuationCents)}
+              tone="neutral"
+              delta={
+                finance.valuationBasis === "ebitda" ? "EBITDA multiple"
+                : finance.valuationBasis === "revenue" ? "Revenue multiple (EBITDA ≤ 0)"
+                : "Need sales to estimate"
+              }
+              hint="Set multipliers in Settings"
+            />
+            <KpiCard
+              label="Marketing / Guest"
+              value={formatMoney(finance.marketingPerGuestCents)}
+              tone={finance.marketingPerGuestCents > 500 ? "warn" : "good"}
+              delta={`${formatMoney(finance.marketingCents)} marketing · ${finance.guestCount.toLocaleString()} guests`}
+              hint="CAC proxy"
+            />
+          </div>
+          {finance.expenseByCategory.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {finance.expenseByCategory.map((e) => (
+                <Badge key={e.category} variant="muted" className="gap-1.5">
+                  <span className="capitalize">{e.category.toLowerCase()}</span>
+                  <span className="num font-semibold">{formatMoney(e.amountCents)}</span>
+                </Badge>
+              ))}
+              <Link href="/expenses" className="text-2xs text-muted-foreground hover:text-foreground self-center ml-2">Manage expenses →</Link>
+            </div>
+          )}
+          {finance.expenseByCategory.length === 0 && (
+            <p className="text-2xs text-muted-foreground pt-1">
+              <Link href="/expenses" className="underline">Log your operating expenses</Link> (rent, marketing, utilities) for accurate EBITDA and CAC.
+            </p>
+          )}
         </div>
 
         {/* Exception cards */}
