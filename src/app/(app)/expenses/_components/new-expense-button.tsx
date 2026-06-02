@@ -15,6 +15,7 @@ const CATEGORIES = [
   { value: "RENT", label: "Rent" },
   { value: "UTILITIES", label: "Utilities" },
   { value: "MARKETING", label: "Marketing" },
+  { value: "CONTRACTOR", label: "Contractor / Freelancer" },
   { value: "INSURANCE", label: "Insurance" },
   { value: "EQUIPMENT", label: "Equipment" },
   { value: "REPAIRS", label: "Repairs" },

@@ -6,6 +6,7 @@ export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "RENT", label: "Rent" },
   { value: "UTILITIES", label: "Utilities" },
   { value: "MARKETING", label: "Marketing" },
+  { value: "CONTRACTOR", label: "Contractor / Freelancer" },
   { value: "INSURANCE", label: "Insurance" },
   { value: "EQUIPMENT", label: "Equipment" },
   { value: "REPAIRS", label: "Repairs" },
@@ -34,6 +35,7 @@ export async function listExpenses(locationId: string, filters: ExpenseFilters =
     include: {
       createdBy: { select: { name: true } },
       event: { select: { id: true, name: true, color: true } },
+      vendor: { select: { id: true, name: true } },
     },
     orderBy: { businessDate: "desc" },
   });

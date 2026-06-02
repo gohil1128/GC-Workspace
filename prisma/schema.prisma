@@ -59,6 +59,7 @@ enum ExpenseCategory {
   RENT
   UTILITIES
   MARKETING
+  CONTRACTOR
   INSURANCE
   EQUIPMENT
   REPAIRS
@@ -93,6 +94,7 @@ model Business {
   auditLogs       AuditLog[]
   events          Event[]
   expenses        Expense[]
+  vendors         Vendor[]
 }
 
 model Location {
@@ -619,10 +621,12 @@ model Expense {
   businessId   String
   locationId   String
   eventId      String?
+  vendorId     String?
   category     ExpenseCategory
   businessDate DateTime
   amountCents  Int
   description  String?
+  isIncentive  Boolean         @default(false)
   createdById  String
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -630,10 +634,38 @@ model Expense {
   business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   event     Event?   @relation(fields: [eventId], references: [id])
+  vendor    Vendor?  @relation(fields: [vendorId], references: [id])
   createdBy User     @relation(fields: [createdById], references: [id])
 
   @@index([businessId, businessDate])
   @@index([locationId, businessDate])
   @@index([eventId])
+  @@index([vendorId])
   @@index([category])
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Vendors / Contractors — recurring service providers
+// (graphic designers, accountants, freelancers, agencies, etc.)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Vendor {
+  id              String   @id @default(cuid())
+  businessId      String
+  name            String
+  role            String?    // e.g. "Graphic Designer", "Accountant"
+  country         String?    // free-text country for tax/jurisdiction context
+  monthlyFeeCents Int        @default(0)
+  currency        String     @default("USD")
+  defaultCategory ExpenseCategory @default(CONTRACTOR)
+  isFlatFee       Boolean    @default(true)  // true = no tax withholding
+  notes           String?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([businessId])
 }
