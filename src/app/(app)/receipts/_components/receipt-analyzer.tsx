@@ -158,7 +158,8 @@ export function ReceiptAnalyzer({ events }: { events: { id: string; name: string
           <input
             id="receipt-file"
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
+            accept="image/*"
+            capture="environment"
             onChange={onFileChange}
             className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-accent/80"
           />
