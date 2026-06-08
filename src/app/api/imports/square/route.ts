@@ -55,6 +55,13 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) return NextResponse.json({ error: "Missing CSV file" }, { status: 400 });
   const text = await file.text();
   const rows = parseCsv(text);
+  // Optional event tag — applied to every imported row.
+  const eventIdRaw = String(form.get("eventId") ?? "");
+  const eventId = eventIdRaw && eventIdRaw !== "none" ? eventIdRaw : null;
+  if (eventId) {
+    const exists = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
+    if (!exists) return NextResponse.json({ error: "Selected event not found" }, { status: 400 });
+  }
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "CSV looked empty" }, { status: 400 });
@@ -112,6 +119,7 @@ export async function POST(req: Request) {
       taxCents: toCents(taxDollars),
       tipsCents: toCents(tipsDollars),
       guestCount,
+      eventId,
       source: "POS" as const,
     };
 

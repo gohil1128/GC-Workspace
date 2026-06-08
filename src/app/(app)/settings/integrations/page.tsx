@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getScope } from "@/lib/scope";
+import { listActiveEvents } from "@/modules/events/queries";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function IntegrationsPage() {
   const scope = await getScope();
   if (scope.role !== "OWNER") redirect("/dashboard");
+  const events = await listActiveEvents(scope.businessId);
+  const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
   return (
     <div>
       <PageHeader title="Integrations" description="CSV import works · external APIs are wired as placeholders" />
@@ -26,7 +29,7 @@ export default async function IntegrationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SquareImporter />
+            <SquareImporter events={eventProps} />
           </CardContent>
         </Card>
 
@@ -36,7 +39,7 @@ export default async function IntegrationsPage() {
             <CardDescription>Manual format · Columns: date, net_sales, tax, guests</CardDescription>
           </CardHeader>
           <CardContent>
-            <SalesImporter />
+            <SalesImporter events={eventProps} />
           </CardContent>
         </Card>
 

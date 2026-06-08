@@ -22,6 +22,12 @@ export async function POST(req: Request) {
   if (!(file instanceof File)) return NextResponse.json({ error: "missing file" }, { status: 400 });
   const text = await file.text();
   const rawRows = parseCsv(text);
+  const eventIdRaw = String(form.get("eventId") ?? "");
+  const eventId = eventIdRaw && eventIdRaw !== "none" ? eventIdRaw : null;
+  if (eventId) {
+    const exists = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
+    if (!exists) return NextResponse.json({ error: "Selected event not found" }, { status: 400 });
+  }
   let created = 0;
   let updated = 0;
   let errors: { row: number; reason: string }[] = [];
@@ -44,6 +50,7 @@ export async function POST(req: Request) {
       taxCents: toCents(parsed.data.tax ?? "0"),
       tipsCents: toCents(parsed.data.tips ?? "0"),
       guestCount: Number(parsed.data.guests ?? "0") || 0,
+      eventId,
       source: "CSV" as const,
     };
     const existing = await prisma.dailySales.findUnique({
