@@ -52,6 +52,8 @@ export async function getDashboard(params: {
   ]);
 
   const netSalesCents = sales.reduce((a, s) => a + s.netSalesCents, 0);
+  const tipsCents = sales.reduce((a, s) => a + s.tipsCents, 0);
+  const guestCount = sales.reduce((a, s) => a + s.guestCount, 0);
 
   // labor cost from completed time entries, fall back to scheduled minutes * rate
   const laborCostCents = shifts.reduce((acc, s) => {
@@ -105,6 +107,8 @@ export async function getDashboard(params: {
     period: { from, to, days },
     kpis: {
       netSalesCents,
+      tipsCents,
+      guestCount,
       foodCostCents,
       laborCostCents,
       foodPct,

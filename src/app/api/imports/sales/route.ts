@@ -11,6 +11,7 @@ const rowSchema = z.object({
   date: z.string(),
   net_sales: z.string(),
   tax: z.string().optional(),
+  tips: z.string().optional(),
   guests: z.string().optional(),
 });
 
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       businessDate,
       netSalesCents: toCents(parsed.data.net_sales),
       taxCents: toCents(parsed.data.tax ?? "0"),
+      tipsCents: toCents(parsed.data.tips ?? "0"),
       guestCount: Number(parsed.data.guests ?? "0") || 0,
       source: "CSV" as const,
     };

@@ -94,14 +94,22 @@ export default async function DashboardPage() {
       <div className="p-4 sm:p-6 space-y-6">
         {/* Hero KPI strip — controllable levers first */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <KpiCard label="Net Sales" value={formatMoney(data.kpis.netSalesCents)} hint={`${data.period.days}d`} />
+          <KpiCard label="Net Sales" value={formatMoney(data.kpis.netSalesCents)} delta={`${data.kpis.guestCount.toLocaleString()} transactions`} hint={`${data.period.days}d`} />
           <KpiCard label="Food Cost %" value={formatPercent(data.kpis.foodPct)} tone={foodTone} delta={`Target ${data.kpis.foodTarget}%`} />
           <KpiCard label="Labor %" value={formatPercent(data.kpis.laborPct)} tone={laborTone} delta={`Target ${data.kpis.laborTarget}%`} />
           <KpiCard label="Prime Cost %" value={formatPercent(data.kpis.primePct)} tone={data.kpis.primePct > 60 ? "bad" : data.kpis.primePct > 55 ? "warn" : "good"} delta="Target ≤60%" />
           <KpiCard label="Inventory Variance" value={formatPercent(data.kpis.inventoryVariancePct)} tone={varianceTone} delta={data.lastCountAt ? `Last count ${fmtDate(data.lastCountAt)}` : "No count yet"} />
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <KpiCard
+            label="Tips Collected"
+            value={formatMoney(data.kpis.tipsCents)}
+            tone={data.kpis.tipsCents > 0 ? "good" : "neutral"}
+            delta={data.kpis.netSalesCents > 0
+              ? `${((data.kpis.tipsCents / data.kpis.netSalesCents) * 100).toFixed(1)}% of net sales`
+              : "—"}
+          />
           <KpiCard label="Cash Over/Short" value={formatMoney(data.kpis.cashOverShortCents, { signed: true })} tone={cashTone} delta={`${data.period.days}d total`} />
           <KpiCard label="Low Stock Items" value={String(data.lowStockItems.length)} tone={data.lowStockItems.length > 0 ? "warn" : "good"} delta={`of ${data.ingredientsCount} tracked`} />
           <KpiCard label="Open POs" value={String(data.openPos.length)} delta="draft + sent" />

@@ -27,6 +27,7 @@ export async function dailySummary(locationId: string, days: number) {
     return {
       date: fmtDate(d),
       netSalesCents: net,
+      tipsCents: sale?.tipsCents ?? 0,
       guests: sale?.guestCount ?? 0,
       foodCostCents: foodCents,
       laborCostCents: laborCents,

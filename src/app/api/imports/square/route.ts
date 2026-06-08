@@ -69,7 +69,10 @@ export async function POST(req: Request) {
   const taxCol = findCol(sample, ["Tax", "Sales Tax", "Taxes"]);
   const cashCol = findCol(sample, ["Cash", "Cash Sales"]);
   const cardCol = findCol(sample, ["Card", "Credit", "Card Sales", "Card Payments"]);
-  const guestsCol = findCol(sample, ["Guests", "Covers", "Transactions", "Order Count"]);
+  // Each Square transaction counts as one guest — that's the closest signal
+  // available without per-customer identity tracking.
+  const guestsCol = findCol(sample, ["Guests", "Covers", "Transactions", "Order Count", "Txns", "Tickets"]);
+  const tipsCol = findCol(sample, ["Tips", "Tip", "Gratuity", "Gratuities"]);
 
   if (!dateCol) {
     return NextResponse.json({
@@ -100,12 +103,14 @@ export async function POST(req: Request) {
     }
     const netDollars = netCol ? parseMoney(r[netCol]) : parseMoney(r[grossCol!]);
     const taxDollars = taxCol ? parseMoney(r[taxCol]) : 0;
+    const tipsDollars = tipsCol ? parseMoney(r[tipsCol]) : 0;
     const guestCount = guestsCol ? parseInteger(r[guestsCol]) : 0;
     const data = {
       locationId: scope.locationId,
       businessDate,
       netSalesCents: toCents(netDollars),
       taxCents: toCents(taxDollars),
+      tipsCents: toCents(tipsDollars),
       guestCount,
       source: "POS" as const,
     };
@@ -154,7 +159,7 @@ export async function POST(req: Request) {
     userId: scope.userId,
     action: "square.sales.import",
     entityType: "DailySales",
-    diff: { created, updated, errorCount: errors.length, cashClosesTouched, columns: { dateCol, netCol, grossCol, taxCol, cashCol, cardCol, guestsCol } },
+    diff: { created, updated, errorCount: errors.length, cashClosesTouched, columns: { dateCol, netCol, grossCol, taxCol, cashCol, cardCol, guestsCol, tipsCol } },
   });
 
   return NextResponse.json({
@@ -162,6 +167,6 @@ export async function POST(req: Request) {
     updated,
     errors,
     cashClosesTouched,
-    detected: { dateCol, netCol, grossCol, taxCol, cashCol, cardCol, guestsCol },
+    detected: { dateCol, netCol, grossCol, taxCol, cashCol, cardCol, guestsCol, tipsCol },
   });
 }

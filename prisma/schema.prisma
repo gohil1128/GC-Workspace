@@ -433,6 +433,7 @@ model DailySales {
   businessDate  DateTime    // date only, midnight in business tz
   netSalesCents Int
   taxCents      Int         @default(0)
+  tipsCents     Int         @default(0)
   guestCount    Int         @default(0)
   source        SalesSource @default(MANUAL)
   eventId       String?

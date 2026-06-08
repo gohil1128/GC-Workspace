@@ -45,6 +45,7 @@ export default async function ReportsPage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Net Sales</TableHead>
+                  <TableHead className="text-right">Tips</TableHead>
                   <TableHead className="text-right">Guests</TableHead>
                   <TableHead className="text-right">Food $</TableHead>
                   <TableHead className="text-right">Food %</TableHead>
@@ -58,6 +59,7 @@ export default async function ReportsPage() {
                   <TableRow key={i}>
                     <TableCell className="font-medium">{r.date}</TableCell>
                     <TableCell className="text-right num">{formatMoney(r.netSalesCents)}</TableCell>
+                    <TableCell className="text-right num text-muted-foreground">{formatMoney(r.tipsCents)}</TableCell>
                     <TableCell className="text-right num text-muted-foreground">{r.guests}</TableCell>
                     <TableCell className="text-right num">{formatMoney(r.foodCostCents)}</TableCell>
                     <TableCell className={`text-right num ${r.foodPct > 35 ? "text-destructive" : ""}`}>{formatPercent(r.foodPct)}</TableCell>

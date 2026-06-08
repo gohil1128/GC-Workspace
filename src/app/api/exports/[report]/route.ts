@@ -17,10 +17,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ report:
   switch (report) {
     case "daily": {
       const data = await dailySummary(scope.locationId, 30);
-      columns = ["date", "netSales", "guests", "foodCost", "foodPct", "laborCost", "laborPct", "cashOverShort"];
+      columns = ["date", "netSales", "tips", "guests", "foodCost", "foodPct", "laborCost", "laborPct", "cashOverShort"];
       rows = data.map((r) => ({
         date: r.date,
         netSales: fromCents(r.netSalesCents).toFixed(2),
+        tips: fromCents(r.tipsCents).toFixed(2),
         guests: r.guests,
         foodCost: fromCents(r.foodCostCents).toFixed(2),
         foodPct: r.foodPct.toFixed(2),

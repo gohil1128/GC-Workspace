@@ -70,7 +70,8 @@ export function SquareImporter() {
             Tax: <code>{result.detected.taxCol ?? "—"}</code>,
             Cash: <code>{result.detected.cashCol ?? "—"}</code>,
             Card: <code>{result.detected.cardCol ?? "—"}</code>,
-            Guests: <code>{result.detected.guestsCol ?? "—"}</code>
+            Tips: <code>{result.detected.tipsCol ?? "—"}</code>,
+            Guests: <code>{result.detected.guestsCol ?? "—"}</code> <span className="text-2xs">(1 transaction = 1 guest)</span>
           </div>
           {result.errors?.length > 0 && (
             <div className="text-destructive">
