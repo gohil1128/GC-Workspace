@@ -29,9 +29,8 @@ export async function analyzeReceiptImage(
   const client = new Anthropic();
 
   const response = await client.messages.parse({
-    model: "claude-opus-4-8",
+    model: "claude-sonnet-4-6",
     max_tokens: 4096,
-    thinking: { type: "adaptive" },
     system: [
       {
         type: "text",
