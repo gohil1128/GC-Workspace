@@ -14,6 +14,7 @@ import {
   Settings,
   UtensilsCrossed,
   Lock,
+  ScanLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/labor", label: "Labor", icon: Clock },
   { href: "/cash", label: "Cash", icon: Banknote },
   { href: "/expenses", label: "Expenses", icon: Receipt },
+  { href: "/receipts", label: "AI receipts", icon: ScanLine },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
