@@ -1,0 +1,260 @@
+/* Strategy Lab — dark fintech theme */
+
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #0b1020;
+  --panel: #121a2e;
+  --panel-2: #0f1526;
+  --border: #232c44;
+  --text: #e6e9f2;
+  --muted: #9aa3b8;
+  --accent: #4f8ef7;
+  --warn: #f59e0b;
+  --danger: #fb7185;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(11, 16, 32, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand { display: flex; align-items: center; gap: 11px; }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #4f8ef7, #34d399);
+  color: #0b1020;
+  font-size: 15px;
+  font-weight: 700;
+}
+.brand-title { font-weight: 650; letter-spacing: -0.01em; }
+.brand-sub { font-size: 11.5px; color: var(--muted); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.status { font-size: 12px; color: var(--muted); }
+
+/* ---------- Layout ---------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 20px 40px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+#sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* ---------- Panels ---------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.collapsible summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  user-select: none;
+}
+.collapsible[open] summary { margin-bottom: 10px; }
+.hint { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.45; }
+
+/* ---------- Form controls ---------- */
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--muted); min-width: 0; }
+label.check { flex-direction: row; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); }
+
+input[type="number"], input[type="text"], select {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: flex-end;
+}
+.field-row:last-child { margin-bottom: 0; }
+.field-row > label { flex: 1; }
+
+.btn {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1020;
+  font-weight: 650;
+}
+.btn.primary:hover { filter: brightness(1.1); }
+
+/* ---------- Strategy cards ---------- */
+
+.strategy-card { padding-top: 12px; }
+
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.name-input {
+  font-weight: 600;
+  font-size: 13.5px !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  padding-left: 4px !important;
+}
+.name-input:hover, .name-input:focus { border-color: var(--border) !important; background: var(--panel-2) !important; }
+
+.card-actions { display: flex; gap: 4px; }
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 7px;
+  border-radius: 6px;
+}
+.icon-btn:hover { background: var(--panel-2); color: var(--text); }
+.icon-btn.danger:hover { color: var(--danger); }
+
+.sub-label { font-size: 11px; color: var(--muted); margin: 10px 0 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.alloc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+  align-items: end;
+}
+.alloc-cell span { font-size: 10px; color: var(--muted); display: block; margin-bottom: 3px; }
+.alloc-cell input { padding: 5px 6px !important; font-size: 12px !important; }
+.alloc-sum {
+  font-size: 11px;
+  color: var(--muted);
+  align-self: center;
+  justify-self: end;
+  padding-bottom: 6px;
+}
+.alloc-sum.warn { color: var(--warn); font-weight: 600; }
+
+.add-row { display: flex; gap: 8px; }
+.add-row select { flex: 1; }
+
+/* ---------- Market assumptions ---------- */
+
+.market-row {
+  display: grid;
+  grid-template-columns: 1fr 86px 86px;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 7px;
+}
+.market-name { font-size: 12.5px; padding-bottom: 8px; }
+.market-row label { font-size: 10.5px; }
+
+/* ---------- Summary table ---------- */
+
+.table-wrap { overflow-x: auto; }
+
+#summary { width: 100%; border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
+#summary th {
+  text-align: left;
+  font-weight: 550;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 12px 8px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: help;
+}
+#summary td { padding: 9px 12px 9px 0; border-bottom: 1px solid rgba(35, 44, 68, 0.55); }
+#summary tr:last-child td { border-bottom: none; }
+#summary .strong { font-weight: 650; }
+#summary .muted { color: var(--muted); }
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: 0;
+}
+
+/* ---------- Charts ---------- */
+
+.chart-card canvas { width: 100%; display: block; }
+#compareChart, #fanChart { height: 320px; }
+#histChart { height: 260px; }
+
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.chart-head h3 { margin: 0; }
+.chart-head select { width: auto; min-width: 180px; }
+
+.disclaimer {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 4px 6px 0;
+}
