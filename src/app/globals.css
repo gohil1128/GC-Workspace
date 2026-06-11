@@ -142,8 +142,63 @@
     -webkit-backdrop-filter: saturate(180%) blur(14px);
   }
 
+  /* Cinematic dashboard touches — orbs + cascade + scroll-snap */
+  @keyframes orb-drift {
+    0%   { transform: translate3d(0,0,0) scale(1); }
+    50%  { transform: translate3d(2%, -1%, 0) scale(1.04); }
+    100% { transform: translate3d(0,0,0) scale(1); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes ring-fill {
+    from { stroke-dashoffset: var(--ring-circumference, 251); }
+    to   { stroke-dashoffset: var(--ring-target, 0); }
+  }
+  .orb {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 9999px;
+    filter: blur(60px);
+    opacity: 0.55;
+    animation: orb-drift 14s ease-in-out infinite;
+  }
+  .orb--brand   { background: radial-gradient(circle at 30% 30%, hsl(var(--brand) / 0.75), transparent 60%); }
+  .orb--success { background: radial-gradient(circle at 70% 70%, hsl(var(--success) / 0.55), transparent 60%); }
+  .orb--warning { background: radial-gradient(circle at 50% 50%, hsl(var(--warning) / 0.45), transparent 60%); }
+
+  .cascade > * {
+    opacity: 0;
+    animation: fade-in-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .cascade > *:nth-child(1) { animation-delay: 0.04s; }
+  .cascade > *:nth-child(2) { animation-delay: 0.10s; }
+  .cascade > *:nth-child(3) { animation-delay: 0.16s; }
+  .cascade > *:nth-child(4) { animation-delay: 0.22s; }
+  .cascade > *:nth-child(5) { animation-delay: 0.28s; }
+  .cascade > *:nth-child(6) { animation-delay: 0.34s; }
+  .cascade > *:nth-child(7) { animation-delay: 0.40s; }
+  .cascade > *:nth-child(8) { animation-delay: 0.46s; }
+
+  /* Soft scroll-snap on the dashboard sections for that "premium magazine" pace */
+  .snap-dashboard {
+    scroll-snap-type: y proximity;
+  }
+  .snap-dashboard > section {
+    scroll-snap-align: start;
+    scroll-margin-top: 5rem;
+  }
+
+  /* Display-style numerals for the hero figure */
+  .display-num {
+    font-feature-settings: "tnum" 1, "ss01" 1, "cv11" 1;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .animate-page, .animate-fade { animation: none; }
+    .animate-page, .animate-fade, .orb, .cascade > * { animation: none; opacity: 1; }
   }
 }
