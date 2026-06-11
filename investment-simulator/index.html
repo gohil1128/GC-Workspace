@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strategy Lab — Investment Strategy Simulator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">▲</span>
+      <div>
+        <div class="brand-title">Strategy Lab</div>
+        <div class="brand-sub">Monte Carlo investment strategy simulator</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="status" class="status"></span>
+      <button id="run-btn" class="btn primary">Run</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar">
+      <section class="panel">
+        <h3>Simulation</h3>
+        <div class="field-row">
+          <label>Years <input type="number" min="1" max="60" step="1" data-global="years" value="30"></label>
+          <label>Simulations
+            <select data-global="sims">
+              <option value="250">250</option>
+              <option value="500">500</option>
+              <option value="1000" selected>1,000</option>
+              <option value="2500">2,500</option>
+              <option value="5000">5,000</option>
+            </select>
+          </label>
+          <label>Seed <input type="number" min="1" step="1" data-global="seed" value="42"></label>
+        </div>
+        <div class="field-row">
+          <label>Inflation %/yr <input type="number" min="0" max="20" step="0.5" data-global="inflationPct" value="2.5"></label>
+          <label>Goal <input type="number" min="0" step="50000" data-global="goal" value="1000000"></label>
+          <label>Currency
+            <select data-global="symbol">
+              <option value="$" selected>$</option>
+              <option value="₹">₹</option>
+              <option value="€">€</option>
+              <option value="£">£</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="check"><input type="checkbox" data-global="log"> Log scale charts</label>
+        </div>
+      </section>
+
+      <details class="panel collapsible">
+        <summary>Market assumptions (annual return / volatility)</summary>
+        <div id="market-rows"></div>
+        <p class="hint">Long-run nominal estimates — edit them to stress-test your own view of the future. Asset returns are correlated (stocks↔real estate, stocks↔EM, …).</p>
+      </details>
+
+      <div id="strategies"></div>
+
+      <div class="add-row">
+        <select id="preset-select">
+          <option value="custom">Custom strategy</option>
+          <option value="sip_stocks">SIP 100% stocks</option>
+          <option value="lumpsum">Lump sum, no SIP</option>
+          <option value="classic_6040">60/40 rebalanced</option>
+          <option value="stepup">Step-up SIP +10%/yr</option>
+          <option value="dip">Buy the dip (−15%)</option>
+          <option value="momentum">Momentum (6-mo trend)</option>
+          <option value="glide">Retirement glide path</option>
+          <option value="permanent">Permanent portfolio</option>
+          <option value="crypto">Crypto satellite 10%</option>
+        </select>
+        <button id="add-strategy" class="btn">+ Add</button>
+      </div>
+    </aside>
+
+    <main>
+      <section class="panel">
+        <h3>Outcomes after the full horizon</h3>
+        <div class="table-wrap">
+          <table id="summary">
+            <thead>
+              <tr>
+                <th>Strategy</th>
+                <th title="Total money you put in">Invested</th>
+                <th title="Median final value across simulations">Median final</th>
+                <th title="10th–90th percentile of final value">Typical range</th>
+                <th title="Median final value in today's money, after inflation">Real value</th>
+                <th title="Median final ÷ invested">Multiple</th>
+                <th title="Median of the worst peak-to-trough fall">Max drawdown</th>
+                <th title="Chance of ending below what you invested">P(loss)</th>
+                <th title="Chance of reaching your goal">P(goal)</th>
+                <th id="ruinHead" title="Chance of running out of money during withdrawals">P(ruin)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel chart-card">
+        <h3>Median wealth over time</h3>
+        <canvas id="compareChart" height="320"></canvas>
+      </section>
+
+      <section class="panel chart-card">
+        <div class="chart-head">
+          <h3>Range of outcomes</h3>
+          <select id="fanSelect"></select>
+        </div>
+        <canvas id="fanChart" height="320"></canvas>
+      </section>
+
+      <section class="panel chart-card">
+        <h3 id="histTitle">Distribution of final values</h3>
+        <canvas id="histChart" height="260"></canvas>
+      </section>
+
+      <p class="disclaimer">
+        Educational tool — simulated outcomes from simplified statistical assumptions, not financial advice.
+        Real markets have fat tails, regime changes, taxes and fees that this model does not capture.
+      </p>
+    </main>
+  </div>
+
+  <script src="js/engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
