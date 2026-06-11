@@ -1,13 +1,18 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Search } from "lucide-react";
+import { Plus, Trash2, Search, Sparkles } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { addInvoiceItemAction, removeInvoiceItemAction } from "@/modules/invoices/actions";
+import { quickCreateIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
+
+const COMMON_UNITS = ["lb", "kg", "g", "oz", "ea", "case", "gal", "L", "ml", "pack", "box", "bag"];
 
 type Item = {
   id: string;
@@ -34,6 +39,45 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
   const [picked, setPicked] = React.useState<Ingredient | null>(null);
   const [qty, setQty] = React.useState("1");
   const [cost, setCost] = React.useState("0");
+
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [creating, setCreating] = React.useState(false);
+  const [newName, setNewName] = React.useState("");
+  const [newUnit, setNewUnit] = React.useState("ea");
+  const [newCategory, setNewCategory] = React.useState("");
+  const [newCost, setNewCost] = React.useState("");
+
+  const openCreate = () => {
+    setNewName(q.trim());
+    setNewUnit("ea");
+    setNewCategory("");
+    setNewCost("");
+    setCreateOpen(true);
+  };
+
+  const submitCreate = async () => {
+    if (!newName.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
+    if (!newUnit.trim()) { toast({ title: "Unit is required", variant: "destructive" }); return; }
+    setCreating(true);
+    try {
+      const created = await quickCreateIngredientAction({
+        name: newName,
+        unit: newUnit,
+        category: newCategory || null,
+        lastCostDollars: Number(newCost) || 0,
+      });
+      toast({ title: `${created.name} created`, description: "Auto-filled below — adjust qty and add it." });
+      setCreateOpen(false);
+      setPicked(created);
+      setQ(created.name);
+      setCost((created.lastCostCents / 100).toFixed(2));
+      setQty("1");
+    } catch (err: any) {
+      toast({ title: "Could not create", description: String(err?.message ?? err), variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -135,9 +179,9 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
                 <Input className="pl-7" placeholder="e.g. milk, MLK01" value={q} onChange={(e) => { setQ(e.target.value); setPicked(null); }} />
               </div>
               {q && !picked && (
-                <div className="rounded border bg-popover max-h-48 overflow-y-auto text-sm">
+                <div className="rounded border bg-popover max-h-56 overflow-y-auto text-sm">
                   {results.length === 0 && (
-                    <div className="p-2 text-xs text-muted-foreground">No matches.</div>
+                    <div className="p-2 text-xs text-muted-foreground">No matches — add this as a new ingredient below.</div>
                   )}
                   {results.map((ing) => (
                     <button
@@ -155,6 +199,14 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
                       <Badge variant="muted" className="num shrink-0">${(ing.lastCostCents/100).toFixed(2)}</Badge>
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="sticky bottom-0 w-full text-left px-2 py-2 border-t bg-popover hover:bg-accent flex items-center gap-2 text-brand font-medium"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Create &quot;{q.trim() || "new ingredient"}&quot;
+                  </button>
                 </div>
               )}
               {picked && (
@@ -183,6 +235,70 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
           </div>
         </div>
       )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Create new ingredient</DialogTitle></DialogHeader>
+          <div className="grid gap-3 text-sm">
+            <div className="grid gap-1.5">
+              <Label htmlFor="qi-name">Name</Label>
+              <Input
+                id="qi-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Whole milk"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="qi-unit">Unit</Label>
+                <Input
+                  id="qi-unit"
+                  value={newUnit}
+                  onChange={(e) => setNewUnit(e.target.value)}
+                  list="qi-unit-list"
+                  placeholder="lb, gal, ea..."
+                />
+                <datalist id="qi-unit-list">
+                  {COMMON_UNITS.map((u) => <option key={u} value={u} />)}
+                </datalist>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="qi-cost">Last cost ($/unit)</Label>
+                <Input
+                  id="qi-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newCost}
+                  onChange={(e) => setNewCost(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="qi-cat">Category (optional)</Label>
+              <Input
+                id="qi-cat"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Dairy, Produce, Dry goods..."
+              />
+            </div>
+            <p className="text-2xs text-muted-foreground">
+              Par level, reorder point, and SKU default to zero — you can refine these later from{" "}
+              <span className="font-medium">Inventory</span>.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+            <Button type="button" onClick={submitCreate} disabled={creating}>
+              {creating ? "Creating..." : "Create & use"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
