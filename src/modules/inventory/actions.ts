@@ -173,6 +173,46 @@ export async function recordWasteAction(formData: FormData) {
   return { ok: true };
 }
 
+export async function quickCreateIngredientAction(input: {
+  name: string;
+  unit: string;
+  category?: string | null;
+  lastCostDollars?: number;
+  supplierId?: string | null;
+}): Promise<{ id: string; name: string; sku: string | null; unit: string; category: string | null; lastCostCents: number; supplierId: string | null }> {
+  const scope = await getScope();
+  const name = input.name.trim();
+  const unit = input.unit.trim();
+  if (!name) throw new Error("Name is required");
+  if (!unit) throw new Error("Unit is required");
+  const lastCostCents = toCents(input.lastCostDollars ?? 0);
+  const created = await prisma.ingredient.create({
+    data: {
+      businessId: scope.businessId,
+      name,
+      unit,
+      category: input.category?.trim() || null,
+      supplierId: input.supplierId || null,
+      parLevel: 0,
+      reorderPoint: 0,
+      reorderQty: 0,
+      lastCostCents,
+      avgCostCents: lastCostCents,
+    },
+    select: { id: true, name: true, sku: true, unit: true, category: true, lastCostCents: true, supplierId: true },
+  });
+  await writeAudit({
+    businessId: scope.businessId,
+    userId: scope.userId,
+    action: "ingredient.quick_create",
+    entityType: "Ingredient",
+    entityId: created.id,
+    diff: { name: created.name, unit: created.unit, source: "invoice_form" },
+  });
+  revalidatePath("/inventory");
+  return created;
+}
+
 export async function deleteIngredientAction(id: string) {
   const scope = await getScope();
   const ing = await prisma.ingredient.findFirst({ where: { id, businessId: scope.businessId } });
