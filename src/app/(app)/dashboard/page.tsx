@@ -279,6 +279,7 @@ export default async function DashboardPage() {
             />
             <TopItems
               items={topItems.items}
+              byCategory={topItems.byCategory}
               totalCents={topItems.totalCents}
               totalQty={topItems.totalQty}
             />

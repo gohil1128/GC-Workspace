@@ -1,5 +1,6 @@
 import { formatMoney, formatPercent } from "@/lib/money";
 import { Sparkles } from "lucide-react";
+import { categoryStyle } from "@/modules/items/categories";
 
 type Item = {
   itemName: string;
@@ -10,21 +11,21 @@ type Item = {
   sharePct: number;
 };
 
-// Catetgory → soft accent color. Keep it warm + on-brand.
-function categoryStyle(category: string | null) {
-  const c = (category ?? "").toLowerCase();
-  if (c.includes("hot")) return { dot: "bg-destructive", text: "text-destructive" };
-  if (c.includes("cold")) return { dot: "bg-brand", text: "text-brand" };
-  if (c.includes("food")) return { dot: "bg-warning", text: "text-warning" };
-  return { dot: "bg-muted-foreground/50", text: "text-muted-foreground" };
-}
+type CategoryRollup = {
+  category: string;
+  netSalesCents: number;
+  qty: number;
+  sharePct: number;
+};
 
 export function TopItems({
   items,
+  byCategory = [],
   totalCents,
   totalQty,
 }: {
   items: Item[];
+  byCategory?: CategoryRollup[];
   totalCents: number;
   totalQty: number;
 }) {
@@ -51,6 +52,40 @@ export function TopItems({
         <Stat label="Item revenue" value={formatMoney(totalCents)} />
         <Stat label="Top item share" value={formatPercent(topShare)} />
       </div>
+
+      {/* Category rollup — Hot Chai / Cold Chais / Food / Tips / Other */}
+      {byCategory.length > 0 && (
+        <div className="border-b px-4 py-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">By category</span>
+            <a href="/settings/integrations" className="text-2xs text-muted-foreground hover:text-foreground">Edit categories →</a>
+          </div>
+          {/* Stacked share bar */}
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            {byCategory.map((c) => (
+              <div
+                key={c.category}
+                className={`${categoryStyle(c.category).bar} h-full`}
+                style={{ width: `${c.sharePct}%` }}
+                title={`${c.category}: ${formatMoney(c.netSalesCents)} (${formatPercent(c.sharePct)})`}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {byCategory.map((c) => {
+              const s = categoryStyle(c.category);
+              return (
+                <div key={c.category} className="flex items-center gap-1.5 text-xs">
+                  <span className={`h-2 w-2 rounded-full ${s.dot}`} />
+                  <span className="font-medium">{c.category}</span>
+                  <span className="num text-muted-foreground">{formatMoney(c.netSalesCents)}</span>
+                  <span className="num text-2xs text-muted-foreground/70">({formatPercent(c.sharePct)})</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <ul className="divide-y">
         {items.map((it, idx) => {
           const style = categoryStyle(it.category);
