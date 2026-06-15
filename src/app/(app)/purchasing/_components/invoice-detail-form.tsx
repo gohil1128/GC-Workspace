@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { updateInvoiceAction } from "@/modules/invoices/actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { updateInvoiceAction, setInvoiceEventAction } from "@/modules/invoices/actions";
 import { toast } from "@/components/ui/use-toast";
+
+type Event = { id: string; name: string; color: string | null };
 
 type Initial = {
   supplierName: string;
@@ -17,6 +20,7 @@ type Initial = {
   invoiceDate: string;
   dateReceived: string;
   internalMemo: string;
+  eventId: string | null;
   subtotalDollars: number;
   gstDollars: number;
   pstDollars: number;
@@ -29,9 +33,11 @@ type Initial = {
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-export function InvoiceDetailForm({ invoiceId, initial, readOnly }: { invoiceId: string; initial: Initial; readOnly: boolean }) {
+export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }: { invoiceId: string; initial: Initial; events?: Event[]; readOnly: boolean }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
+  const [eventPending, startEvent] = React.useTransition();
+  const [eventId, setEventId] = React.useState<string>(initial.eventId ?? "none");
   const [invoiceNumber, setInvoiceNumber] = React.useState(initial.invoiceNumber);
   const [invoiceDate, setInvoiceDate] = React.useState(initial.invoiceDate);
   const [dateReceived, setDateReceived] = React.useState(initial.dateReceived);
@@ -40,6 +46,20 @@ export function InvoiceDetailForm({ invoiceId, initial, readOnly }: { invoiceId:
   const [pst, setPst] = React.useState(String(initial.pstDollars));
   const [shipping, setShipping] = React.useState(String(initial.shippingDollars));
   const [rebate, setRebate] = React.useState(String(initial.rebateDollars));
+
+  // Event tagging works independently of open/closed state — retag any invoice.
+  const onEventChange = (next: string) => {
+    setEventId(next);
+    startEvent(async () => {
+      try {
+        await setInvoiceEventAction(invoiceId, next === "none" ? null : next);
+        toast({ title: "Event updated" });
+        router.refresh();
+      } catch (err: any) {
+        toast({ title: "Could not set event", description: String(err?.message ?? err), variant: "destructive" });
+      }
+    });
+  };
 
   const liveTotal =
     initial.subtotalDollars +
@@ -102,6 +122,27 @@ export function InvoiceDetailForm({ invoiceId, initial, readOnly }: { invoiceId:
         <Read label="Total" value={fmt(liveTotal)} bold accent />
         <Read label="Items / Qty Received" value={`${initial.numberOfItems} · ${initial.qtyReceived.toFixed(2)}`} />
       </div>
+
+      {events.length > 0 && (
+        <div className="grid gap-1.5 md:max-w-xs">
+          <Label htmlFor="inv-event">Event {eventPending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
+          <Select value={eventId} onValueChange={onEventChange}>
+            <SelectTrigger id="inv-event"><SelectValue placeholder="No event" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No event</SelectItem>
+              {events.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                    {e.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
+        </div>
+      )}
 
       <div className="grid gap-1.5">
         <Label htmlFor="memo">Internal Memo</Label>

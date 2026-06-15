@@ -99,6 +99,7 @@ export default async function InvoicesPage({
               <TableRow>
                 <TableHead><Link href={buildSortHref("invoiceNumber")} className="hover:text-foreground">Invoice #<SortIcon k="invoiceNumber" /></Link></TableHead>
                 <TableHead><Link href={buildSortHref("supplier")} className="hover:text-foreground">Supplier<SortIcon k="supplier" /></Link></TableHead>
+                <TableHead>Event</TableHead>
                 <TableHead><Link href={buildSortHref("invoiceDate")} className="hover:text-foreground">Date<SortIcon k="invoiceDate" /></Link></TableHead>
                 <TableHead>Received</TableHead>
                 <TableHead className="text-right">Items</TableHead>
@@ -118,6 +119,16 @@ export default async function InvoicesPage({
                     </Link>
                   </TableCell>
                   <TableCell>{i.supplier.name}</TableCell>
+                  <TableCell>
+                    {i.event ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: i.event.color ?? "hsl(var(--muted-foreground))" }} />
+                        {i.event.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{fmtDate(i.invoiceDate)}</TableCell>
                   <TableCell className="text-muted-foreground">{fmtDate(i.dateReceived)}</TableCell>
                   <TableCell className="text-right num">{i._count.items}</TableCell>
@@ -146,7 +157,7 @@ export default async function InvoicesPage({
               ))}
               {sorted.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-10">
+                  <TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-10">
                     <FileText className="h-6 w-6 mx-auto mb-2 opacity-40" />
                     {activeFilterCount > 0
                       ? "No invoices match the current filters. Adjust filters above."

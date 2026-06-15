@@ -25,6 +25,7 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
     include: {
       supplier: { select: { name: true } },
       createdBy: { select: { name: true } },
+      event: { select: { id: true, name: true, color: true } },
       _count: { select: { items: true } },
     },
     orderBy: { invoiceDate: "desc" },

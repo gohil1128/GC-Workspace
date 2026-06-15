@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, Lock, Unlock } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getInvoice } from "@/modules/invoices/queries";
+import { listActiveEvents } from "@/modules/events/queries";
 import { closeInvoiceAction, deleteInvoiceAction } from "@/modules/invoices/actions";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const scope = await getScope();
   const inv = await getInvoice(scope.locationId, id);
   if (!inv) notFound();
+  const events = await listActiveEvents(scope.businessId);
+  const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
 
   const numberOfItems = inv.items.length;
   const qtyReceived = inv.items.reduce((a, it) => a + it.qty, 0);
@@ -68,6 +71,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <InvoiceDetailForm
               invoiceId={inv.id}
               readOnly={!!inv.closedAt}
+              events={eventProps}
               initial={{
                 supplierName: inv.supplier.name,
                 locationName: inv.location.name,
@@ -77,6 +81,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 invoiceDate: inv.invoiceDate.toISOString().slice(0, 10),
                 dateReceived: inv.dateReceived.toISOString().slice(0, 10),
                 internalMemo: inv.internalMemo ?? "",
+                eventId: inv.eventId ?? null,
                 subtotalDollars: fromCents(inv.subtotalCents),
                 gstDollars: fromCents(inv.gstCents),
                 pstDollars: fromCents(inv.pstCents),

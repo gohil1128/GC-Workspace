@@ -7,6 +7,7 @@ export const createInvoiceSchema = z.object({
   dateReceived: z.string().min(1),
   internalMemo: z.string().optional().nullable(),
   poId: z.string().optional().nullable(),
+  eventId: z.string().optional().nullable(),
 });
 
 export const updateInvoiceTotalsSchema = z.object({
@@ -18,6 +19,7 @@ export const updateInvoiceTotalsSchema = z.object({
   invoiceDate: z.string().min(1),
   dateReceived: z.string().min(1),
   internalMemo: z.string().optional().nullable(),
+  eventId: z.string().optional().nullable(),
 });
 
 export const addInvoiceItemSchema = z.object({
