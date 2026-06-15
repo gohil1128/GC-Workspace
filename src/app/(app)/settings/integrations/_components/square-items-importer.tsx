@@ -12,8 +12,11 @@ type Result = {
   days: { created: number; updated: number; total: number };
   items: { created: number; updated: number; total: number };
   uniqueItems: string[];
+  cashSplit: { detected: boolean; cashClosesTouched: number; cashCents: number; cardCents: number };
   errors: { row: number; reason: string }[];
 };
+
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 type Event = { id: string; name: string; color: string | null };
 
@@ -112,6 +115,15 @@ export function SquareItemsImporter({
             {result.days.total} day{result.days.total === 1 ? "" : "s"} · {result.items.total} item rollups · {result.uniqueItems.length} unique items
             {selectedEvent && <span className="text-muted-foreground"> · tagged &quot;{selectedEvent.name}&quot;</span>}
           </div>
+          {result.cashSplit.detected && (
+            <div className="text-muted-foreground">
+              <span className="font-medium text-foreground">Cash tracking:</span>{" "}
+              cash {money(result.cashSplit.cashCents)} · card {money(result.cashSplit.cardCents)}
+              {result.cashSplit.cashClosesTouched > 0
+                ? ` · pre-filled ${result.cashSplit.cashClosesTouched} cash close${result.cashSplit.cashClosesTouched === 1 ? "" : "s"}`
+                : " · no matching cash close to pre-fill yet"}
+            </div>
+          )}
           <div className="flex flex-wrap gap-1">
             {result.uniqueItems.map((name) => (
               <Badge key={name} variant="muted" className="text-2xs gap-1">
