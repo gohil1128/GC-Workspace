@@ -26,6 +26,8 @@ export async function dailySummary(locationId: string, days: number) {
     const net = sale?.netSalesCents ?? 0;
     return {
       date: fmtDate(d),
+      iso: key,
+      hasSales: !!sale,
       netSalesCents: net,
       tipsCents: sale?.tipsCents ?? 0,
       guests: sale?.guestCount ?? 0,
