@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getScope } from "@/lib/scope";
 import { listActiveEvents } from "@/modules/events/queries";
 import { listImportedDays } from "@/modules/imports/queries";
+import { listItemCatalog } from "@/modules/items/queries";
 import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { SquareImporter } from "./_components/square-importer";
 import { SquareItemsImporter } from "./_components/square-items-importer";
 import { SquareItemSummaryImporter } from "./_components/square-item-summary-importer";
 import { ImportedDataManager } from "./_components/imported-data-manager";
+import { ItemsManager } from "./_components/items-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,14 @@ export default async function IntegrationsPage() {
   const defaultEventId = broadway?.id;
 
   const importedDays = await listImportedDays(scope.locationId);
+  const itemCatalog = await listItemCatalog(scope.locationId);
+  const itemRows = itemCatalog.map((i) => ({
+    itemName: i.itemName,
+    category: i.category,
+    qty: i.qty,
+    netSalesDollars: i.netSalesCents / 100,
+    dayCount: i.dayCount,
+  }));
   const managerDays = importedDays.map((d) => ({
     iso: d.iso,
     label: fmtDate(d.businessDate),
@@ -97,6 +107,21 @@ export default async function IntegrationsPage() {
           </CardHeader>
           <CardContent>
             <ImportedDataManager days={managerDays} eventGroups={eventGroups} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Items &amp; categories <Badge variant="brand" className="ml-2">Categorize</Badge></CardTitle>
+            <CardDescription>
+              Every item from your imported sales. Assign each one to a category — Hot Chai,
+              Cold Chais, Food, Tips, or Other — and the dashboard&apos;s category breakdown updates
+              automatically. Items that came in as &quot;Uncategorized&quot; or &quot;Custom Amount&quot;
+              default to <strong>Other</strong>. You can also delete an item&apos;s sales here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ItemsManager items={itemRows} />
           </CardContent>
         </Card>
 

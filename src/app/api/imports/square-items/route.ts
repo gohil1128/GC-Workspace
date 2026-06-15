@@ -248,7 +248,9 @@ export async function POST(req: Request) {
       },
     });
     if (existing) {
-      await prisma.salesItem.update({ where: { id: existing.id }, data });
+      // Preserve a manually-assigned category across re-imports.
+      const preserved = existing.category ? { ...data, category: existing.category } : data;
+      await prisma.salesItem.update({ where: { id: existing.id }, data: preserved });
       itemUpdated++;
     } else {
       await prisma.salesItem.create({ data });
