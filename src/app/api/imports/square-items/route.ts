@@ -85,6 +85,10 @@ export async function POST(req: Request) {
   const grossCol = findCol(sample, ["Gross Sales", "Gross", "Total"]);
   const taxCol = findCol(sample, ["Tax", "Sales Tax", "Taxes"]);
   const txCol = findCol(sample, ["Transaction ID", "Order ID", "Receipt Number"]);
+  // Payment method signal: Square's per-item export carries a "Card Brand"
+  // column (Visa / MasterCard / Interac / Amex … for card, blank for cash).
+  // We use it to split each day's revenue into cash vs card for cash tracking.
+  const cardBrandCol = findCol(sample, ["Card Brand", "Card Type", "Payment Method", "Tender", "Tender Type"]);
 
   if (!dateCol || !itemCol) {
     return NextResponse.json({
@@ -105,6 +109,8 @@ export async function POST(req: Request) {
     businessDate: Date;
     netCents: number;
     taxCents: number;
+    cashCents: number;
+    cardCents: number;
     txIds: Set<string>;
   }>();
   const itemAgg = new Map<ItemKey, {
@@ -135,16 +141,23 @@ export async function POST(req: Request) {
     const net = netCol ? parseMoney(r[netCol]) : parseMoney(r[grossCol!]);
     const tax = taxCol ? parseMoney(r[taxCol]) : 0;
     const tx = txCol ? String(r[txCol] ?? "").trim() : "";
+    const cardBrand = cardBrandCol ? String(r[cardBrandCol] ?? "").trim() : "";
+    const isCash = cardBrand === ""; // blank Card Brand ⇒ cash tender
+    const grossLineCents = toCents(net) + toCents(tax); // money that actually moved
 
     const dayKey = date.toISOString();
     const day = dayAgg.get(dayKey) ?? {
       businessDate: date,
       netCents: 0,
       taxCents: 0,
+      cashCents: 0,
+      cardCents: 0,
       txIds: new Set<string>(),
     };
     day.netCents += toCents(net);
     day.taxCents += toCents(tax);
+    if (isCash) day.cashCents += grossLineCents;
+    else day.cardCents += grossLineCents;
     if (tx) day.txIds.add(tx);
     dayAgg.set(dayKey, day);
 
@@ -170,6 +183,8 @@ export async function POST(req: Request) {
   let dayUpdated = 0;
   let itemCreated = 0;
   let itemUpdated = 0;
+  let cashClosesTouched = 0;
+  const hasPaymentSplit = cardBrandCol !== null;
 
   for (const day of dayAgg.values()) {
     const data = {
@@ -190,6 +205,24 @@ export async function POST(req: Request) {
     } else {
       await prisma.dailySales.create({ data });
       dayCreated++;
+    }
+
+    // If we could read a payment-method column, pre-fill the matching cash
+    // close's cash/credit split for better cash-transaction tracking.
+    if (hasPaymentSplit && (day.cashCents > 0 || day.cardCents > 0)) {
+      const close = await prisma.cashClose.findFirst({
+        where: { locationId: scope.locationId, businessDate: day.businessDate },
+      });
+      if (close) {
+        const expectedCents = close.openingCents + day.cashCents + day.cardCents;
+        const overShortCents =
+          day.cashCents + day.cardCents + close.depositCents - close.openingCents - expectedCents;
+        await prisma.cashClose.update({
+          where: { id: close.id },
+          data: { cashCents: day.cashCents, creditCents: day.cardCents, expectedCents, overShortCents },
+        });
+        cashClosesTouched++;
+      }
     }
   }
 
@@ -229,7 +262,7 @@ export async function POST(req: Request) {
     action: "square.items.import",
     entityType: "SalesItem",
     diff: {
-      dayCreated, dayUpdated, itemCreated, itemUpdated,
+      dayCreated, dayUpdated, itemCreated, itemUpdated, cashClosesTouched,
       errorCount: errors.length,
       uniqueDays: dayAgg.size,
       uniqueItems: new Set([...itemAgg.values()].map((i) => i.itemName)).size,
@@ -242,6 +275,14 @@ export async function POST(req: Request) {
     days: { created: dayCreated, updated: dayUpdated, total: dayAgg.size },
     items: { created: itemCreated, updated: itemUpdated, total: itemAgg.size },
     uniqueItems: [...new Set([...itemAgg.values()].map((i) => i.itemName))].sort(),
+    cashSplit: hasPaymentSplit
+      ? {
+          detected: true,
+          cashClosesTouched,
+          cashCents: [...dayAgg.values()].reduce((a, d) => a + d.cashCents, 0),
+          cardCents: [...dayAgg.values()].reduce((a, d) => a + d.cardCents, 0),
+        }
+      : { detected: false, cashClosesTouched: 0, cashCents: 0, cardCents: 0 },
     errors,
   });
 }

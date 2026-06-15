@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getScope } from "@/lib/scope";
 import { listActiveEvents } from "@/modules/events/queries";
+import { listImportedDays } from "@/modules/imports/queries";
+import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SalesImporter } from "./_components/sales-importer";
 import { SquareImporter } from "./_components/square-importer";
 import { SquareItemsImporter } from "./_components/square-items-importer";
+import { ImportedDataManager } from "./_components/imported-data-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,28 @@ export default async function IntegrationsPage() {
   const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
   const broadway = events.find((e) => /broadway/i.test(e.name));
   const defaultEventId = broadway?.id;
+
+  const importedDays = await listImportedDays(scope.locationId);
+  const managerDays = importedDays.map((d) => ({
+    iso: d.iso,
+    label: fmtDate(d.businessDate),
+    netSalesDollars: d.netSalesCents / 100,
+    guestCount: d.guestCount,
+    itemCount: d.itemCount,
+    itemQty: d.itemQty,
+    source: d.source,
+    event: d.event,
+  }));
+  // Group imported days by event for the quick-delete chips.
+  const eventGroupMap = new Map<string, { id: string; name: string; color: string | null; days: number; netDollars: number }>();
+  for (const d of importedDays) {
+    if (!d.event) continue;
+    const g = eventGroupMap.get(d.event.id) ?? { id: d.event.id, name: d.event.name, color: d.event.color, days: 0, netDollars: 0 };
+    g.days += 1;
+    g.netDollars += d.netSalesCents / 100;
+    eventGroupMap.set(d.event.id, g);
+  }
+  const eventGroups = [...eventGroupMap.values()];
   return (
     <div>
       <PageHeader title="Integrations" description="CSV import works · external APIs are wired as placeholders" />
@@ -32,12 +57,27 @@ export default async function IntegrationsPage() {
             <CardDescription>
               Upload Square&apos;s <em>Sales by Item</em> CSV — one row per line item per transaction.
               We aggregate daily totals AND keep a per-item breakdown so the dashboard can show
-              <strong> what sold and how much</strong>.
+              <strong> what sold and how much</strong>. If the file has a Card Brand column we also
+              split <strong>cash vs card</strong> and pre-fill that day&apos;s cash close.
               {broadway && <span className="block mt-1 text-brand">Defaults to your &quot;{broadway.name}&quot; event.</span>}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <SquareItemsImporter events={eventProps} defaultEventId={defaultEventId} />
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Manage imported data <Badge variant="muted" className="ml-2">Delete</Badge></CardTitle>
+            <CardDescription>
+              Every imported sales day at this location. Delete a single day, wipe a whole event,
+              or clear everything to re-import from scratch. Deleting here removes sales totals and
+              item rollups (your events themselves stay).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ImportedDataManager days={managerDays} eventGroups={eventGroups} />
           </CardContent>
         </Card>
 
