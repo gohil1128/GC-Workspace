@@ -545,6 +545,7 @@ model Event {
   cashCloses  CashClose[]
   expenses    Expense[]
   salesItems  SalesItem[]
+  invoices    Invoice[]
 
   @@index([businessId, startDate])
 }
@@ -595,6 +596,7 @@ model Invoice {
   locationId    String
   supplierId    String
   poId          String?
+  eventId       String?
   invoiceNumber String
   invoiceDate   DateTime
   dateReceived  DateTime
@@ -613,12 +615,14 @@ model Invoice {
   location  Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
   supplier  Supplier       @relation(fields: [supplierId], references: [id])
   po        PurchaseOrder? @relation(fields: [poId], references: [id])
+  event     Event?         @relation(fields: [eventId], references: [id])
   createdBy User           @relation(fields: [createdById], references: [id])
   items     InvoiceItem[]
 
   @@unique([supplierId, invoiceNumber])
   @@index([locationId, invoiceDate])
   @@index([supplierId])
+  @@index([eventId])
 }
 
 model InvoiceItem {

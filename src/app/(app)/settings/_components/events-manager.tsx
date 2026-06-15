@@ -1,14 +1,13 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Calendar } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Calendar, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { DeleteButton } from "@/components/delete-button";
 import { createEventAction, updateEventAction, deleteEventAction } from "@/modules/events/actions";
 import { toast } from "@/components/ui/use-toast";
 
@@ -37,12 +36,7 @@ export function EventsManager({ events }: { events: Ev[] }) {
             </div>
             {!e.isActive && <Badge variant="muted">Inactive</Badge>}
             <EditEventButton event={e} />
-            <DeleteButton
-              action={() => deleteEventAction(e.id)}
-              itemLabel="event"
-              itemName={e.name}
-              confirmText={`This will remove "${e.name}". Sales and cash closes tagged with it will keep their data but lose the tag.`}
-            />
+            <TwoStepDeleteEventButton event={e} />
           </div>
         ))}
         {events.length === 0 && (
@@ -124,6 +118,96 @@ function NewEventButton() {
             <Button type="submit" disabled={pending}>{pending ? "Saving..." : "Create event"}</Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Two-stage confirmation: first a plain "are you sure", then a hard warning
+// that types out exactly what gets deleted (sales + item sales) vs preserved
+// (invoices + cash closes). The operator must confirm twice to proceed.
+function TwoStepDeleteEventButton({ event }: { event: Ev }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [step, setStep] = React.useState<1 | 2>(1);
+  const [pending, start] = React.useTransition();
+
+  const reset = () => { setStep(1); };
+
+  const onConfirm = () => {
+    if (step === 1) { setStep(2); return; }
+    start(async () => {
+      try {
+        await deleteEventAction(event.id);
+        toast({ title: "Event deleted", description: `"${event.name}" and its sales data were removed. Invoices were kept.` });
+        setOpen(false);
+        setStep(1);
+        router.refresh();
+      } catch (err: any) {
+        toast({ title: "Delete failed", description: String(err?.message ?? err), variant: "destructive" });
+      }
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" aria-label={`Delete ${event.name}`}>
+          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        {step === 1 ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                Delete &quot;{event.name}&quot;?
+              </DialogTitle>
+              <DialogDescription>
+                You&apos;re about to delete this event. The next screen will confirm exactly what gets removed.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={onConfirm}>Continue</Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Last warning — this cannot be undone
+              </DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-3 pt-1">
+                  <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                    <div className="font-medium text-destructive mb-1">Will be permanently deleted:</div>
+                    <ul className="list-disc list-inside text-foreground/80 space-y-0.5">
+                      <li>All <strong>daily sales</strong> tagged to &quot;{event.name}&quot;</li>
+                      <li>All <strong>per-item sales</strong> tagged to &quot;{event.name}&quot;</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-lg border border-success/40 bg-success/5 p-3 text-sm">
+                    <div className="font-medium text-success mb-1">Will be kept (just untagged):</div>
+                    <ul className="list-disc list-inside text-foreground/80 space-y-0.5">
+                      <li>All <strong>invoices</strong></li>
+                      <li>All <strong>cash closes</strong></li>
+                    </ul>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => { setStep(1); }} disabled={pending}>Back</Button>
+              <Button variant="destructive" onClick={onConfirm} disabled={pending}>
+                {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Delete event &amp; its sales
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

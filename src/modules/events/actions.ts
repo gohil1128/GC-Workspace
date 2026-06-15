@@ -77,14 +77,23 @@ export async function deleteEventAction(id: string) {
   const scope = await getScope();
   const ev = await prisma.event.findFirst({ where: { id, businessId: scope.businessId } });
   if (!ev) throw new Error("Not found");
-  await prisma.$transaction([
-    prisma.dailySales.updateMany({ where: { eventId: id }, data: { eventId: null } }),
+  // Destructive by design: deleting an event also deletes the sales data tagged
+  // to it (DailySales + per-item SalesItem). Invoices and cash closes are
+  // PRESERVED — they're financial records — and simply lose the event tag.
+  const [salesDeleted, itemsDeleted] = await prisma.$transaction([
+    prisma.dailySales.deleteMany({ where: { eventId: id } }),
+    prisma.salesItem.deleteMany({ where: { eventId: id } }),
     prisma.cashClose.updateMany({ where: { eventId: id }, data: { eventId: null } }),
+    prisma.invoice.updateMany({ where: { eventId: id }, data: { eventId: null } }),
     prisma.event.delete({ where: { id } }),
   ]);
   const cookieStore = await cookies();
   if (cookieStore.get(EVENT_COOKIE)?.value === id) cookieStore.delete(EVENT_COOKIE);
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "event.delete", entityType: "Event", entityId: id, diff: { name: ev.name } });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "event.delete", entityType: "Event", entityId: id,
+    diff: { name: ev.name, salesDeleted: salesDeleted.count, itemsDeleted: itemsDeleted.count },
+  });
   revalidatePath("/", "layout");
 }
 

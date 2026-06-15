@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listSuppliersForInvoice } from "@/modules/invoices/queries";
+import { listActiveEvents } from "@/modules/events/queries";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,11 @@ export const dynamic = "force-dynamic";
 
 export default async function NewInvoicePage() {
   const scope = await getScope();
-  const suppliers = await listSuppliersForInvoice(scope.businessId);
+  const [suppliers, events] = await Promise.all([
+    listSuppliersForInvoice(scope.businessId),
+    listActiveEvents(scope.businessId),
+  ]);
+  const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div>
@@ -28,6 +33,7 @@ export default async function NewInvoicePage() {
           <CardContent>
             <NewInvoiceForm
               suppliers={suppliers}
+              events={eventProps}
               locationName={scope.locationName}
               defaultDate={today}
             />

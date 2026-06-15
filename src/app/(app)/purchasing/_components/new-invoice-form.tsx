@@ -10,13 +10,16 @@ import { createInvoiceAction } from "@/modules/invoices/actions";
 import { toast } from "@/components/ui/use-toast";
 
 type Supplier = { id: string; name: string };
+type Event = { id: string; name: string; color: string | null };
 
 export function NewInvoiceForm({
   suppliers,
+  events = [],
   locationName,
   defaultDate,
 }: {
   suppliers: Supplier[];
+  events?: Event[];
   locationName: string;
   defaultDate: string;
 }) {
@@ -25,6 +28,7 @@ export function NewInvoiceForm({
   const [supplierId, setSupplierId] = React.useState("");
   const [openPos, setOpenPos] = React.useState<{ id: string; orderedAt: string; totalCents: number }[]>([]);
   const [poId, setPoId] = React.useState<string>("");
+  const [eventId, setEventId] = React.useState<string>("none");
 
   React.useEffect(() => {
     if (!supplierId) { setOpenPos([]); setPoId(""); return; }
@@ -40,6 +44,7 @@ export function NewInvoiceForm({
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
         if (poId) fd.set("poId", poId);
+        fd.set("eventId", eventId);
         start(async () => {
           try {
             await createInvoiceAction(fd);
@@ -94,6 +99,27 @@ export function NewInvoiceForm({
           <Input id="dateReceived" name="dateReceived" type="date" required defaultValue={defaultDate} />
         </div>
       </div>
+
+      {events.length > 0 && (
+        <div className="grid gap-1.5 md:max-w-xs">
+          <Label htmlFor="invoice-event">Event (optional)</Label>
+          <Select value={eventId} onValueChange={setEventId}>
+            <SelectTrigger id="invoice-event"><SelectValue placeholder="No event" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No event</SelectItem>
+              {events.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                    {e.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-2xs text-muted-foreground">Tag this bill to an event for per-event cost analysis.</span>
+        </div>
+      )}
 
       <div className="grid gap-1.5">
         <Label htmlFor="internalMemo">Internal Memo</Label>

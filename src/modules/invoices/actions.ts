@@ -29,7 +29,13 @@ export async function createInvoiceAction(formData: FormData) {
     dateReceived: formData.get("dateReceived"),
     internalMemo: formData.get("internalMemo"),
     poId: formData.get("poId") || null,
+    eventId: formData.get("eventId") || null,
   });
+  const eventId = parsed.eventId && parsed.eventId !== "none" ? parsed.eventId : null;
+  if (eventId) {
+    const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
+    if (!ev) throw new Error("Selected event not found");
+  }
 
   const invoice = await prisma.$transaction(async (tx) => {
     const inv = await tx.invoice.create({
@@ -37,6 +43,7 @@ export async function createInvoiceAction(formData: FormData) {
         locationId: scope.locationId,
         supplierId: parsed.supplierId,
         poId: parsed.poId || null,
+        eventId,
         invoiceNumber: parsed.invoiceNumber,
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
@@ -90,7 +97,13 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
     pstDollars: formData.get("pstDollars"),
     shippingDollars: formData.get("shippingDollars"),
     rebateDollars: formData.get("rebateDollars"),
+    eventId: formData.get("eventId") || null,
   });
+  const eventId = parsed.eventId && parsed.eventId !== "none" ? parsed.eventId : null;
+  if (eventId) {
+    const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
+    if (!ev) throw new Error("Selected event not found");
+  }
 
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -104,6 +117,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
+        eventId,
         gstCents: toCents(parsed.gstDollars),
         pstCents: toCents(parsed.pstDollars),
         shippingCents: toCents(parsed.shippingDollars),
@@ -212,6 +226,27 @@ export async function removeInvoiceItemAction(invoiceId: string, itemId: string)
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "invoice.item.remove", entityType: "Invoice", entityId: invoiceId, diff: { ingredient: item.ingredient.name } });
   revalidatePath(`/purchasing/invoices/${invoiceId}`);
   revalidatePath("/inventory");
+}
+
+// Lightweight event tag for an existing invoice — works even on closed
+// invoices, since tagging doesn't change line items or totals.
+export async function setInvoiceEventAction(id: string, eventIdRaw: string | null) {
+  const scope = await getScope();
+  const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
+  if (!inv) throw new Error("Not found");
+  const eventId = eventIdRaw && eventIdRaw !== "none" ? eventIdRaw : null;
+  if (eventId) {
+    const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
+    if (!ev) throw new Error("Selected event not found");
+  }
+  await prisma.invoice.update({ where: { id }, data: { eventId } });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "invoice.set_event", entityType: "Invoice", entityId: id,
+    diff: { eventId },
+  });
+  revalidatePath("/purchasing/invoices");
+  revalidatePath(`/purchasing/invoices/${id}`);
 }
 
 export async function closeInvoiceAction(id: string) {
