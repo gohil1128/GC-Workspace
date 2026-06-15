@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatMoney, formatPercent } from "@/lib/money";
+import { DeleteReportDayButton } from "./_components/delete-report-day-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
   const scope = await getScope();
+  const isOwner = scope.role === "OWNER";
   const [daily, weekly, labor, spend, variance] = await Promise.all([
     dailySummary(scope.locationId, 14),
     weeklyTrend(scope.locationId, 4),
@@ -52,6 +54,7 @@ export default async function ReportsPage() {
                   <TableHead className="text-right">Labor $</TableHead>
                   <TableHead className="text-right">Labor %</TableHead>
                   <TableHead className="text-right">Cash O/S</TableHead>
+                  {isOwner && <TableHead className="w-12 text-right">Delete</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -66,6 +69,15 @@ export default async function ReportsPage() {
                     <TableCell className="text-right num">{formatMoney(r.laborCostCents)}</TableCell>
                     <TableCell className={`text-right num ${r.laborPct > 30 ? "text-destructive" : ""}`}>{formatPercent(r.laborPct)}</TableCell>
                     <TableCell className={`text-right num ${r.cashOverShortCents < 0 ? "text-destructive" : r.cashOverShortCents > 0 ? "text-warning" : ""}`}>{formatMoney(r.cashOverShortCents, { signed: true })}</TableCell>
+                    {isOwner && (
+                      <TableCell className="text-right">
+                        {r.hasSales ? (
+                          <DeleteReportDayButton iso={r.iso} label={r.date} />
+                        ) : (
+                          <span className="text-2xs text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
