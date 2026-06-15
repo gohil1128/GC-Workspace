@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SalesImporter } from "./_components/sales-importer";
 import { SquareImporter } from "./_components/square-importer";
 import { SquareItemsImporter } from "./_components/square-items-importer";
+import { SquareItemSummaryImporter } from "./_components/square-item-summary-importer";
 import { ImportedDataManager } from "./_components/imported-data-manager";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,24 @@ export default async function IntegrationsPage() {
           </CardHeader>
           <CardContent>
             <SquareItemsImporter events={eventProps} defaultEventId={defaultEventId} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Square Item Sales Summary CSV
+              <Badge variant="success" className="ml-2">Live</Badge>
+            </CardTitle>
+            <CardDescription>
+              Upload Square&apos;s <em>Item Sales</em> export — one row per item with totals
+              over a date range. Since this file has no Date column, <strong>pick the
+              business date</strong> (we&apos;ll guess it from the filename). We&apos;ll also
+              roll the items up into a DailySales record for that day.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SquareItemSummaryImporter events={eventProps} defaultEventId={defaultEventId} />
           </CardContent>
         </Card>
 
