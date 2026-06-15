@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard } from "@/modules/dashboard/queries";
+import { getTopItems } from "@/modules/dashboard/items";
 import { getActiveEvent } from "@/modules/events/queries";
 import { getFinanceSummary } from "@/modules/finance/queries";
 import { fmtDate } from "@/lib/date";
@@ -23,6 +24,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { MetricRing } from "@/components/dashboard/metric-ring";
 import { AreaStory } from "@/components/dashboard/area-story";
 import { SectionTitle } from "@/components/dashboard/section-title";
+import { TopItems } from "@/components/dashboard/top-items";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,14 @@ export default async function DashboardPage() {
       eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
     }),
   ]);
+
+  const topItems = await getTopItems({
+    locationId: scope.locationId,
+    from: data.period.from,
+    to: data.period.to,
+    eventId: activeEvent?.id ?? null,
+    limit: 12,
+  });
 
   const salesSpark = data.trends.sales.map((s) => s.y);
   const laborSpark = data.trends.labor.map((s) => s.y);
@@ -252,6 +262,26 @@ export default async function DashboardPage() {
             <div className="rounded-2xl border bg-card shadow-card p-4 sm:p-6">
               <AreaStory data={data.trends.sales} height={300} />
             </div>
+          </section>
+
+          {/* ─────── Top selling items ─────── */}
+          <section className="space-y-4">
+            <SectionTitle
+              eyebrow="What sold"
+              title="Top items by revenue"
+              subtitle={
+                activeEvent
+                  ? `Items ranked for the "${activeEvent.name}" event window. Bars show share of total item revenue.`
+                  : `Items ranked across the last ${data.period.days} days. Bars show share of total item revenue.`
+              }
+              href="/settings/integrations"
+              cta="Upload more"
+            />
+            <TopItems
+              items={topItems.items}
+              totalCents={topItems.totalCents}
+              totalQty={topItems.totalQty}
+            />
           </section>
 
           {/* ─────── Exceptions ─────── */}
