@@ -8,9 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SalesImporter } from "./_components/sales-importer";
-import { SquareImporter } from "./_components/square-importer";
-import { SquareItemsImporter } from "./_components/square-items-importer";
+import { SquareSalesSummaryImporter } from "./_components/square-sales-summary-importer";
 import { SquareItemSummaryImporter } from "./_components/square-item-summary-importer";
 import { ImportedDataManager } from "./_components/imported-data-manager";
 import { ItemsManager } from "./_components/items-manager";
@@ -54,27 +52,29 @@ export default async function IntegrationsPage() {
     eventGroupMap.set(d.event.id, g);
   }
   const eventGroups = [...eventGroupMap.values()];
+
   return (
     <div>
-      <PageHeader title="Integrations" description="CSV import works · external APIs are wired as placeholders" />
+      <PageHeader title="Integrations" description="Upload Square's Sales Summary and Item Sales Summary CSVs · external APIs are wired as placeholders" />
       <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="lg:col-span-2 border-brand/50">
+
+        <Card className="border-brand/50">
           <CardHeader>
             <CardTitle>
-              Square per-item CSV
+              Square Sales Summary CSV
               <Badge variant="success" className="ml-2">Live</Badge>
               <Badge variant="brand" className="ml-2">Recommended</Badge>
             </CardTitle>
             <CardDescription>
-              Upload Square&apos;s <em>Sales by Item</em> CSV — one row per line item per transaction.
-              We aggregate daily totals AND keep a per-item breakdown so the dashboard can show
-              <strong> what sold and how much</strong>. If the file has a Card Brand column we also
-              split <strong>cash vs card</strong> and pre-fill that day&apos;s cash close.
+              Upload Square&apos;s <em>Sales Summary</em> page export — the one-day report with
+              <strong> Net sales, Tips, Taxes, Cash, Card</strong> and total transactions. Pick the
+              business date (auto-guessed from the filename); we&apos;ll create the daily totals AND
+              pre-fill that day&apos;s cash close split.
               {broadway && <span className="block mt-1 text-brand">Defaults to your &quot;{broadway.name}&quot; event.</span>}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SquareItemsImporter events={eventProps} defaultEventId={defaultEventId} />
+            <SquareSalesSummaryImporter events={eventProps} defaultEventId={defaultEventId} />
           </CardContent>
         </Card>
 
@@ -85,10 +85,9 @@ export default async function IntegrationsPage() {
               <Badge variant="success" className="ml-2">Live</Badge>
             </CardTitle>
             <CardDescription>
-              Upload Square&apos;s <em>Item Sales</em> export — one row per item with totals
-              over a date range. Since this file has no Date column, <strong>pick the
-              business date</strong> (we&apos;ll guess it from the filename). We&apos;ll also
-              roll the items up into a DailySales record for that day.
+              Upload Square&apos;s <em>Item Sales</em> export — one row per item with totals for
+              the day. Pick the business date; we&apos;ll create per-item rows so the dashboard
+              shows what sold and roll them up into a DailySales record.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -122,30 +121,6 @@ export default async function IntegrationsPage() {
           </CardHeader>
           <CardContent>
             <ItemsManager items={itemRows} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Square sales import <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
-            <CardDescription>
-              Upload Square&apos;s &quot;Sales Summary by Day&quot; CSV. Auto-detects Date, Net Sales,
-              Gross Sales, Tax, Cash, Card, and Guests columns; cash/card totals also pre-fill the
-              matching day&apos;s cash close.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SquareImporter events={eventProps} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Generic sales CSV <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
-            <CardDescription>Manual format · Columns: date, net_sales, tax, guests</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SalesImporter events={eventProps} />
           </CardContent>
         </Card>
 
