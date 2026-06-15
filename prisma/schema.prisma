@@ -118,6 +118,7 @@ model Location {
   reportSnapshots  ReportSnapshot[]
   invoices         Invoice[]
   expenses         Expense[]
+  salesItems       SalesItem[]
 
   @@index([businessId])
 }
@@ -500,6 +501,29 @@ model Deposit {
   @@index([locationId, businessDate])
 }
 
+model SalesItem {
+  id            String   @id @default(cuid())
+  locationId    String
+  businessDate  DateTime
+  itemName      String
+  category      String?
+  qty           Float
+  netSalesCents Int
+  taxCents      Int      @default(0)
+  txCount       Int      @default(0)
+  eventId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  event    Event?   @relation(fields: [eventId], references: [id])
+
+  @@unique([locationId, businessDate, itemName])
+  @@index([locationId, businessDate])
+  @@index([eventId])
+  @@index([itemName])
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Events (promo / pop-up tags for analysis filters)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -520,6 +544,7 @@ model Event {
   dailySales  DailySales[]
   cashCloses  CashClose[]
   expenses    Expense[]
+  salesItems  SalesItem[]
 
   @@index([businessId, startDate])
 }

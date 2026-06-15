@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SalesImporter } from "./_components/sales-importer";
 import { SquareImporter } from "./_components/square-importer";
+import { SquareItemsImporter } from "./_components/square-items-importer";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,31 @@ export default async function IntegrationsPage() {
   if (scope.role !== "OWNER") redirect("/dashboard");
   const events = await listActiveEvents(scope.businessId);
   const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
+  const broadway = events.find((e) => /broadway/i.test(e.name));
+  const defaultEventId = broadway?.id;
   return (
     <div>
       <PageHeader title="Integrations" description="CSV import works · external APIs are wired as placeholders" />
       <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="lg:col-span-2 border-brand/50">
+          <CardHeader>
+            <CardTitle>
+              Square per-item CSV
+              <Badge variant="success" className="ml-2">Live</Badge>
+              <Badge variant="brand" className="ml-2">Recommended</Badge>
+            </CardTitle>
+            <CardDescription>
+              Upload Square&apos;s <em>Sales by Item</em> CSV — one row per line item per transaction.
+              We aggregate daily totals AND keep a per-item breakdown so the dashboard can show
+              <strong> what sold and how much</strong>.
+              {broadway && <span className="block mt-1 text-brand">Defaults to your &quot;{broadway.name}&quot; event.</span>}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SquareItemsImporter events={eventProps} defaultEventId={defaultEventId} />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Square sales import <Badge variant="success" className="ml-2">Live</Badge></CardTitle>
