@@ -4,7 +4,10 @@ import { safeDivide } from "@/lib/money";
 export type FinanceSummary = {
   range: { from: Date; to: Date; label: string };
   netSalesCents: number;
-  cogsCents: number;
+  cogsCents: number; // Theoretical food cost from USAGE movements
+  invoicePurchaseCents: number; // Actual supplier spend from invoices
+  effectiveCogsCents: number; // The one used in EBITDA: USAGE if any, else invoices
+  invoiceCount: number;
   laborCostCents: number;
   operatingExpensesCents: number;
   eventFeeCents: number;
@@ -22,7 +25,10 @@ export type FinanceSummary = {
  * Compute the year-to-date / event-scoped financial summary used by the
  * dashboard's financial tiles.
  *
- * EBITDA = Net Sales − COGS (food) − Labor − Operating Expenses
+ * EBITDA = Net Sales − COGS − Labor − Operating Expenses
+ * COGS prefers theoretical USAGE movements (recipe-driven). If none are
+ * recorded — common for an operator who only enters invoices — we fall back
+ * to invoice totals so EBITDA isn't artificially inflated.
  * Valuation = EBITDA × ebitdaMultiplier when EBITDA > 0
  *             else Net Sales × revenueMultiplier
  * CAC proxy = Marketing spend / Guest count (cost per acquired guest visit)
@@ -52,7 +58,7 @@ export async function getFinanceSummary(params: {
         endDate: { gte: from },
       };
 
-  const [business, sales, shifts, usage, expenses, feeEvents] = await Promise.all([
+  const [business, sales, shifts, usage, expenses, feeEvents, invoices] = await Promise.all([
     prisma.business.findUnique({
       where: { id: params.businessId },
       select: { ebitdaMultiplier: true, revenueMultiplier: true },
@@ -72,6 +78,16 @@ export async function getFinanceSummary(params: {
       where: { locationId: params.locationId, businessDate: { gte: from, lte: to }, ...eventFilter },
     }),
     prisma.event.findMany({ where: eventFeeWhere, select: { feeCents: true } }),
+    // Supplier invoices in the period — keyed by invoiceDate, scoped to event
+    // when one is active so per-event cost analysis works.
+    prisma.invoice.findMany({
+      where: {
+        locationId: params.locationId,
+        invoiceDate: { gte: from, lte: to },
+        ...eventFilter,
+      },
+      select: { totalCents: true },
+    }),
   ]);
 
   const netSalesCents = sales.reduce((a, s) => a + s.netSalesCents, 0);
@@ -87,6 +103,13 @@ export async function getFinanceSummary(params: {
     return a + Math.round((minutes / 60) * s.employee.hourlyRateCents);
   }, 0);
 
+  const invoicePurchaseCents = invoices.reduce((a, i) => a + i.totalCents, 0);
+  const invoiceCount = invoices.length;
+  // Prefer recipe-driven USAGE (theoretical food cost). Falls back to invoice
+  // totals when there are no USAGE rows — otherwise an operator who only
+  // enters invoices would see EBITDA = Net Sales − $0 = inflated.
+  const effectiveCogsCents = cogsCents > 0 ? cogsCents : invoicePurchaseCents;
+
   const eventFeeCents = feeEvents.reduce((a, e) => a + e.feeCents, 0);
   const opexFromExpenses = expenses.reduce((a, e) => a + e.amountCents, 0);
   // Event fees count as operating expenses for EBITDA purposes.
@@ -95,7 +118,7 @@ export async function getFinanceSummary(params: {
     .filter((e) => e.category === "MARKETING")
     .reduce((a, e) => a + e.amountCents, 0);
 
-  const ebitdaCents = netSalesCents - cogsCents - laborCostCents - operatingExpensesCents;
+  const ebitdaCents = netSalesCents - effectiveCogsCents - laborCostCents - operatingExpensesCents;
   const ebitdaMarginPct = safeDivide(ebitdaCents, netSalesCents) * 100;
 
   const ebitdaMult = business?.ebitdaMultiplier ?? 4;
@@ -121,6 +144,9 @@ export async function getFinanceSummary(params: {
   if (eventFeeCents > 0) {
     byCategory.set("EVENT_FEES", (byCategory.get("EVENT_FEES") ?? 0) + eventFeeCents);
   }
+  if (invoicePurchaseCents > 0) {
+    byCategory.set("SUPPLIER_INVOICES", invoicePurchaseCents);
+  }
   const expenseByCategory = Array.from(byCategory.entries())
     .map(([category, amountCents]) => ({ category, amountCents }))
     .sort((a, b) => b.amountCents - a.amountCents);
@@ -129,6 +155,9 @@ export async function getFinanceSummary(params: {
     range: { from, to, label },
     netSalesCents,
     cogsCents,
+    invoicePurchaseCents,
+    effectiveCogsCents,
+    invoiceCount,
     laborCostCents,
     operatingExpensesCents,
     eventFeeCents,
