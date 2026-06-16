@@ -14,7 +14,10 @@ import { toast } from "@/components/ui/use-toast";
 type Ev = {
   id: string; name: string; color: string | null;
   startDate: string; endDate: string; isActive: boolean;
+  feeCents: number; feeNote: string; notes: string;
 };
+
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 const PALETTE = ["#f97316", "#16a34a", "#0ea5e9", "#a855f7", "#dc2626", "#facc15"];
 
@@ -31,7 +34,14 @@ export function EventsManager({ events }: { events: Ev[] }) {
               />
               <div className="min-w-0">
                 <div className="font-medium text-sm truncate">{e.name}</div>
-                <div className="text-2xs text-muted-foreground">{e.startDate} → {e.endDate}</div>
+                <div className="text-2xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                  <span>{e.startDate} → {e.endDate}</span>
+                  {e.feeCents > 0 && (
+                    <Badge variant="brand" className="text-2xs h-4 px-1.5">
+                      Fee {money(e.feeCents)}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             {!e.isActive && <Badge variant="muted">Inactive</Badge>}
@@ -109,6 +119,19 @@ function NewEventButton() {
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-[1fr_2fr] gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="ev-fee">Event fee ($)</Label>
+              <Input id="ev-fee" name="feeDollars" type="number" step="0.01" min="0" defaultValue="0" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ev-fee-note">Fee note (optional)</Label>
+              <Input id="ev-fee-note" name="feeNote" placeholder="Booth rental · vendor permit · entry fee…" />
+            </div>
+          </div>
+          <p className="text-2xs text-muted-foreground -mt-1">
+            Paid upfront to participate (booth fee, vendor permit, etc.). Counts as an event-scoped operating expense.
+          </p>
           <div className="grid gap-1.5">
             <Label htmlFor="ev-notes">Notes (optional)</Label>
             <Textarea id="ev-notes" name="notes" rows={2} />
@@ -269,9 +292,34 @@ function EditEventButton({ event }: { event: Ev }) {
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-[1fr_2fr] gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor={`fee-${event.id}`}>Event fee ($)</Label>
+              <Input
+                id={`fee-${event.id}`}
+                name="feeDollars"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={(event.feeCents / 100).toFixed(2)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`feenote-${event.id}`}>Fee note (optional)</Label>
+              <Input
+                id={`feenote-${event.id}`}
+                name="feeNote"
+                defaultValue={event.feeNote}
+                placeholder="Booth rental · vendor permit · entry fee…"
+              />
+            </div>
+          </div>
+          <p className="text-2xs text-muted-foreground -mt-1">
+            Booth / vendor / entry fee paid upfront. Counts as an event-scoped operating expense.
+          </p>
           <div className="grid gap-1.5">
             <Label>Notes</Label>
-            <Textarea name="notes" rows={2} />
+            <Textarea name="notes" rows={2} defaultValue={event.notes} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="isActive" value="true" defaultChecked={event.isActive} />

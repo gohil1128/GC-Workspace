@@ -7,6 +7,7 @@ export type FinanceSummary = {
   cogsCents: number;
   laborCostCents: number;
   operatingExpensesCents: number;
+  eventFeeCents: number;
   marketingCents: number;
   ebitdaCents: number;
   ebitdaMarginPct: number;
@@ -40,7 +41,18 @@ export async function getFinanceSummary(params: {
   const label = params.eventRange ? "event range" : `YTD ${now.getFullYear()}`;
   const eventFilter = params.eventId ? { eventId: params.eventId } : {};
 
-  const [business, sales, shifts, usage, expenses] = await Promise.all([
+  // Event fees (booth / vendor / entry) — only included when:
+  //   • we're scoped to a specific event → that one event's fee
+  //   • we're not event-scoped → fees from events whose date range overlaps
+  const eventFeeWhere = params.eventId
+    ? { id: params.eventId, businessId: params.businessId }
+    : {
+        businessId: params.businessId,
+        startDate: { lte: to },
+        endDate: { gte: from },
+      };
+
+  const [business, sales, shifts, usage, expenses, feeEvents] = await Promise.all([
     prisma.business.findUnique({
       where: { id: params.businessId },
       select: { ebitdaMultiplier: true, revenueMultiplier: true },
@@ -59,6 +71,7 @@ export async function getFinanceSummary(params: {
     prisma.expense.findMany({
       where: { locationId: params.locationId, businessDate: { gte: from, lte: to }, ...eventFilter },
     }),
+    prisma.event.findMany({ where: eventFeeWhere, select: { feeCents: true } }),
   ]);
 
   const netSalesCents = sales.reduce((a, s) => a + s.netSalesCents, 0);
@@ -74,7 +87,10 @@ export async function getFinanceSummary(params: {
     return a + Math.round((minutes / 60) * s.employee.hourlyRateCents);
   }, 0);
 
-  const operatingExpensesCents = expenses.reduce((a, e) => a + e.amountCents, 0);
+  const eventFeeCents = feeEvents.reduce((a, e) => a + e.feeCents, 0);
+  const opexFromExpenses = expenses.reduce((a, e) => a + e.amountCents, 0);
+  // Event fees count as operating expenses for EBITDA purposes.
+  const operatingExpensesCents = opexFromExpenses + eventFeeCents;
   const marketingCents = expenses
     .filter((e) => e.category === "MARKETING")
     .reduce((a, e) => a + e.amountCents, 0);
@@ -102,6 +118,9 @@ export async function getFinanceSummary(params: {
   for (const e of expenses) {
     byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amountCents);
   }
+  if (eventFeeCents > 0) {
+    byCategory.set("EVENT_FEES", (byCategory.get("EVENT_FEES") ?? 0) + eventFeeCents);
+  }
   const expenseByCategory = Array.from(byCategory.entries())
     .map(([category, amountCents]) => ({ category, amountCents }))
     .sort((a, b) => b.amountCents - a.amountCents);
@@ -112,6 +131,7 @@ export async function getFinanceSummary(params: {
     cogsCents,
     laborCostCents,
     operatingExpensesCents,
+    eventFeeCents,
     marketingCents,
     ebitdaCents,
     ebitdaMarginPct,

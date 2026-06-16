@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, Plus } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getInvoice } from "@/modules/invoices/queries";
 import { listActiveEvents } from "@/modules/events/queries";
@@ -37,6 +37,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><ArrowLeft className="h-3.5 w-3.5" /> All invoices</Link></Button>
+            <Button asChild variant="brand" size="sm"><Link href="/purchasing/invoices/new"><Plus className="h-3.5 w-3.5" /> New invoice</Link></Button>
             {inv.closedAt
               ? <Badge variant="muted" className="gap-1"><Lock className="h-3 w-3" /> Closed</Badge>
               : <Badge variant="success" className="gap-1"><Unlock className="h-3 w-3" /> Editable</Badge>}
@@ -113,6 +114,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             />
           </CardContent>
         </Card>
+
+        <div className="flex justify-end gap-2">
+          <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><ArrowLeft className="h-3.5 w-3.5" /> Back to all invoices</Link></Button>
+          <Button asChild variant="brand" size="sm"><Link href="/purchasing/invoices/new"><Plus className="h-3.5 w-3.5" /> Enter another invoice</Link></Button>
+        </div>
       </div>
     </div>
   );

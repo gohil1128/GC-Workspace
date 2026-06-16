@@ -102,6 +102,9 @@ export default async function SettingsPage() {
               startDate: e.startDate.toISOString().slice(0, 10),
               endDate: e.endDate.toISOString().slice(0, 10),
               isActive: e.isActive,
+              feeCents: e.feeCents ?? 0,
+              feeNote: e.feeNote ?? "",
+              notes: e.notes ?? "",
             }))} />
           </CardContent>
         </Card>
