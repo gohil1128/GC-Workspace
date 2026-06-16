@@ -63,11 +63,26 @@ export async function getDashboard(params: {
   }, 0);
 
   // food cost (theoretical): sum of USAGE movements in window valued at avgCost
-  const usage = await prisma.inventoryMovement.findMany({
-    where: { locationId: params.locationId, occurredAt: { gte: from, lte: to }, type: "USAGE" },
-    include: { ingredient: { select: { avgCostCents: true } } },
-  });
-  const foodCostCents = usage.reduce((acc, m) => acc + Math.round(Math.abs(m.qty) * m.ingredient.avgCostCents), 0);
+  // Fallback: when no USAGE rows exist (operator only enters invoices, no
+  // recipe-driven sales), use invoice totals in the period instead — keyed
+  // by invoiceDate and scoped to event when one is active.
+  const [usage, invoicesForFood] = await Promise.all([
+    prisma.inventoryMovement.findMany({
+      where: { locationId: params.locationId, occurredAt: { gte: from, lte: to }, type: "USAGE" },
+      include: { ingredient: { select: { avgCostCents: true } } },
+    }),
+    prisma.invoice.findMany({
+      where: {
+        locationId: params.locationId,
+        invoiceDate: { gte: from, lte: to },
+        ...eventFilter,
+      },
+      select: { totalCents: true },
+    }),
+  ]);
+  const theoreticalFoodCostCents = usage.reduce((acc, m) => acc + Math.round(Math.abs(m.qty) * m.ingredient.avgCostCents), 0);
+  const invoiceFoodCostCents = invoicesForFood.reduce((a, i) => a + i.totalCents, 0);
+  const foodCostCents = theoreticalFoodCostCents > 0 ? theoreticalFoodCostCents : invoiceFoodCostCents;
 
   // inventory variance %: latest count's varianceCost / value of period sales
   const varianceCostCents = recentVariance ? recentVariance.lines.reduce((a, l) => a + Math.abs(l.varianceCostCents), 0) : 0;

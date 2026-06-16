@@ -337,13 +337,16 @@ export default async function DashboardPage() {
               subtitle={
                 <>
                   Revenue {formatMoney(finance.netSalesCents)} · Costs{" "}
-                  {formatMoney(finance.cogsCents + finance.laborCostCents + finance.operatingExpensesCents)}
+                  {formatMoney(finance.effectiveCogsCents + finance.laborCostCents + finance.operatingExpensesCents)}
+                  {finance.invoicePurchaseCents > 0 && (
+                    <> · {finance.invoiceCount} invoice{finance.invoiceCount === 1 ? "" : "s"} {formatMoney(finance.invoicePurchaseCents)}</>
+                  )}
                 </>
               }
               href="/settings"
               cta="Set multipliers"
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
               <FinanceTile
                 icon={<Coins className="h-4 w-4" />}
                 label="EBITDA"
@@ -351,6 +354,14 @@ export default async function DashboardPage() {
                 tone={finance.ebitdaCents < 0 ? "bad" : finance.ebitdaMarginPct > 15 ? "good" : "warn"}
                 hint={`${formatPercent(finance.ebitdaMarginPct)} margin`}
                 sub="Sales − COGS − Labor − Opex"
+              />
+              <FinanceTile
+                icon={<ShoppingCart className="h-4 w-4" />}
+                label="Supplier invoices"
+                value={formatMoney(finance.invoicePurchaseCents)}
+                tone={finance.invoicePurchaseCents > 0 ? "warn" : "neutral"}
+                hint={`${finance.invoiceCount} invoice${finance.invoiceCount === 1 ? "" : "s"}`}
+                sub={finance.cogsCents > 0 ? "Real supplier spend (incl. taxes/shipping)" : "Used as proxy COGS — no recipe usage yet"}
               />
               <FinanceTile
                 icon={<Gem className="h-4 w-4" />}
