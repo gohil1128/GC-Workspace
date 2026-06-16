@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import { toCents } from "@/lib/money";
 
 const EVENT_COOKIE = "active-event";
 
@@ -16,6 +17,8 @@ const eventSchema = z.object({
   color: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  feeDollars: z.coerce.number().min(0).default(0),
+  feeNote: z.string().optional().nullable(),
 });
 
 export async function createEventAction(formData: FormData) {
@@ -28,6 +31,8 @@ export async function createEventAction(formData: FormData) {
     color: formData.get("color"),
     notes: formData.get("notes"),
     isActive: formData.get("isActive") !== "false",
+    feeDollars: formData.get("feeDollars") ?? 0,
+    feeNote: formData.get("feeNote"),
   });
   const ev = await prisma.event.create({
     data: {
@@ -38,9 +43,11 @@ export async function createEventAction(formData: FormData) {
       color: parsed.color || null,
       notes: parsed.notes || null,
       isActive: parsed.isActive,
+      feeCents: toCents(parsed.feeDollars),
+      feeNote: parsed.feeNote || null,
     },
   });
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "event.create", entityType: "Event", entityId: ev.id, diff: { name: ev.name } });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "event.create", entityType: "Event", entityId: ev.id, diff: { name: ev.name, feeCents: ev.feeCents } });
   revalidatePath("/", "layout");
 }
 
@@ -54,6 +61,8 @@ export async function updateEventAction(id: string, formData: FormData) {
     color: formData.get("color"),
     notes: formData.get("notes"),
     isActive: formData.get("isActive") !== "false",
+    feeDollars: formData.get("feeDollars") ?? 0,
+    feeNote: formData.get("feeNote"),
   });
   const ev = await prisma.event.findFirst({ where: { id, businessId: scope.businessId } });
   if (!ev) throw new Error("Not found");
@@ -66,9 +75,11 @@ export async function updateEventAction(id: string, formData: FormData) {
       color: parsed.color || null,
       notes: parsed.notes || null,
       isActive: parsed.isActive,
+      feeCents: toCents(parsed.feeDollars),
+      feeNote: parsed.feeNote || null,
     },
   });
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "event.update", entityType: "Event", entityId: id });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "event.update", entityType: "Event", entityId: id, diff: { feeCents: toCents(parsed.feeDollars) } });
   revalidatePath("/", "layout");
 }
 
