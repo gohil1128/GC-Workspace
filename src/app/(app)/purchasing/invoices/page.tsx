@@ -21,7 +21,7 @@ type SortDir = "asc" | "desc";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ supplier?: string; status?: string; number?: string; from?: string; to?: string; sort?: SortKey; dir?: SortDir }>;
+  searchParams: Promise<{ supplier?: string; status?: string; number?: string; from?: string; to?: string; untagged?: string; sort?: SortKey; dir?: SortDir }>;
 }) {
   const sp = await searchParams;
   const scope = await getScope();
@@ -34,10 +34,13 @@ export default async function InvoicesPage({
     to: sp.to,
   };
 
-  const [invoices, suppliers] = await Promise.all([
+  const onlyUntagged = sp.untagged === "1";
+
+  const [allInvoices, suppliers] = await Promise.all([
     listInvoices(scope.locationId, filters),
     listSuppliersForInvoice(scope.businessId),
   ]);
+  const invoices = onlyUntagged ? allInvoices.filter((i) => !i.event) : allInvoices;
 
   const sortKey: SortKey = (sp.sort as SortKey) ?? "invoiceDate";
   const sortDir: SortDir = (sp.dir as SortDir) ?? "desc";
@@ -92,6 +95,15 @@ export default async function InvoicesPage({
       />
       <div className="p-4 sm:p-6 space-y-4">
         <InvoiceFilters suppliers={suppliers} />
+        {onlyUntagged && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
+            <span>
+              Showing only invoices <span className="font-semibold">not tagged to any event</span>.
+              Open each one and pick an event from the event dropdown.
+            </span>
+            <Link href="/purchasing/invoices" className="underline text-warning-foreground shrink-0">Clear filter</Link>
+          </div>
+        )}
 
         <div className="rounded-lg border">
           <Table>

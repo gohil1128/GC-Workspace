@@ -384,6 +384,19 @@ export default async function DashboardPage() {
                 sub="CAC proxy"
               />
             </div>
+            {finance.untaggedInvoiceCount > 0 && (
+              <Link
+                href="/purchasing/invoices?untagged=1"
+                className="flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs hover:bg-warning/15 transition-colors"
+              >
+                <span className="text-warning-foreground">
+                  <span className="font-semibold">{finance.untaggedInvoiceCount} invoice{finance.untaggedInvoiceCount === 1 ? "" : "s"}</span>
+                  {" "}({formatMoney(finance.untaggedInvoiceCents)}) are <span className="font-semibold">not tagged to any event</span>
+                  {activeEvent ? <> — they&apos;re excluded from the &quot;{activeEvent.name}&quot; view.</> : <> — tag them so per-event analysis works.</>}
+                </span>
+                <span className="text-2xs text-warning-foreground/80 underline shrink-0">Tag invoices →</span>
+              </Link>
+            )}
             {finance.expenseByCategory.length > 0 ? (
               <div className="flex flex-wrap items-center gap-1.5 px-1">
                 {finance.expenseByCategory.map((e) => (

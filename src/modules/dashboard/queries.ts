@@ -71,12 +71,12 @@ export async function getDashboard(params: {
       where: { locationId: params.locationId, occurredAt: { gte: from, lte: to }, type: "USAGE" },
       include: { ingredient: { select: { avgCostCents: true } } },
     }),
+    // When event-scoped, the eventId tag is more reliable than the invoice
+    // date (suppliers are often invoiced before the event begins).
     prisma.invoice.findMany({
-      where: {
-        locationId: params.locationId,
-        invoiceDate: { gte: from, lte: to },
-        ...eventFilter,
-      },
+      where: params.eventId
+        ? { locationId: params.locationId, eventId: params.eventId }
+        : { locationId: params.locationId, invoiceDate: { gte: from, lte: to } },
       select: { totalCents: true },
     }),
   ]);
