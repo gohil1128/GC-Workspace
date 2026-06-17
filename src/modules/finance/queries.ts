@@ -8,6 +8,8 @@ export type FinanceSummary = {
   invoicePurchaseCents: number; // Actual supplier spend from invoices
   effectiveCogsCents: number; // The one used in EBITDA: USAGE if any, else invoices
   invoiceCount: number;
+  untaggedInvoiceCount: number; // Invoices NOT tagged to any event (visibility hint)
+  untaggedInvoiceCents: number;
   laborCostCents: number;
   operatingExpensesCents: number;
   eventFeeCents: number;
@@ -74,18 +76,21 @@ export async function getFinanceSummary(params: {
       where: { locationId: params.locationId, occurredAt: { gte: from, lte: to }, type: "USAGE" },
       include: { ingredient: { select: { avgCostCents: true } } },
     }),
+    // Expenses: when an event is active, the eventId tag is the source of
+    // truth (an event-scoped expense might be paid before/after the event's
+    // calendar window). Date window only applies in the unfiltered/YTD view.
     prisma.expense.findMany({
-      where: { locationId: params.locationId, businessDate: { gte: from, lte: to }, ...eventFilter },
+      where: params.eventId
+        ? { locationId: params.locationId, eventId: params.eventId }
+        : { locationId: params.locationId, businessDate: { gte: from, lte: to } },
     }),
     prisma.event.findMany({ where: eventFeeWhere, select: { feeCents: true } }),
-    // Supplier invoices in the period — keyed by invoiceDate, scoped to event
-    // when one is active so per-event cost analysis works.
+    // Supplier invoices: same rule — when event-scoped, trust the tag and
+    // ignore date (supplies are often bought before the event starts).
     prisma.invoice.findMany({
-      where: {
-        locationId: params.locationId,
-        invoiceDate: { gte: from, lte: to },
-        ...eventFilter,
-      },
+      where: params.eventId
+        ? { locationId: params.locationId, eventId: params.eventId }
+        : { locationId: params.locationId, invoiceDate: { gte: from, lte: to } },
       select: { totalCents: true },
     }),
   ]);
@@ -105,6 +110,17 @@ export async function getFinanceSummary(params: {
 
   const invoicePurchaseCents = invoices.reduce((a, i) => a + i.totalCents, 0);
   const invoiceCount = invoices.length;
+
+  // Always look up how many invoices have NO event tag — surfaces them on the
+  // dashboard so the operator can fix the tagging instead of silently missing
+  // them when switching to an event-scoped view.
+  const untagged = await prisma.invoice.aggregate({
+    where: { locationId: params.locationId, eventId: null },
+    _count: { _all: true },
+    _sum: { totalCents: true },
+  });
+  const untaggedInvoiceCount = untagged._count._all;
+  const untaggedInvoiceCents = untagged._sum.totalCents ?? 0;
   // Prefer recipe-driven USAGE (theoretical food cost). Falls back to invoice
   // totals when there are no USAGE rows — otherwise an operator who only
   // enters invoices would see EBITDA = Net Sales − $0 = inflated.
@@ -158,6 +174,8 @@ export async function getFinanceSummary(params: {
     invoicePurchaseCents,
     effectiveCogsCents,
     invoiceCount,
+    untaggedInvoiceCount,
+    untaggedInvoiceCents,
     laborCostCents,
     operatingExpensesCents,
     eventFeeCents,
