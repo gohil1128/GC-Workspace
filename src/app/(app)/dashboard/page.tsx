@@ -10,12 +10,14 @@ import {
   ShoppingCart,
   Sparkles,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
 import { getActiveEvent } from "@/modules/events/queries";
 import { getFinanceSummary } from "@/modules/finance/queries";
+import { getCapitalSummary } from "@/modules/capital/queries";
 import { fmtDate } from "@/lib/date";
 import { formatMoney, formatPercent } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -54,6 +56,12 @@ export default async function DashboardPage() {
       eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
     }),
   ]);
+  const capital = await getCapitalSummary({
+    locationId: scope.locationId,
+    from: finance.range.from,
+    to: finance.range.to,
+    eventId: activeEvent?.id ?? null,
+  });
 
   const topItems = await getTopItems({
     locationId: scope.locationId,
@@ -341,12 +349,15 @@ export default async function DashboardPage() {
                   {finance.invoicePurchaseCents > 0 && (
                     <> · {finance.invoiceCount} invoice{finance.invoiceCount === 1 ? "" : "s"} {formatMoney(finance.invoicePurchaseCents)}</>
                   )}
+                  {capital.totalInvestedCents > 0 && (
+                    <> · Capital {formatMoney(capital.totalInvestedCents)} ({capital.count} item{capital.count === 1 ? "" : "s"})</>
+                  )}
                 </>
               }
               href="/settings"
               cta="Set multipliers"
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
               <FinanceTile
                 icon={<Coins className="h-4 w-4" />}
                 label="EBITDA"
@@ -362,6 +373,18 @@ export default async function DashboardPage() {
                 tone={finance.invoicePurchaseCents > 0 ? "warn" : "neutral"}
                 hint={`${finance.invoiceCount} invoice${finance.invoiceCount === 1 ? "" : "s"}`}
                 sub={finance.cogsCents > 0 ? "Real supplier spend (incl. taxes/shipping)" : "Used as proxy COGS — no recipe usage yet"}
+              />
+              <FinanceTile
+                icon={<Wrench className="h-4 w-4" />}
+                label="Capital invested"
+                value={formatMoney(capital.totalInvestedCents)}
+                tone={capital.totalInvestedCents > 0 ? "good" : "neutral"}
+                hint={`${capital.count} item${capital.count === 1 ? "" : "s"} in service`}
+                sub={
+                  capital.depreciationCents > 0
+                    ? `Period depreciation ${formatMoney(capital.depreciationCents)} · NBV ${formatMoney(capital.netBookValueCents)}`
+                    : "Separate from opex · doesn't reduce EBITDA"
+                }
               />
               <FinanceTile
                 icon={<Gem className="h-4 w-4" />}

@@ -2,6 +2,7 @@ import { getScope } from "@/lib/scope";
 import { listExpenses, EXPENSE_CATEGORIES } from "@/modules/expenses/queries";
 import { listVendors, getMonthlyFeePaymentStatus } from "@/modules/vendors/queries";
 import { listActiveEvents } from "@/modules/events/queries";
+import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/queries";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +13,7 @@ import { fmtDate } from "@/lib/date";
 import { Sparkles } from "lucide-react";
 import { NewExpenseButton } from "./_components/new-expense-button";
 import { VendorsSection } from "./_components/vendor-card";
+import { CapitalSection } from "./_components/capital-section";
 import type { ExpenseCategory } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -27,11 +29,38 @@ export default async function ExpensesPage({
 }) {
   const sp = await searchParams;
   const scope = await getScope();
-  const [expenses, vendors, events] = await Promise.all([
+  const [expenses, vendors, events, capitalAssets] = await Promise.all([
     listExpenses(scope.locationId, { category: sp.category, from: sp.from, to: sp.to }),
     listVendors(scope.businessId),
     listActiveEvents(scope.businessId),
+    listCapitalAssets(scope.locationId),
   ]);
+
+  // Annotate each asset with this-month depreciation + net book value for the
+  // section's quick stats. The same math is used by the dashboard query.
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+  const capitalRows = capitalAssets.map((a) => {
+    const monthlyDepCents = depreciationForPeriod(a, monthStart, monthEnd);
+    const cumDepCents = depreciationForPeriod(a, a.purchaseDate, today);
+    const nbvCents = Math.max(a.salvageValueCents, a.purchasePriceCents - cumDepCents);
+    return {
+      id: a.id,
+      name: a.name,
+      category: a.category,
+      vendor: a.vendor,
+      purchaseDate: a.purchaseDate.toISOString().slice(0, 10),
+      purchasePriceDollars: a.purchasePriceCents / 100,
+      usefulLifeMonths: a.usefulLifeMonths,
+      salvageValueDollars: a.salvageValueCents / 100,
+      status: a.status as "IN_SERVICE" | "SOLD" | "WRITTEN_OFF",
+      notes: a.notes ?? "",
+      event: a.event,
+      monthlyDepreciationDollars: monthlyDepCents / 100,
+      netBookValueDollars: nbvCents / 100,
+    };
+  });
 
   // "Has this vendor been paid this calendar month?" lookup
   const now = new Date();
@@ -59,6 +88,11 @@ export default async function ExpensesPage({
           }))}
           payments={paymentRecord}
           yearMonth={yearMonth}
+        />
+
+        <CapitalSection
+          assets={capitalRows}
+          events={events.map((e) => ({ id: e.id, name: e.name, color: e.color }))}
         />
 
         <div className="space-y-2">

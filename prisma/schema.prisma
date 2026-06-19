@@ -119,6 +119,7 @@ model Location {
   invoices         Invoice[]
   expenses         Expense[]
   salesItems       SalesItem[]
+  capitalAssets    CapitalAsset[]
 
   @@index([businessId])
 }
@@ -146,6 +147,7 @@ model User {
   auditLogs        AuditLog[]
   invoices         Invoice[]
   expenses         Expense[]
+  capitalAssets    CapitalAsset[]
 
   @@index([businessId])
 }
@@ -550,6 +552,7 @@ model Event {
   expenses    Expense[]
   salesItems  SalesItem[]
   invoices    Invoice[]
+  capitalAssets CapitalAsset[]
 
   @@index([businessId, startDate])
 }
@@ -702,4 +705,41 @@ model Vendor {
   expenses Expense[]
 
   @@index([businessId])
+}
+
+// Capital / fixed asset — high-cost equipment kept separate from regular
+// operating expenses because the financial treatment is different (sunk
+// purchase cost + ongoing depreciation, not a one-shot opex hit). Examples:
+// hot holding unit, tea dispenser, refrigerator, espresso machine.
+enum CapitalStatus {
+  IN_SERVICE
+  SOLD
+  WRITTEN_OFF
+}
+
+model CapitalAsset {
+  id                String        @id @default(cuid())
+  locationId        String
+  name              String
+  category          String?       // e.g. "Beverage equipment", "Refrigeration"
+  vendor            String?
+  purchaseDate      DateTime
+  purchasePriceCents Int
+  // Months of useful life for straight-line depreciation. Null = treat as
+  // non-depreciating (the operator just tracks total invested).
+  usefulLifeMonths  Int?
+  salvageValueCents Int           @default(0)
+  status            CapitalStatus @default(IN_SERVICE)
+  notes             String?
+  eventId           String?
+  createdById       String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  event     Event?   @relation(fields: [eventId], references: [id])
+  createdBy User     @relation(fields: [createdById], references: [id])
+
+  @@index([locationId])
+  @@index([eventId])
 }
