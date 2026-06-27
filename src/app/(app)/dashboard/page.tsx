@@ -15,7 +15,7 @@ import {
 import { getScope } from "@/lib/scope";
 import { getDashboard } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
-import { getActiveEvent } from "@/modules/events/queries";
+import { getActiveEvent, getAllEventsRange } from "@/modules/events/queries";
 import { getFinanceSummary } from "@/modules/finance/queries";
 import { getCapitalSummary } from "@/modules/capital/queries";
 import { fmtDate } from "@/lib/date";
@@ -41,19 +41,28 @@ function toneFor(value: number, target: number, slack = 2): Tone {
 export default async function DashboardPage() {
   const scope = await getScope();
   const activeEvent = await getActiveEvent(scope.businessId);
+  // "All events" (no specific event picked): span the full date range covering
+  // every event so the dashboard aggregates ALL event data, not just a recent
+  // window. A specific event uses its own range. No events at all → default
+  // windows (last 14d / YTD).
+  const allEventsRange = activeEvent ? null : await getAllEventsRange(scope.businessId);
+  const dashboardRange = activeEvent
+    ? { start: activeEvent.startDate, end: activeEvent.endDate }
+    : allEventsRange;
+
   const [data, finance] = await Promise.all([
     getDashboard({
       businessId: scope.businessId,
       locationId: scope.locationId,
       days: 14,
       eventId: activeEvent?.id ?? null,
-      eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
+      eventRange: dashboardRange,
     }),
     getFinanceSummary({
       businessId: scope.businessId,
       locationId: scope.locationId,
       eventId: activeEvent?.id ?? null,
-      eventRange: activeEvent ? { start: activeEvent.startDate, end: activeEvent.endDate } : null,
+      eventRange: dashboardRange,
     }),
   ]);
   const capital = await getCapitalSummary({
@@ -140,7 +149,9 @@ export default async function DashboardPage() {
 
   const periodLabel = activeEvent
     ? `Event · ${activeEvent.name}`
-    : `Last ${data.period.days} days · ${scope.locationName}`;
+    : allEventsRange
+      ? `All events · ${scope.locationName}`
+      : `Last ${data.period.days} days · ${scope.locationName}`;
 
   return (
     <div>
@@ -149,7 +160,9 @@ export default async function DashboardPage() {
         description={
           activeEvent
             ? `${scope.locationName} · event: ${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
-            : `${scope.locationName} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)} (${data.period.days} days)`
+            : allEventsRange
+              ? `${scope.locationName} · all events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
+              : `${scope.locationName} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)} (${data.period.days} days)`
         }
       />
 
