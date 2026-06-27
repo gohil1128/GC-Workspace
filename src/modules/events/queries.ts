@@ -32,3 +32,23 @@ export async function getActiveEvent(businessId: string): Promise<EventLite | nu
   if (!id) return null;
   return prisma.event.findFirst({ where: { id, businessId } });
 }
+
+// Bounding date range covering EVERY event the business has — used for the
+// "All events" dashboard view so it shows all event data, not just a recent
+// window. Returns null when there are no events (caller falls back to YTD).
+export async function getAllEventsRange(
+  businessId: string,
+): Promise<{ start: Date; end: Date } | null> {
+  const agg = await prisma.event.aggregate({
+    where: { businessId },
+    _min: { startDate: true },
+    _max: { endDate: true },
+  });
+  if (!agg._min.startDate || !agg._max.endDate) return null;
+  // Extend the end to "now" if the latest event ended in the past but data is
+  // still being entered, so nothing recent is clipped.
+  const now = new Date();
+  const end = agg._max.endDate > now ? agg._max.endDate : now;
+  return { start: agg._min.startDate, end };
+}
+

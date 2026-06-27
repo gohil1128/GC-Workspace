@@ -46,7 +46,11 @@ export async function getFinanceSummary(params: {
   const ytdStart = new Date(now.getFullYear(), 0, 1);
   const from = params.eventRange?.start ?? ytdStart;
   const to = params.eventRange?.end ?? now;
-  const label = params.eventRange ? "event range" : `YTD ${now.getFullYear()}`;
+  const label = params.eventId
+    ? "event range"
+    : params.eventRange
+      ? "all events"
+      : `YTD ${now.getFullYear()}`;
   const eventFilter = params.eventId ? { eventId: params.eventId } : {};
 
   // Event fees (booth / vendor / entry) — only included when:
