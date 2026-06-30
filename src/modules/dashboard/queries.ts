@@ -83,6 +83,8 @@ export async function getDashboard(params: {
   const theoreticalFoodCostCents = usage.reduce((acc, m) => acc + Math.round(Math.abs(m.qty) * m.ingredient.avgCostCents), 0);
   const invoiceFoodCostCents = invoicesForFood.reduce((a, i) => a + i.totalCents, 0);
   const foodCostCents = theoreticalFoodCostCents > 0 ? theoreticalFoodCostCents : invoiceFoodCostCents;
+  const foodCostBasis: "usage" | "invoices" | "none" =
+    theoreticalFoodCostCents > 0 ? "usage" : invoiceFoodCostCents > 0 ? "invoices" : "none";
 
   // inventory variance %: latest count's varianceCost / value of period sales
   const varianceCostCents = recentVariance ? recentVariance.lines.reduce((a, l) => a + Math.abs(l.varianceCostCents), 0) : 0;
@@ -134,6 +136,7 @@ export async function getDashboard(params: {
       cashOverShortCents,
       foodTarget,
       laborTarget,
+      foodCostBasis,
     },
     trends: {
       sales: trendSales,

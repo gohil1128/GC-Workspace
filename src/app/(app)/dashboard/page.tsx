@@ -259,7 +259,11 @@ export default async function DashboardPage() {
               <StatCard
                 label="Food cost (period)"
                 value={formatMoney(data.kpis.foodCostCents)}
-                hint="theoretical usage"
+                hint={
+                  data.kpis.foodCostBasis === "usage" ? "recipe usage (theoretical)"
+                    : data.kpis.foodCostBasis === "invoices" ? "supplier invoices"
+                      : "no data yet"
+                }
               />
               <StatCard
                 label="Labor cost"

@@ -8,11 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UnitSelect } from "@/components/ui/unit-select";
 import { addInvoiceItemAction, removeInvoiceItemAction } from "@/modules/invoices/actions";
 import { quickCreateIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
-
-const COMMON_UNITS = ["lb", "kg", "g", "oz", "ea", "case", "gal", "L", "ml", "pack", "box", "bag"];
 
 type Item = {
   id: string;
@@ -253,16 +252,7 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="qi-unit">Unit</Label>
-                <Input
-                  id="qi-unit"
-                  value={newUnit}
-                  onChange={(e) => setNewUnit(e.target.value)}
-                  list="qi-unit-list"
-                  placeholder="lb, gal, ea..."
-                />
-                <datalist id="qi-unit-list">
-                  {COMMON_UNITS.map((u) => <option key={u} value={u} />)}
-                </datalist>
+                <UnitSelect id="qi-unit" value={newUnit} onValueChange={setNewUnit} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="qi-cost">Last cost ($/unit)</Label>

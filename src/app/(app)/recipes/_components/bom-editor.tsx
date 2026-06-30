@@ -1,17 +1,28 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UnitSelect } from "@/components/ui/unit-select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney } from "@/lib/money";
+import { convertUnits, areCompatible, unitLabel } from "@/lib/units";
 import { updateBomAction } from "@/modules/recipes/actions";
 import { toast } from "@/components/ui/use-toast";
 
-type Item = { ingredientId: string; name: string; unit: string; qty: number; avgCostCents: number };
+// `unit` is the recipe unit; `stockUnit` is how the ingredient is priced.
+type Item = { ingredientId: string; name: string; stockUnit: string; unit: string; qty: number; avgCostCents: number };
 type Catalog = { id: string; name: string; unit: string; avgCostCents: number }[];
+
+// Cost a line by converting the recipe qty into the ingredient's stock unit.
+// Falls back to a raw 1:1 multiply when the units aren't compatible.
+function lineCostCents(it: Item): { cents: number; converted: boolean } {
+  const conv = convertUnits(it.qty, it.unit, it.stockUnit);
+  if (conv !== null) return { cents: Math.round(conv * it.avgCostCents), converted: true };
+  return { cents: Math.round(it.qty * it.avgCostCents), converted: false };
+}
 
 export function BomEditor({ recipeId, initial, catalog }: { recipeId: string; initial: Item[]; catalog: Catalog }) {
   const [items, setItems] = React.useState<Item[]>(initial);
@@ -19,23 +30,25 @@ export function BomEditor({ recipeId, initial, catalog }: { recipeId: string; in
   const [pending, start] = React.useTransition();
   const router = useRouter();
 
-  const totalCents = items.reduce((acc, it) => acc + Math.round(it.qty * it.avgCostCents), 0);
+  const totalCents = items.reduce((acc, it) => acc + lineCostCents(it).cents, 0);
+  const anyIncompatible = items.some((it) => it.qty > 0 && !areCompatible(it.unit, it.stockUnit));
 
   const add = () => {
     if (!pickerId) return;
     if (items.some((i) => i.ingredientId === pickerId)) return;
     const cat = catalog.find((c) => c.id === pickerId);
     if (!cat) return;
-    setItems([...items, { ingredientId: cat.id, name: cat.name, unit: cat.unit, qty: 0, avgCostCents: cat.avgCostCents }]);
+    setItems([...items, { ingredientId: cat.id, name: cat.name, stockUnit: cat.unit, unit: cat.unit, qty: 0, avgCostCents: cat.avgCostCents }]);
     setPickerId("");
   };
 
   const remove = (id: string) => setItems(items.filter((i) => i.ingredientId !== id));
-
   const setQty = (id: string, qty: string) => {
     const n = Number(qty);
     setItems(items.map((i) => (i.ingredientId === id ? { ...i, qty: isNaN(n) ? 0 : n } : i)));
   };
+  const setUnit = (id: string, unit: string) =>
+    setItems(items.map((i) => (i.ingredientId === id ? { ...i, unit } : i)));
 
   const save = () =>
     start(async () => {
@@ -57,36 +70,61 @@ export function BomEditor({ recipeId, initial, catalog }: { recipeId: string; in
           <TableHeader>
             <TableRow>
               <TableHead>Ingredient</TableHead>
-              <TableHead className="text-right w-32">Qty</TableHead>
-              <TableHead>Unit</TableHead>
+              <TableHead className="text-right w-28">Qty</TableHead>
+              <TableHead className="w-40">Unit</TableHead>
               <TableHead className="text-right">Unit Cost</TableHead>
               <TableHead className="text-right">Line $</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((it) => (
-              <TableRow key={it.ingredientId}>
-                <TableCell className="font-medium">{it.name}</TableCell>
-                <TableCell className="text-right">
-                  <Input type="number" step="0.001" min="0" value={it.qty} onChange={(e) => setQty(it.ingredientId, e.target.value)} className="h-8 text-right num" />
-                </TableCell>
-                <TableCell className="text-muted-foreground">{it.unit}</TableCell>
-                <TableCell className="text-right num">{formatMoney(it.avgCostCents)}</TableCell>
-                <TableCell className="text-right num">{formatMoney(Math.round(it.qty * it.avgCostCents))}</TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => remove(it.ingredientId)} aria-label="Remove">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {items.map((it) => {
+              const lc = lineCostCents(it);
+              const incompatible = it.qty > 0 && !areCompatible(it.unit, it.stockUnit);
+              return (
+                <TableRow key={it.ingredientId}>
+                  <TableCell className="font-medium">
+                    {it.name}
+                    <div className="text-2xs text-muted-foreground">stocked in {unitLabel(it.stockUnit)} · {formatMoney(it.avgCostCents)}/{unitLabel(it.stockUnit)}</div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Input type="number" step="0.001" min="0" value={it.qty} onChange={(e) => setQty(it.ingredientId, e.target.value)} className="h-8 text-right num" />
+                  </TableCell>
+                  <TableCell>
+                    <UnitSelect value={it.unit} onValueChange={(u) => setUnit(it.ingredientId, u)} />
+                  </TableCell>
+                  <TableCell className="text-right num">{formatMoney(it.avgCostCents)}</TableCell>
+                  <TableCell className="text-right num">
+                    <span className={incompatible ? "text-warning" : ""}>{formatMoney(lc.cents)}</span>
+                    {incompatible && (
+                      <AlertTriangle className="inline-block h-3 w-3 ml-1 text-warning align-text-bottom" />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => remove(it.ingredientId)} aria-label="Remove">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {items.length === 0 && (
               <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No ingredients yet. Add one below.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {anyIncompatible && (
+        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-warning" />
+          <span>
+            Some lines use a unit that can&apos;t be converted to the ingredient&apos;s stock unit
+            (e.g. volume vs weight). Those are costed 1:1 — pick a matching unit, or add a
+            conversion, for an accurate plate cost.
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex-1 min-w-[200px]">
@@ -97,7 +135,7 @@ export function BomEditor({ recipeId, initial, catalog }: { recipeId: string; in
                 .filter((c) => !items.some((i) => i.ingredientId === c.id))
                 .map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name} ({c.unit}) · {formatMoney(c.avgCostCents)}
+                    {c.name} ({unitLabel(c.unit)}) · {formatMoney(c.avgCostCents)}
                   </SelectItem>
                 ))}
             </SelectContent>

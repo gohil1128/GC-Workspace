@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UnitSelect } from "@/components/ui/unit-select";
 import { useRouter } from "next/navigation";
 import { createIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
@@ -56,8 +57,8 @@ export function NewIngredientButton() {
               <Input id="sku" name="sku" />
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="unit">Unit</Label>
-              <Input id="unit" name="unit" required placeholder="lb, ea, oz" />
+              <Label htmlFor="unit">Stock unit</Label>
+              <UnitSelect id="unit" name="unit" defaultValue="g" />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="lastCostDollars">Last cost ($/unit)</Label>

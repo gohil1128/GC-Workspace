@@ -48,6 +48,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
               initial={r.ingredients.map((ri) => ({
                 ingredientId: ri.ingredientId,
                 name: ri.ingredient.name,
+                stockUnit: ri.ingredient.unit,
                 unit: ri.unit,
                 qty: ri.qty,
                 avgCostCents: ri.ingredient.avgCostCents,
