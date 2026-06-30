@@ -1,4 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { convertUnits } from "@/lib/units";
+
+// Cost a single BOM line: convert the recipe qty into the ingredient's stock
+// unit (the unit its avgCost is priced in). Falls back to a raw 1:1 multiply
+// when units aren't compatible, matching the editor.
+function bomLineCents(ri: { qty: number; unit: string; ingredient: { unit: string; avgCostCents: number } }): number {
+  const conv = convertUnits(ri.qty, ri.unit, ri.ingredient.unit);
+  const effectiveQty = conv !== null ? conv : ri.qty;
+  return Math.round(effectiveQty * ri.ingredient.avgCostCents);
+}
 
 export async function listRecipes(businessId: string) {
   const recipes = await prisma.recipe.findMany({
@@ -8,7 +18,7 @@ export async function listRecipes(businessId: string) {
   });
   return recipes.map((r) => ({
     ...r,
-    plateCostCents: r.ingredients.reduce((acc, ri) => acc + Math.round(ri.qty * ri.ingredient.avgCostCents), 0),
+    plateCostCents: r.ingredients.reduce((acc, ri) => acc + bomLineCents(ri), 0),
   }));
 }
 
@@ -18,7 +28,7 @@ export async function getRecipe(businessId: string, id: string) {
     include: { ingredients: { include: { ingredient: true }, orderBy: { id: "asc" } } },
   });
   if (!r) return null;
-  const plateCostCents = r.ingredients.reduce((acc, ri) => acc + Math.round(ri.qty * ri.ingredient.avgCostCents), 0);
+  const plateCostCents = r.ingredients.reduce((acc, ri) => acc + bomLineCents(ri), 0);
   return { ...r, plateCostCents };
 }
 

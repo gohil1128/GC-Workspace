@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UnitSelect } from "@/components/ui/unit-select";
 import { createRecipeAction } from "@/modules/recipes/actions";
 import { toast } from "@/components/ui/use-toast";
 
@@ -57,7 +58,7 @@ export function NewRecipeButton() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="yieldUnit">Yield unit</Label>
-              <Input id="yieldUnit" name="yieldUnit" defaultValue="ea" />
+              <UnitSelect id="yieldUnit" name="yieldUnit" defaultValue="ea" />
             </div>
           </div>
           <input type="hidden" name="isActive" value="true" />
