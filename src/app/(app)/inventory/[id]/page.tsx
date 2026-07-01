@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { fmtDateTime } from "@/lib/date";
 import { WasteForm } from "../_components/waste-form";
+import { EditIngredientButton } from "../_components/edit-ingredient";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,24 @@ export default async function IngredientDetailPage({ params }: { params: Promise
         title={ing.name}
         description={`${ing.category ?? "—"} · ${ing.unit}`}
         actions={
-          <Button asChild variant="outline" size="sm"><Link href="/inventory"><ArrowLeft className="h-3.5 w-3.5" /> All ingredients</Link></Button>
+          <>
+            <Button asChild variant="outline" size="sm"><Link href="/inventory"><ArrowLeft className="h-3.5 w-3.5" /> All ingredients</Link></Button>
+            <EditIngredientButton
+              variant="button"
+              ingredient={{
+                id: ing.id,
+                name: ing.name,
+                category: ing.category,
+                sku: ing.sku,
+                unit: ing.unit,
+                onHand: ing.onHand,
+                parLevel: ing.parLevel,
+                reorderPoint: ing.reorderPoint,
+                reorderQty: ing.reorderQty,
+                lastCostDollars: ing.lastCostCents / 100,
+              }}
+            />
+          </>
         }
       />
       <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">

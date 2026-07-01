@@ -55,21 +55,52 @@ export async function updateIngredientAction(id: string, formData: FormData) {
   });
   const existing = await prisma.ingredient.findFirst({ where: { id, businessId: scope.businessId } });
   if (!existing) throw new Error("Not found");
-  await prisma.ingredient.update({
-    where: { id },
-    data: {
-      name: parsed.name,
-      sku: parsed.sku || null,
-      category: parsed.category || null,
-      unit: parsed.unit,
-      parLevel: parsed.parLevel,
-      reorderPoint: parsed.reorderPoint,
-      reorderQty: parsed.reorderQty,
-      supplierId: parsed.supplierId || null,
-      lastCostCents: toCents(parsed.lastCostDollars),
-    },
+
+  // Optional "set on hand" — lets the operator record how much volume/stock
+  // they actually have. Written as an ADJUSTMENT movement so the ledger stays
+  // consistent instead of silently overwriting onHand.
+  const onHandRaw = formData.get("onHand");
+  const onHandNext = onHandRaw !== null && String(onHandRaw).trim() !== "" ? Number(onHandRaw) : null;
+  const onHandDelta =
+    onHandNext !== null && isFinite(onHandNext) && onHandNext >= 0 ? onHandNext - existing.onHand : 0;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.ingredient.update({
+      where: { id },
+      data: {
+        name: parsed.name,
+        sku: parsed.sku || null,
+        category: parsed.category || null,
+        unit: parsed.unit,
+        parLevel: parsed.parLevel,
+        reorderPoint: parsed.reorderPoint,
+        reorderQty: parsed.reorderQty,
+        supplierId: parsed.supplierId || null,
+        lastCostCents: toCents(parsed.lastCostDollars),
+        ...(onHandDelta !== 0 ? { onHand: onHandNext! } : {}),
+      },
+    });
+    if (onHandDelta !== 0) {
+      await tx.inventoryMovement.create({
+        data: {
+          locationId: scope.locationId,
+          ingredientId: id,
+          type: "ADJUSTMENT",
+          qty: onHandDelta,
+          unit: parsed.unit,
+          unitCostCents: existing.avgCostCents,
+          sourceType: "ADJUST",
+          note: `On-hand set to ${onHandNext} ${parsed.unit} via edit`,
+        },
+      });
+    }
   });
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "ingredient.update", entityType: "Ingredient", entityId: id });
+
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "ingredient.update", entityType: "Ingredient", entityId: id,
+    diff: onHandDelta !== 0 ? { unit: parsed.unit, onHand: onHandNext } : { unit: parsed.unit },
+  });
   revalidatePath("/inventory");
   revalidatePath(`/inventory/${id}`);
   return { ok: true };

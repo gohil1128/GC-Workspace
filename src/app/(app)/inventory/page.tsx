@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney } from "@/lib/money";
 import { NewIngredientButton } from "./_components/new-ingredient";
+import { EditIngredientButton } from "./_components/edit-ingredient";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteIngredientAction } from "@/modules/inventory/actions";
 
@@ -43,7 +44,7 @@ export default async function InventoryPage() {
                 <TableHead className="text-right">Reorder Pt</TableHead>
                 <TableHead className="text-right">Last Cost</TableHead>
                 <TableHead className="text-right">Status</TableHead>
-                <TableHead className="w-12" />
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,11 +68,27 @@ export default async function InventoryPage() {
                       {low ? <Badge variant="danger">Low</Badge> : <Badge variant="muted">OK</Badge>}
                     </TableCell>
                     <TableCell>
-                      <DeleteButton
-                        action={deleteIngredientAction.bind(null, i.id)}
-                        itemLabel="ingredient"
-                        itemName={i.name}
-                      />
+                      <div className="flex items-center gap-0.5">
+                        <EditIngredientButton
+                          ingredient={{
+                            id: i.id,
+                            name: i.name,
+                            category: i.category,
+                            sku: i.sku,
+                            unit: i.unit,
+                            onHand: i.onHand,
+                            parLevel: i.parLevel,
+                            reorderPoint: i.reorderPoint,
+                            reorderQty: i.reorderQty,
+                            lastCostDollars: i.lastCostCents / 100,
+                          }}
+                        />
+                        <DeleteButton
+                          action={deleteIngredientAction.bind(null, i.id)}
+                          itemLabel="ingredient"
+                          itemName={i.name}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
