@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UnitSelect } from "@/components/ui/unit-select";
+import { CategorySelect } from "@/components/ui/category-select";
+import { INGREDIENT_CATEGORIES } from "@/lib/gc-categories";
 import { useRouter } from "next/navigation";
 import { createIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
@@ -48,7 +50,7 @@ export function NewIngredientButton() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="category">Category</Label>
-              <Input id="category" name="category" placeholder="Produce, Dairy, ..." />
+              <CategorySelect id="category" name="category" options={INGREDIENT_CATEGORIES} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
