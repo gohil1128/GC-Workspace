@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { UnitSelect } from "@/components/ui/unit-select";
+import { CategorySelect } from "@/components/ui/category-select";
+import { INGREDIENT_CATEGORIES } from "@/lib/gc-categories";
 import { addInvoiceItemAction, removeInvoiceItemAction } from "@/modules/invoices/actions";
 import { quickCreateIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
@@ -30,7 +32,7 @@ type Ingredient = {
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: string; items: Item[]; readOnly: boolean }) {
+export function InvoiceItemsTable({ invoiceId, supplierId, items, readOnly }: { invoiceId: string; supplierId?: string | null; items: Item[]; readOnly: boolean }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
   const [q, setQ] = React.useState("");
@@ -64,6 +66,9 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
         unit: newUnit,
         category: newCategory || null,
         lastCostDollars: Number(newCost) || 0,
+        // Link the new ingredient to this invoice's supplier so reorder
+        // suggestions and supplier spend reports pick it up automatically.
+        supplierId: supplierId ?? null,
       });
       toast({ title: `${created.name} created`, description: "Auto-filled below — adjust qty and add it." });
       setCreateOpen(false);
@@ -269,11 +274,11 @@ export function InvoiceItemsTable({ invoiceId, items, readOnly }: { invoiceId: s
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="qi-cat">Category (optional)</Label>
-              <Input
+              <CategorySelect
                 id="qi-cat"
+                options={INGREDIENT_CATEGORIES}
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="Dairy, Produce, Dry goods..."
+                onValueChange={setNewCategory}
               />
             </div>
             <p className="text-2xs text-muted-foreground">

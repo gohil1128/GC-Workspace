@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UnitSelect } from "@/components/ui/unit-select";
+import { CategorySelect } from "@/components/ui/category-select";
+import { INGREDIENT_CATEGORIES } from "@/lib/gc-categories";
 import { updateIngredientAction } from "@/modules/inventory/actions";
 import { toast } from "@/components/ui/use-toast";
 
@@ -73,7 +75,12 @@ export function EditIngredientButton({
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`ei-cat-${ingredient.id}`}>Category</Label>
-              <Input id={`ei-cat-${ingredient.id}`} name="category" defaultValue={ingredient.category ?? ""} placeholder="Produce, Dairy, ..." />
+              <CategorySelect
+                id={`ei-cat-${ingredient.id}`}
+                name="category"
+                options={INGREDIENT_CATEGORIES}
+                defaultValue={ingredient.category}
+              />
             </div>
           </div>
 

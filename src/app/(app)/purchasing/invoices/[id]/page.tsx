@@ -101,6 +101,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <CardContent>
             <InvoiceItemsTable
               invoiceId={inv.id}
+              supplierId={inv.supplierId}
               readOnly={!!inv.closedAt}
               items={inv.items.map((it) => ({
                 id: it.id,

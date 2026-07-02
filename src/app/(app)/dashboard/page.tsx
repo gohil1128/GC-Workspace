@@ -186,8 +186,8 @@ export default async function DashboardPage() {
           <section className="space-y-4">
             <SectionTitle
               eyebrow="Vitals"
-              title="How the business is breathing"
-              subtitle="The four ratios that move the P&L. Each ring fills to the actual value — the tick mark is your target."
+              title="Your four key health numbers"
+              subtitle="Food cost = what ingredients cost vs what you sold. Labor = wages vs sales. Prime = food + labor together. Lower is better on all four — the small tick on each ring is your target."
             />
             <div className="rounded-2xl border bg-card shadow-card p-6">
               <div className="grid grid-cols-2 gap-y-6 md:grid-cols-4">
@@ -377,11 +377,11 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
               <FinanceTile
                 icon={<Coins className="h-4 w-4" />}
-                label="EBITDA"
+                label="Profit (EBITDA)"
                 value={formatMoney(finance.ebitdaCents, { signed: true })}
                 tone={finance.ebitdaCents < 0 ? "bad" : finance.ebitdaMarginPct > 15 ? "good" : "warn"}
                 hint={`${formatPercent(finance.ebitdaMarginPct)} margin`}
-                sub="Sales − COGS − Labor − Opex"
+                sub="What's left: sales minus ingredients, wages & expenses"
               />
               <FinanceTile
                 icon={<ShoppingCart className="h-4 w-4" />}
@@ -421,7 +421,7 @@ export default async function DashboardPage() {
                 value={formatMoney(finance.marketingPerGuestCents)}
                 tone={finance.marketingPerGuestCents > 500 ? "warn" : "good"}
                 hint={`${formatMoney(finance.marketingCents)} mkt · ${finance.guestCount.toLocaleString()} guests`}
-                sub="CAC proxy"
+                sub="Ad spend it took to bring in each customer"
               />
             </div>
             {finance.untaggedInvoiceCount > 0 && (
@@ -545,8 +545,80 @@ export default async function DashboardPage() {
               <JumpTile href="/inventory/counts" icon={<Sparkles className="h-4 w-4" />} title="Weekly count" hint="Reconcile inventory" />
             </div>
           </section>
+
+          {/* ─────── How it all connects (beginner guide) ─────── */}
+          <section className="space-y-4">
+            <SectionTitle
+              eyebrow="New here?"
+              title="How this dashboard works"
+              subtitle="Every number above is fed by something you enter. Here's the map — do these four things and the whole dashboard fills itself in."
+            />
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <GuideCard
+                step="1"
+                title="Upload your sales"
+                body="After each event day, upload the two Square CSVs (Sales Summary + Item Sales) in Settings → Integrations. That powers Net sales, Tips, Top items, and the category bars."
+                href="/settings/integrations"
+                cta="Go to imports"
+              />
+              <GuideCard
+                step="2"
+                title="Enter supplier invoices"
+                body="Every bill you pay goes in as an invoice, tagged to its event. Line items automatically add stock to Inventory and update ingredient costs — and the totals drive Food cost and Profit."
+                href="/purchasing/invoices/new"
+                cta="Enter an invoice"
+              />
+              <GuideCard
+                step="3"
+                title="Close cash each day"
+                body="Count the drawer, log deposits. This powers Cash over/short — the number that tells you if money is leaking."
+                href="/cash/new"
+                cta="Close cash"
+              />
+              <GuideCard
+                step="4"
+                title="Tag everything to events"
+                body="Pick an event when importing sales or entering invoices. Then use the event picker in the top bar to see any single event's profit — or 'All events' for the big picture."
+                href="/settings"
+                cta="Manage events"
+              />
+            </div>
+          </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function GuideCard({
+  step,
+  title,
+  body,
+  href,
+  cta,
+}: {
+  step: string;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <div className="flex flex-col rounded-2xl border bg-card p-4 shadow-card">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand text-sm font-bold">
+          {step}
+        </span>
+        <span className="text-sm font-semibold tracking-tight">{title}</span>
+      </div>
+      <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
+      <Link
+        href={href}
+        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+      >
+        {cta}
+        <ArrowUpRight className="h-3 w-3" />
+      </Link>
     </div>
   );
 }
