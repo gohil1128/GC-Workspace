@@ -28,7 +28,29 @@ export async function createSupplierAction(formData: FormData) {
     },
   });
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "supplier.create", entityType: "Supplier", entityId: s.id });
-  revalidatePath("/purchasing/suppliers");
+  revalidatePath("/purchasing");
+}
+
+// Minimal inline supplier creation used from the invoice form — just a name,
+// details can be added later. Idempotent on name so re-typing an existing
+// supplier reuses it instead of duplicating.
+export async function quickCreateSupplierAction(nameRaw: string): Promise<{ id: string; name: string }> {
+  const scope = await getScope();
+  const name = String(nameRaw ?? "").trim();
+  if (!name) throw new Error("Supplier name is required");
+  const existing = await prisma.supplier.findFirst({
+    where: { businessId: scope.businessId, name: { equals: name, mode: "insensitive" } },
+    select: { id: true, name: true },
+  });
+  if (existing) return existing;
+  const s = await prisma.supplier.create({
+    data: { businessId: scope.businessId, name },
+    select: { id: true, name: true },
+  });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "supplier.quick_create", entityType: "Supplier", entityId: s.id, diff: { name: s.name } });
+  revalidatePath("/purchasing");
+  revalidatePath("/purchasing/invoices/new");
+  return s;
 }
 
 export async function createPoAction(payload: unknown) {
@@ -150,7 +172,7 @@ export async function deleteSupplierAction(id: string) {
     prisma.supplier.delete({ where: { id } }),
   ]);
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "supplier.delete", entityType: "Supplier", entityId: id, diff: { name: s.name } });
-  revalidatePath("/purchasing/suppliers");
+  revalidatePath("/purchasing");
   revalidatePath("/purchasing");
 }
 

@@ -41,7 +41,6 @@ const SECTIONS: Section[] = [
       { href: "/purchasing/invoices", label: "Invoices", note: "Supplier bills" },
       { href: "/purchasing/invoices/new", label: "New invoice", note: "Enter a bill" },
       { href: "/purchasing", label: "Purchase orders", note: "Reorder builder" },
-      { href: "/purchasing/suppliers", label: "Suppliers", note: "Vendor list" },
     ],
   },
   {
