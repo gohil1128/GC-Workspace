@@ -1,12 +1,14 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateInvoiceAction, setInvoiceEventAction } from "@/modules/invoices/actions";
+import { updateInvoiceAction, setInvoiceEventAction, setInvoiceImageAction } from "@/modules/invoices/actions";
+import { compressImageToDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
 type Event = { id: string; name: string; color: string | null };
@@ -21,6 +23,7 @@ type Initial = {
   dateReceived: string;
   internalMemo: string;
   eventId: string | null;
+  imageDataUrl: string | null;
   subtotalDollars: number;
   gstDollars: number;
   pstDollars: number;
@@ -42,10 +45,37 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
   const [invoiceDate, setInvoiceDate] = React.useState(initial.invoiceDate);
   const [dateReceived, setDateReceived] = React.useState(initial.dateReceived);
   const [internalMemo, setInternalMemo] = React.useState(initial.internalMemo);
+  const [subtotal, setSubtotal] = React.useState(String(initial.subtotalDollars));
   const [gst, setGst] = React.useState(String(initial.gstDollars));
   const [pst, setPst] = React.useState(String(initial.pstDollars));
   const [shipping, setShipping] = React.useState(String(initial.shippingDollars));
   const [rebate, setRebate] = React.useState(String(initial.rebateDollars));
+  const [image, setImage] = React.useState<string | null>(initial.imageDataUrl);
+  const [imagePending, startImage] = React.useTransition();
+  const hasItems = initial.numberOfItems > 0;
+
+  const saveImage = (dataUrl: string | null) => {
+    startImage(async () => {
+      try {
+        await setInvoiceImageAction(invoiceId, dataUrl);
+        setImage(dataUrl);
+        toast({ title: dataUrl ? "Photo attached" : "Photo removed" });
+        router.refresh();
+      } catch (err: any) {
+        toast({ title: "Photo failed", description: String(err?.message ?? err), variant: "destructive" });
+      }
+    });
+  };
+
+  const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      saveImage(await compressImageToDataUrl(f));
+    } catch {
+      toast({ title: "Could not read the photo", variant: "destructive" });
+    }
+  };
 
   // Event tagging works independently of open/closed state — retag any invoice.
   const onEventChange = (next: string) => {
@@ -61,8 +91,11 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
     });
   };
 
+  // With line items, subtotal is locked to their sum; totals-only invoices
+  // use the editable manual subtotal.
+  const effectiveSubtotal = hasItems ? initial.subtotalDollars : Number(subtotal) || 0;
   const liveTotal =
-    initial.subtotalDollars +
+    effectiveSubtotal +
     (Number(gst) || 0) +
     (Number(pst) || 0) +
     (Number(shipping) || 0) -
@@ -75,6 +108,7 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
     fd.set("invoiceDate", invoiceDate);
     fd.set("dateReceived", dateReceived);
     fd.set("internalMemo", internalMemo);
+    fd.set("subtotalDollars", subtotal);
     fd.set("gstDollars", gst);
     fd.set("pstDollars", pst);
     fd.set("shippingDollars", shipping);
@@ -114,13 +148,45 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
-        <Read label="Sub Total" value={fmt(initial.subtotalDollars)} bold />
+        {hasItems ? (
+          <Read label="Sub Total (from items)" value={fmt(initial.subtotalDollars)} bold />
+        ) : (
+          <Field id="subtotal" label="Amount before tax" value={subtotal} onChange={setSubtotal} disabled={readOnly} />
+        )}
         <Field id="gst" label="GST" value={gst} onChange={setGst} disabled={readOnly} />
         <Field id="pst" label="PST" value={pst} onChange={setPst} disabled={readOnly} />
         <Field id="ship" label="Shipping" value={shipping} onChange={setShipping} disabled={readOnly} />
         <Field id="rebate" label="Rebate/Discount" value={rebate} onChange={setRebate} disabled={readOnly} />
         <Read label="Total" value={fmt(liveTotal)} bold accent />
         <Read label="Items / Qty Received" value={`${initial.numberOfItems} · ${initial.qtyReceived.toFixed(2)}`} />
+      </div>
+
+      {/* Attached photo of the paper invoice — editable even when closed */}
+      <div className="grid gap-1.5">
+        <Label>Invoice photo {imagePending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
+        {image ? (
+          <div className="flex items-start gap-3">
+            <a href={image} target="_blank" rel="noreferrer" title="Open full size">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt="Invoice" className="h-32 w-auto rounded-lg border object-cover hover:opacity-90 transition-opacity" />
+            </a>
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-brand cursor-pointer hover:underline">
+                <Camera className="h-3.5 w-3.5" /> Replace
+                <input type="file" accept="image/*" capture="environment" onChange={onPhotoPick} className="hidden" />
+              </label>
+              <button type="button" onClick={() => saveImage(null)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive">
+                <X className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Camera className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input type="file" accept="image/*" capture="environment" onChange={onPhotoPick} className="text-sm" />
+          </div>
+        )}
+        <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
       </div>
 
       {events.length > 0 && (

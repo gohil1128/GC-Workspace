@@ -614,6 +614,9 @@ model Invoice {
   rebateCents   Int       @default(0)
   totalCents    Int       @default(0)
   internalMemo  String?
+  // Photo of the paper invoice, stored as a compressed JPEG data URL
+  // (client-side downscaled; ~200-500 KB). Null when no photo attached.
+  imageDataUrl  String?
   closedAt      DateTime?
   createdById   String
   createdAt     DateTime  @default(now())

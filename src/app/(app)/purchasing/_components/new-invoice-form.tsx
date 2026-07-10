@@ -1,12 +1,14 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createInvoiceAction } from "@/modules/invoices/actions";
+import { compressImageToDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
 type Supplier = { id: string; name: string };
@@ -29,6 +31,26 @@ export function NewInvoiceForm({
   const [openPos, setOpenPos] = React.useState<{ id: string; orderedAt: string; totalCents: number }[]>([]);
   const [poId, setPoId] = React.useState<string>("");
   const [eventId, setEventId] = React.useState<string>("none");
+  const [subtotal, setSubtotal] = React.useState("");
+  const [gst, setGst] = React.useState("");
+  const [pst, setPst] = React.useState("");
+  const [imageDataUrl, setImageDataUrl] = React.useState<string>("");
+  const [compressing, setCompressing] = React.useState(false);
+
+  const liveTotal = (Number(subtotal) || 0) + (Number(gst) || 0) + (Number(pst) || 0);
+
+  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setCompressing(true);
+    try {
+      setImageDataUrl(await compressImageToDataUrl(f));
+    } catch {
+      toast({ title: "Could not read the photo", variant: "destructive" });
+    } finally {
+      setCompressing(false);
+    }
+  };
 
   React.useEffect(() => {
     if (!supplierId) { setOpenPos([]); setPoId(""); return; }
@@ -45,6 +67,7 @@ export function NewInvoiceForm({
         const fd = new FormData(e.currentTarget);
         if (poId) fd.set("poId", poId);
         fd.set("eventId", eventId);
+        if (imageDataUrl) fd.set("imageDataUrl", imageDataUrl);
         start(async () => {
           try {
             await createInvoiceAction(fd);
@@ -98,6 +121,77 @@ export function NewInvoiceForm({
           <Label htmlFor="dateReceived">Date Received</Label>
           <Input id="dateReceived" name="dateReceived" type="date" required defaultValue={defaultDate} />
         </div>
+      </div>
+
+      {/* Totals-only entry — no need to list every ingredient */}
+      <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Amounts — just enter the bill totals
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="subtotalDollars">Amount before tax ($)</Label>
+            <Input
+              id="subtotalDollars" name="subtotalDollars" type="number" step="0.01" min="0"
+              value={subtotal} onChange={(e) => setSubtotal(e.target.value)} placeholder="0.00"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="gstDollars">GST ($)</Label>
+            <Input
+              id="gstDollars" name="gstDollars" type="number" step="0.01" min="0"
+              value={gst} onChange={(e) => setGst(e.target.value)} placeholder="0.00"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pstDollars">PST ($)</Label>
+            <Input
+              id="pstDollars" name="pstDollars" type="number" step="0.01" min="0"
+              value={pst} onChange={(e) => setPst(e.target.value)} placeholder="0.00"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Total</Label>
+            <div className="num h-9 inline-flex items-center font-semibold text-brand">
+              ${liveTotal.toFixed(2)}
+            </div>
+          </div>
+        </div>
+        <p className="text-2xs text-muted-foreground">
+          Listing individual ingredients is optional — you can add line items later on the invoice
+          page if you want per-ingredient stock and cost tracking. If you do, they replace the
+          amount entered here.
+        </p>
+      </div>
+
+      {/* Photo of the paper invoice */}
+      <div className="grid gap-1.5">
+        <Label htmlFor="invoice-photo">Invoice photo (optional)</Label>
+        {imageDataUrl ? (
+          <div className="flex items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageDataUrl} alt="Invoice" className="h-28 w-auto rounded-lg border object-cover" />
+            <Button type="button" variant="ghost" size="sm" onClick={() => setImageDataUrl("")}>
+              <X className="h-3.5 w-3.5" /> Remove
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Camera className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              id="invoice-photo"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={onPhoto}
+              className="text-sm"
+            />
+            {compressing && <span className="text-2xs text-muted-foreground">compressing…</span>}
+          </div>
+        )}
+        <span className="text-2xs text-muted-foreground">
+          Snap the paper bill so you always have proof attached to the record.
+        </span>
       </div>
 
       {events.length > 0 && (

@@ -69,16 +69,26 @@ export async function weeklyTrend(locationId: string, weeks: number) {
 
 export async function purchaseSpendByPeriod(locationId: string, days: number) {
   const { from, to } = lastNDays(days);
-  const pos = await prisma.purchaseOrder.findMany({
-    where: { locationId, orderedAt: { gte: from, lte: to } },
-    include: { supplier: true },
-  });
+  // Invoices are the operator's actual bills; POs cover anything ordered but
+  // not yet invoiced. Both count toward supplier spend.
+  const [pos, invoices] = await Promise.all([
+    prisma.purchaseOrder.findMany({
+      where: { locationId, orderedAt: { gte: from, lte: to } },
+      include: { supplier: { select: { name: true } } },
+    }),
+    prisma.invoice.findMany({
+      where: { locationId, invoiceDate: { gte: from, lte: to } },
+      select: { supplierId: true, totalCents: true, supplier: { select: { name: true } } },
+    }),
+  ]);
   const bySupplier = new Map<string, { name: string; orderCount: number; spendCents: number }>();
-  for (const p of pos) {
-    if (!bySupplier.has(p.supplierId)) bySupplier.set(p.supplierId, { name: p.supplier.name, orderCount: 0, spendCents: 0 });
-    const e = bySupplier.get(p.supplierId)!;
+  const bump = (supplierId: string, name: string, cents: number) => {
+    if (!bySupplier.has(supplierId)) bySupplier.set(supplierId, { name, orderCount: 0, spendCents: 0 });
+    const e = bySupplier.get(supplierId)!;
     e.orderCount += 1;
-    e.spendCents += p.totalCents;
-  }
+    e.spendCents += cents;
+  };
+  for (const i of invoices) bump(i.supplierId, i.supplier.name, i.totalCents);
+  for (const p of pos) bump(p.supplierId, p.supplier.name, p.totalCents);
   return Array.from(bySupplier.values()).sort((a, b) => b.spendCents - a.spendCents);
 }

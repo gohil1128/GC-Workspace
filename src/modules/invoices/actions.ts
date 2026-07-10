@@ -10,14 +10,29 @@ import { createInvoiceSchema, updateInvoiceTotalsSchema, addInvoiceItemSchema } 
 
 async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
   const items = await tx.invoiceItem.findMany({ where: { invoiceId } });
-  const subtotal = items.reduce((a: number, it: any) => a + it.lineTotalCents, 0);
   const inv = await tx.invoice.findUnique({ where: { id: invoiceId } });
   if (!inv) return;
+  // Line items take over the subtotal when present; a totals-only invoice
+  // (no items) keeps its manually entered subtotal.
+  const subtotal = items.length > 0
+    ? items.reduce((a: number, it: any) => a + it.lineTotalCents, 0)
+    : inv.subtotalCents;
   const total = subtotal + inv.gstCents + inv.pstCents + inv.shippingCents - inv.rebateCents;
   await tx.invoice.update({
     where: { id: invoiceId },
     data: { subtotalCents: subtotal, totalCents: total },
   });
+}
+
+// Data-URL guard for attached invoice photos: must be an image, and capped so
+// a giant original can't blow up the row size (client compresses first).
+const MAX_IMAGE_DATAURL_CHARS = 3_000_000; // ~2.2 MB binary
+function validateImageDataUrl(raw: unknown): string | null {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s) return null;
+  if (!s.startsWith("data:image/")) throw new Error("Attachment must be an image");
+  if (s.length > MAX_IMAGE_DATAURL_CHARS) throw new Error("Image too large — retake or crop the photo");
+  return s;
 }
 
 export async function createInvoiceAction(formData: FormData) {
@@ -30,12 +45,20 @@ export async function createInvoiceAction(formData: FormData) {
     internalMemo: formData.get("internalMemo"),
     poId: formData.get("poId") || null,
     eventId: formData.get("eventId") || null,
+    subtotalDollars: formData.get("subtotalDollars") || 0,
+    gstDollars: formData.get("gstDollars") || 0,
+    pstDollars: formData.get("pstDollars") || 0,
+    imageDataUrl: formData.get("imageDataUrl") || null,
   });
   const eventId = parsed.eventId && parsed.eventId !== "none" ? parsed.eventId : null;
   if (eventId) {
     const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
     if (!ev) throw new Error("Selected event not found");
   }
+  const imageDataUrl = validateImageDataUrl(parsed.imageDataUrl);
+  const subtotalCents = toCents(parsed.subtotalDollars);
+  const gstCents = toCents(parsed.gstDollars);
+  const pstCents = toCents(parsed.pstDollars);
 
   const invoice = await prisma.$transaction(async (tx) => {
     const inv = await tx.invoice.create({
@@ -48,6 +71,11 @@ export async function createInvoiceAction(formData: FormData) {
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
+        imageDataUrl,
+        subtotalCents,
+        gstCents,
+        pstCents,
+        totalCents: subtotalCents + gstCents + pstCents,
         createdById: scope.userId,
       },
     });
@@ -93,6 +121,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
     invoiceDate: formData.get("invoiceDate"),
     dateReceived: formData.get("dateReceived"),
     internalMemo: formData.get("internalMemo"),
+    subtotalDollars: formData.get("subtotalDollars") || 0,
     gstDollars: formData.get("gstDollars"),
     pstDollars: formData.get("pstDollars"),
     shippingDollars: formData.get("shippingDollars"),
@@ -118,6 +147,8 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
         eventId,
+        // Manual subtotal — recompute overrides it whenever line items exist.
+        subtotalCents: toCents(parsed.subtotalDollars),
         gstCents: toCents(parsed.gstDollars),
         pstCents: toCents(parsed.pstDollars),
         shippingCents: toCents(parsed.shippingDollars),
@@ -246,6 +277,22 @@ export async function setInvoiceEventAction(id: string, eventIdRaw: string | nul
     diff: { eventId },
   });
   revalidatePath("/purchasing/invoices");
+  revalidatePath(`/purchasing/invoices/${id}`);
+}
+
+// Attach, replace, or remove (null) the invoice photo. Allowed on closed
+// invoices too — a photo is documentation, not a financial edit.
+export async function setInvoiceImageAction(id: string, dataUrl: string | null) {
+  const scope = await getScope();
+  const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
+  if (!inv) throw new Error("Not found");
+  const imageDataUrl = validateImageDataUrl(dataUrl);
+  await prisma.invoice.update({ where: { id }, data: { imageDataUrl } });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: imageDataUrl ? "invoice.image.attach" : "invoice.image.remove",
+    entityType: "Invoice", entityId: id,
+  });
   revalidatePath(`/purchasing/invoices/${id}`);
 }
 

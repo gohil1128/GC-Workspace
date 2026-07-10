@@ -8,9 +8,16 @@ export const createInvoiceSchema = z.object({
   internalMemo: z.string().optional().nullable(),
   poId: z.string().optional().nullable(),
   eventId: z.string().optional().nullable(),
+  // Totals-only entry: the bill amount before taxes plus taxes. Line items are
+  // optional — when added later they take over the subtotal.
+  subtotalDollars: z.coerce.number().min(0).default(0),
+  gstDollars: z.coerce.number().min(0).default(0),
+  pstDollars: z.coerce.number().min(0).default(0),
+  imageDataUrl: z.string().optional().nullable(),
 });
 
 export const updateInvoiceTotalsSchema = z.object({
+  subtotalDollars: z.coerce.number().min(0).default(0),
   gstDollars: z.coerce.number().min(0).default(0),
   pstDollars: z.coerce.number().min(0).default(0),
   shippingDollars: z.coerce.number().min(0).default(0),
