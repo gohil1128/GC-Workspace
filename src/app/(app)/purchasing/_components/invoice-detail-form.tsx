@@ -1,8 +1,9 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Camera, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PhotoInput } from "@/components/ui/photo-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,9 +68,7 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
     });
   };
 
-  const onPhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  const onPhotoPick = async (f: File) => {
     try {
       saveImage(await compressImageToDataUrl(f));
     } catch {
@@ -170,21 +169,15 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={image} alt="Invoice" className="h-32 w-auto rounded-lg border object-cover hover:opacity-90 transition-opacity" />
             </a>
-            <div className="flex flex-col gap-1.5">
-              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-brand cursor-pointer hover:underline">
-                <Camera className="h-3.5 w-3.5" /> Replace
-                <input type="file" accept="image/*" capture="environment" onChange={onPhotoPick} className="hidden" />
-              </label>
+            <div className="flex flex-col gap-2">
+              <PhotoInput onPick={onPhotoPick} disabled={imagePending} />
               <button type="button" onClick={() => saveImage(null)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive">
                 <X className="h-3.5 w-3.5" /> Remove
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input type="file" accept="image/*" capture="environment" onChange={onPhotoPick} className="text-sm" />
-          </div>
+          <PhotoInput onPick={onPhotoPick} disabled={imagePending} />
         )}
         <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
       </div>

@@ -541,7 +541,7 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <JumpTile href="/cash/new" icon={<Wallet className="h-4 w-4" />} title="Close cash" hint="Run today's cash close" />
               <JumpTile href="/purchasing/invoices/new" icon={<Package className="h-4 w-4" />} title="New invoice" hint="Enter a supplier invoice" />
-              <JumpTile href="/receipts" icon={<ScanLine className="h-4 w-4" />} title="Scan receipt" hint="AI per-unit cost extractor" />
+              <JumpTile href="/expenses" icon={<ScanLine className="h-4 w-4" />} title="Log expense" hint="Rent, marketing, vendors" />
               <JumpTile href="/inventory/counts" icon={<Sparkles className="h-4 w-4" />} title="Weekly count" hint="Reconcile inventory" />
             </div>
           </section>

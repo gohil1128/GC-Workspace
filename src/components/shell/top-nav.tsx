@@ -23,7 +23,6 @@ const SECTIONS: Section[] = [
     href: "/reports",
     children: [
       { href: "/reports", label: "Reports", note: "Daily, weekly, variance" },
-      { href: "/receipts", label: "AI receipts", note: "Scan a receipt" },
       { href: "/settings/integrations", label: "Import sales (CSV)", note: "Square uploads" },
     ],
   },
