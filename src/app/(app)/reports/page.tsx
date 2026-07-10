@@ -117,7 +117,7 @@ export default async function ReportsPage() {
 
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle>Purchase spend by supplier (30d)</CardTitle>
+              <CardTitle>Supplier spend (30d) · invoices + POs</CardTitle>
               <Button asChild variant="outline" size="sm"><a href="/api/exports/spend"><Download className="h-3.5 w-3.5" /> CSV</a></Button>
             </CardHeader>
             <CardContent className="p-0">

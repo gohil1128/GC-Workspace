@@ -164,7 +164,8 @@ export function InvoiceItemsTable({ invoiceId, supplierId, items, readOnly }: { 
             {items.length === 0 && (
               <TableRow>
                 <TableCell colSpan={readOnly ? 6 : 7} className="text-center text-sm text-muted-foreground py-6">
-                  No items yet. {readOnly ? "" : "Search below to add one."}
+                  No line items — this invoice uses the totals entered above.
+                  {readOnly ? "" : " Add items below only if you want per-ingredient stock & cost tracking (they replace the manual amount)."}
                 </TableCell>
               </TableRow>
             )}

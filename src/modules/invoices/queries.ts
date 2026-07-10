@@ -20,9 +20,18 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
     if (filters.from) where.invoiceDate.gte = startOfDay(new Date(filters.from));
     if (filters.to) where.invoiceDate.lte = endOfDay(new Date(filters.to));
   }
+  // Explicit select keeps the (potentially large) imageDataUrl out of the
+  // list query — the photo is only loaded on the invoice detail page.
   return prisma.invoice.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      invoiceNumber: true,
+      invoiceDate: true,
+      dateReceived: true,
+      subtotalCents: true,
+      totalCents: true,
+      closedAt: true,
       supplier: { select: { name: true } },
       createdBy: { select: { name: true } },
       event: { select: { id: true, name: true, color: true } },
