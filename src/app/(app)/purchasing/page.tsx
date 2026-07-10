@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users, FileText } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listPurchaseOrders } from "@/modules/purchasing/queries";
 import { PageHeader } from "@/components/page-header";
@@ -25,7 +25,6 @@ export default async function PurchasingPage() {
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><FileText className="h-3.5 w-3.5" /> Invoices</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link href="/purchasing/suppliers"><Users className="h-3.5 w-3.5" /> Suppliers</Link></Button>
             <Button asChild size="sm"><Link href="/purchasing/invoices/new"><Plus className="h-3.5 w-3.5" /> New invoice</Link></Button>
           </>
         }

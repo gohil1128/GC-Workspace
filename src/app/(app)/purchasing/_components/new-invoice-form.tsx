@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PhotoInput } from "@/components/ui/photo-input";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createInvoiceAction } from "@/modules/invoices/actions";
+import { quickCreateSupplierAction } from "@/modules/purchasing/actions";
 import { compressImageToDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -37,6 +38,30 @@ export function NewInvoiceForm({
   const [pst, setPst] = React.useState("");
   const [imageDataUrl, setImageDataUrl] = React.useState<string>("");
   const [compressing, setCompressing] = React.useState(false);
+
+  // Inline supplier creation — new suppliers land in this local list and get
+  // selected immediately, no separate Suppliers page needed.
+  const [supplierList, setSupplierList] = React.useState<Supplier[]>(suppliers);
+  const [addingSupplier, setAddingSupplier] = React.useState(false);
+  const [newSupplierName, setNewSupplierName] = React.useState("");
+  const [savingSupplier, setSavingSupplier] = React.useState(false);
+
+  const saveNewSupplier = async () => {
+    if (!newSupplierName.trim() || savingSupplier) return;
+    setSavingSupplier(true);
+    try {
+      const s = await quickCreateSupplierAction(newSupplierName);
+      setSupplierList((list) => (list.some((x) => x.id === s.id) ? list : [...list, s].sort((a, b) => a.name.localeCompare(b.name))));
+      setSupplierId(s.id);
+      setAddingSupplier(false);
+      setNewSupplierName("");
+      toast({ title: `Supplier "${s.name}" added` });
+    } catch (err: any) {
+      toast({ title: "Could not add supplier", description: String(err?.message ?? err), variant: "destructive" });
+    } finally {
+      setSavingSupplier(false);
+    }
+  };
 
   const liveTotal = (Number(subtotal) || 0) + (Number(gst) || 0) + (Number(pst) || 0);
 
@@ -84,9 +109,38 @@ export function NewInvoiceForm({
           <Select name="supplierId" value={supplierId} onValueChange={setSupplierId}>
             <SelectTrigger id="supplierId"><SelectValue placeholder="Pick supplier" /></SelectTrigger>
             <SelectContent>
-              {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              {supplierList.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          {addingSupplier ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={newSupplierName}
+                onChange={(e) => setNewSupplierName(e.target.value)}
+                placeholder="Supplier name"
+                className="h-8 text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveNewSupplier(); }
+                  if (e.key === "Escape") setAddingSupplier(false);
+                }}
+              />
+              <Button type="button" size="sm" variant="brand" className="h-8" disabled={savingSupplier || !newSupplierName.trim()} onClick={saveNewSupplier}>
+                {savingSupplier ? "Adding…" : "Add"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setAddingSupplier(false)}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingSupplier(true)}
+              className="self-start inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+            >
+              <Plus className="h-3 w-3" /> New supplier
+            </button>
+          )}
         </div>
         <div className="grid gap-1.5">
           <Label>Store</Label>
