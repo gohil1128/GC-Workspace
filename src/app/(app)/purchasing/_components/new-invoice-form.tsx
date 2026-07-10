@@ -1,8 +1,9 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Camera, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PhotoInput } from "@/components/ui/photo-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,9 +40,7 @@ export function NewInvoiceForm({
 
   const liveTotal = (Number(subtotal) || 0) + (Number(gst) || 0) + (Number(pst) || 0);
 
-  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  const onPhoto = async (f: File) => {
     setCompressing(true);
     try {
       setImageDataUrl(await compressImageToDataUrl(f));
@@ -177,20 +176,12 @@ export function NewInvoiceForm({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input
-              id="invoice-photo"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onPhoto}
-              className="text-sm"
-            />
+            <PhotoInput onPick={onPhoto} disabled={compressing} />
             {compressing && <span className="text-2xs text-muted-foreground">compressing…</span>}
           </div>
         )}
         <span className="text-2xs text-muted-foreground">
-          Snap the paper bill so you always have proof attached to the record.
+          Snap the paper bill with your camera, or pick an existing photo from your gallery / computer.
         </span>
       </div>
 
