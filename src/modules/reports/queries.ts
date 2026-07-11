@@ -146,3 +146,91 @@ export async function supplierSpendByEvent(locationId: string) {
     hasUntagged: grandUntagged > 0,
   };
 }
+
+// P&L per event + overall. Event columns use the event tag for sales,
+// invoices (COGS) and expenses, the event's own fee, and its date window for
+// labor (shifts carry no tag). Overall covers everything all-time, including
+// untagged rows, so it's the true business-wide picture.
+export type PnlColumn = {
+  key: string; // event id or "overall"
+  name: string;
+  color: string | null;
+  txns: number;
+  netSalesCents: number;
+  tipsCents: number;
+  cogsCents: number; // supplier invoices
+  laborCents: number;
+  opexCents: number; // expenses
+  feeCents: number; // event fees
+  profitCents: number;
+  marginPct: number;
+};
+
+export async function pnlByEvent(businessId: string, locationId: string): Promise<PnlColumn[]> {
+  const [events, sales, invoices, expenses, shifts] = await Promise.all([
+    prisma.event.findMany({
+      where: { businessId },
+      select: { id: true, name: true, color: true, startDate: true, endDate: true, feeCents: true },
+      orderBy: { startDate: "asc" },
+    }),
+    prisma.dailySales.findMany({
+      where: { locationId },
+      select: { eventId: true, netSalesCents: true, tipsCents: true, guestCount: true },
+    }),
+    prisma.invoice.findMany({ where: { locationId }, select: { eventId: true, totalCents: true } }),
+    prisma.expense.findMany({ where: { locationId }, select: { eventId: true, amountCents: true } }),
+    prisma.shift.findMany({
+      where: { locationId },
+      select: {
+        start: true,
+        scheduledMinutes: true,
+        timeEntry: { select: { actualMinutes: true } },
+        employee: { select: { hourlyRateCents: true } },
+      },
+    }),
+  ]);
+
+  const shiftCost = (s: (typeof shifts)[number]) =>
+    Math.round(((s.timeEntry?.actualMinutes ?? s.scheduledMinutes) / 60) * s.employee.hourlyRateCents);
+
+  const build = (key: string, name: string, color: string | null, filter: {
+    eventId?: string;
+    window?: { start: Date; end: Date };
+    feeCents: number;
+  }): PnlColumn => {
+    const matchTag = <T extends { eventId: string | null }>(rows: T[]) =>
+      filter.eventId ? rows.filter((r) => r.eventId === filter.eventId) : rows;
+    const s = matchTag(sales);
+    const inv = matchTag(invoices);
+    const exp = matchTag(expenses);
+    const lab = filter.window
+      ? shifts.filter((sh) => sh.start >= filter.window!.start && sh.start <= filter.window!.end)
+      : shifts;
+
+    const netSalesCents = s.reduce((a, r) => a + r.netSalesCents, 0);
+    const tipsCents = s.reduce((a, r) => a + r.tipsCents, 0);
+    const txns = s.reduce((a, r) => a + r.guestCount, 0);
+    const cogsCents = inv.reduce((a, r) => a + r.totalCents, 0);
+    const opexCents = exp.reduce((a, r) => a + r.amountCents, 0);
+    const laborCents = lab.reduce((a, r) => a + shiftCost(r), 0);
+    const profitCents = netSalesCents - cogsCents - laborCents - opexCents - filter.feeCents;
+    const marginPct = netSalesCents > 0 ? (profitCents / netSalesCents) * 100 : 0;
+
+    return {
+      key, name, color, txns, netSalesCents, tipsCents,
+      cogsCents, laborCents, opexCents, feeCents: filter.feeCents,
+      profitCents, marginPct,
+    };
+  };
+
+  const columns = events.map((e) =>
+    build(e.id, e.name, e.color, {
+      eventId: e.id,
+      window: { start: e.startDate, end: new Date(e.endDate.getTime() + 24 * 60 * 60 * 1000 - 1) },
+      feeCents: e.feeCents,
+    }),
+  );
+  const totalFees = events.reduce((a, e) => a + e.feeCents, 0);
+  columns.push(build("overall", "Overall", null, { feeCents: totalFees }));
+  return columns;
+}

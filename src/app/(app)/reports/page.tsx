@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getScope } from "@/lib/scope";
-import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent } from "@/modules/reports/queries";
+import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent, pnlByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
@@ -16,13 +16,14 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const scope = await getScope();
   const isOwner = scope.role === "OWNER";
-  const [daily, weekly, labor, spend, variance, supplierMatrix] = await Promise.all([
+  const [daily, weekly, labor, spend, variance, supplierMatrix, pnl] = await Promise.all([
     dailySummary(scope.locationId, 14),
     weeklyTrend(scope.locationId, 4),
     getLaborReport(scope.locationId, 14),
     purchaseSpendByPeriod(scope.locationId, 30),
     getVarianceReport(scope.locationId),
     supplierSpendByEvent(scope.locationId),
+    pnlByEvent(scope.businessId, scope.locationId),
   ]);
 
   return (
@@ -37,6 +38,118 @@ export default async function ReportsPage() {
         }
       />
       <div className="p-4 sm:p-6 grid gap-4">
+        {/* P&L — profit and loss per event + overall */}
+        <Card className="border-brand/40">
+          <CardHeader>
+            <CardTitle>Profit &amp; Loss · by event and overall</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sales minus supplier invoices, labor, expenses and event fees. Event columns use each
+              item&apos;s event tag (labor uses the event&apos;s dates); Overall covers everything,
+              including untagged items. Tips are shown for reference — they belong to staff, not profit.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            {pnl.length <= 1 && pnl[0]?.netSalesCents === 0 ? (
+              <p className="text-sm text-muted-foreground px-4 pb-4">
+                No data yet — import sales and enter invoices to see your P&amp;L.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-40">Line</TableHead>
+                    {pnl.map((c) => (
+                      <TableHead key={c.key} className={`text-right whitespace-nowrap ${c.key === "overall" ? "font-semibold" : ""}`}>
+                        {c.key === "overall" ? (
+                          "Overall"
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color ?? "hsl(var(--muted-foreground))" }} />
+                            {c.name}
+                          </span>
+                        )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Transactions</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-muted-foreground">{c.txns.toLocaleString()}</TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Net sales</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num font-medium">{formatMoney(c.netSalesCents)}</TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Supplier invoices (COGS)</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-muted-foreground">
+                        {c.cogsCents ? <>−{formatMoney(c.cogsCents)}</> : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Labor</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-muted-foreground">
+                        {c.laborCents ? <>−{formatMoney(c.laborCents)}</> : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Operating expenses</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-muted-foreground">
+                        {c.opexCents ? <>−{formatMoney(c.opexCents)}</> : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Event fees</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-muted-foreground">
+                        {c.feeCents ? <>−{formatMoney(c.feeCents)}</> : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow className="bg-muted/30 border-t-2">
+                    <TableCell className="font-semibold">Profit</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell
+                        key={c.key}
+                        className={`text-right num font-semibold ${c.profitCents < 0 ? "text-destructive" : "text-success"}`}
+                      >
+                        {formatMoney(c.profitCents, { signed: true })}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow className="bg-muted/30">
+                    <TableCell className="text-muted-foreground">Margin</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className={`text-right num ${c.profitCents < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                        {c.netSalesCents > 0 ? formatPercent(c.marginPct) : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground text-xs">Tips (staff, not in profit)</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num text-xs text-muted-foreground">
+                        {c.tipsCents ? formatMoney(c.tipsCents) : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>Daily summary (14d)</CardTitle>
