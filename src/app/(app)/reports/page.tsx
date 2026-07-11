@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getScope } from "@/lib/scope";
-import { dailySummary, weeklyTrend, purchaseSpendByPeriod } from "@/modules/reports/queries";
+import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
@@ -16,12 +16,13 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const scope = await getScope();
   const isOwner = scope.role === "OWNER";
-  const [daily, weekly, labor, spend, variance] = await Promise.all([
+  const [daily, weekly, labor, spend, variance, supplierMatrix] = await Promise.all([
     dailySummary(scope.locationId, 14),
     weeklyTrend(scope.locationId, 4),
     getLaborReport(scope.locationId, 14),
     purchaseSpendByPeriod(scope.locationId, 30),
     getVarianceReport(scope.locationId),
+    supplierSpendByEvent(scope.locationId),
   ]);
 
   return (
@@ -82,6 +83,70 @@ export default async function ReportsPage() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        {/* Supplier spend × event matrix — where the money went, per event and overall */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Supplier spend by event · all-time</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Every supplier invoice, split by the event it&apos;s tagged to. &quot;Untagged&quot; is
+              spend with no event — tag those invoices to make per-event costs exact.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            {supplierMatrix.suppliers.length === 0 ? (
+              <p className="text-sm text-muted-foreground px-4 pb-4">No invoices yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-36">Supplier</TableHead>
+                    {supplierMatrix.events.map((e) => (
+                      <TableHead key={e.id} className="text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                          {e.name}
+                        </span>
+                      </TableHead>
+                    ))}
+                    {supplierMatrix.hasUntagged && <TableHead className="text-right">Untagged</TableHead>}
+                    <TableHead className="text-right font-semibold">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {supplierMatrix.suppliers.map((s) => (
+                    <TableRow key={s.supplierId}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      {supplierMatrix.events.map((e) => (
+                        <TableCell key={e.id} className="text-right num text-muted-foreground">
+                          {s.byEvent[e.id] ? formatMoney(s.byEvent[e.id]) : "—"}
+                        </TableCell>
+                      ))}
+                      {supplierMatrix.hasUntagged && (
+                        <TableCell className="text-right num text-muted-foreground">
+                          {s.untaggedCents ? formatMoney(s.untaggedCents) : "—"}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right num font-semibold">{formatMoney(s.totalCents)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/30">
+                    <TableCell className="font-semibold">All suppliers</TableCell>
+                    {supplierMatrix.events.map((e) => (
+                      <TableCell key={e.id} className="text-right num font-semibold">
+                        {formatMoney(supplierMatrix.eventTotals[e.id] ?? 0)}
+                      </TableCell>
+                    ))}
+                    {supplierMatrix.hasUntagged && (
+                      <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandUntagged)}</TableCell>
+                    )}
+                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 

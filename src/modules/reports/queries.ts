@@ -92,3 +92,57 @@ export async function purchaseSpendByPeriod(locationId: string, days: number) {
   for (const p of pos) bump(p.supplierId, p.supplier.name, p.totalCents);
   return Array.from(bySupplier.values()).sort((a, b) => b.spendCents - a.spendCents);
 }
+
+// Supplier spend matrix: how much has gone to each supplier, split by event
+// tag and overall (all-time, invoice-based). Rows = suppliers, columns = the
+// events that actually carry spend + an "untagged" bucket + a total.
+export async function supplierSpendByEvent(locationId: string) {
+  const invoices = await prisma.invoice.findMany({
+    where: { locationId },
+    select: {
+      supplierId: true,
+      totalCents: true,
+      supplier: { select: { name: true } },
+      event: { select: { id: true, name: true, color: true, startDate: true } },
+    },
+  });
+
+  // Events that appear on at least one invoice, oldest first
+  const eventMap = new Map<string, { id: string; name: string; color: string | null; startDate: Date }>();
+  for (const inv of invoices) {
+    if (inv.event && !eventMap.has(inv.event.id)) eventMap.set(inv.event.id, inv.event);
+  }
+  const events = [...eventMap.values()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+  type Row = { supplierId: string; name: string; byEvent: Record<string, number>; untaggedCents: number; totalCents: number };
+  const rows = new Map<string, Row>();
+  let grandTotal = 0;
+  let grandUntagged = 0;
+  const eventTotals: Record<string, number> = {};
+
+  for (const inv of invoices) {
+    let row = rows.get(inv.supplierId);
+    if (!row) {
+      row = { supplierId: inv.supplierId, name: inv.supplier.name, byEvent: {}, untaggedCents: 0, totalCents: 0 };
+      rows.set(inv.supplierId, row);
+    }
+    row.totalCents += inv.totalCents;
+    grandTotal += inv.totalCents;
+    if (inv.event) {
+      row.byEvent[inv.event.id] = (row.byEvent[inv.event.id] ?? 0) + inv.totalCents;
+      eventTotals[inv.event.id] = (eventTotals[inv.event.id] ?? 0) + inv.totalCents;
+    } else {
+      row.untaggedCents += inv.totalCents;
+      grandUntagged += inv.totalCents;
+    }
+  }
+
+  return {
+    events: events.map((e) => ({ id: e.id, name: e.name, color: e.color })),
+    suppliers: [...rows.values()].sort((a, b) => b.totalCents - a.totalCents),
+    eventTotals,
+    grandUntagged,
+    grandTotal,
+    hasUntagged: grandUntagged > 0,
+  };
+}
