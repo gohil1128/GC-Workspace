@@ -32,7 +32,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   return (
     <div>
       <PageHeader
-        title={`Invoice ${inv.invoiceNumber}`}
+        title={`${inv.supplier.name} invoice`}
         description={`${inv.supplier.name} · ${inv.location.name} · created ${fmtDateTime(inv.createdAt)} by ${inv.createdBy.name}`}
         actions={
           <>
@@ -45,8 +45,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <DeleteButton
               action={deleteInvoiceAction.bind(null, inv.id)}
               itemLabel="invoice"
-              itemName={`${inv.invoiceNumber} (${inv.supplier.name})`}
-              confirmText={`This will delete invoice ${inv.invoiceNumber} and reverse ${numberOfItems} inventory items added by it.`}
+              itemName={`${inv.supplier.name} · ${fmtDate(inv.invoiceDate)}`}
+              confirmText={`This will delete this ${inv.supplier.name} invoice and reverse ${numberOfItems} inventory items added by it.`}
               variant="outline"
               size="sm"
             >
@@ -78,7 +78,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 locationName: inv.location.name,
                 createdByName: inv.createdBy.name,
                 createdAt: fmtDateTime(inv.createdAt),
-                invoiceNumber: inv.invoiceNumber,
                 invoiceDate: inv.invoiceDate.toISOString().slice(0, 10),
                 dateReceived: inv.dateReceived.toISOString().slice(0, 10),
                 internalMemo: inv.internalMemo ?? "",

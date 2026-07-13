@@ -161,11 +161,7 @@ export function NewInvoiceForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="invoiceNumber">Invoice Number</Label>
-          <Input id="invoiceNumber" name="invoiceNumber" required autoFocus />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="grid gap-1.5">
           <Label htmlFor="invoiceDate">Invoice Date</Label>
           <Input id="invoiceDate" name="invoiceDate" type="date" required defaultValue={defaultDate} />

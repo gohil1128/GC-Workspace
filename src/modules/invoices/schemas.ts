@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const createInvoiceSchema = z.object({
   supplierId: z.string().min(1, "Pick a supplier"),
-  invoiceNumber: z.string().min(1, "Invoice number is required"),
+  // Optional — a short reference is auto-generated when omitted. The photo is
+  // the real document for a small operation.
+  invoiceNumber: z.string().optional().nullable(),
   invoiceDate: z.string().min(1),
   dateReceived: z.string().min(1),
   internalMemo: z.string().optional().nullable(),
@@ -22,7 +24,7 @@ export const updateInvoiceTotalsSchema = z.object({
   pstDollars: z.coerce.number().min(0).default(0),
   shippingDollars: z.coerce.number().min(0).default(0),
   rebateDollars: z.coerce.number().min(0).default(0),
-  invoiceNumber: z.string().min(1),
+  invoiceNumber: z.string().optional().nullable(),
   invoiceDate: z.string().min(1),
   dateReceived: z.string().min(1),
   internalMemo: z.string().optional().nullable(),

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listInvoices, listSuppliersForInvoice } from "@/modules/invoices/queries";
 import { PageHeader } from "@/components/page-header";
@@ -15,7 +15,7 @@ import { fmtDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
-type SortKey = "invoiceDate" | "invoiceNumber" | "supplier" | "total" | "status";
+type SortKey = "invoiceDate" | "supplier" | "total" | "status";
 type SortDir = "asc" | "desc";
 
 export default async function InvoicesPage({
@@ -47,7 +47,6 @@ export default async function InvoicesPage({
   const sorted = [...invoices].sort((a, b) => {
     const sign = sortDir === "asc" ? 1 : -1;
     switch (sortKey) {
-      case "invoiceNumber": return sign * a.invoiceNumber.localeCompare(b.invoiceNumber);
       case "supplier": return sign * a.supplier.name.localeCompare(b.supplier.name);
       case "total": return sign * (a.totalCents - b.totalCents);
       case "status": {
@@ -109,7 +108,6 @@ export default async function InvoicesPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><Link href={buildSortHref("invoiceNumber")} className="hover:text-foreground">Invoice #<SortIcon k="invoiceNumber" /></Link></TableHead>
                 <TableHead><Link href={buildSortHref("supplier")} className="hover:text-foreground">Supplier<SortIcon k="supplier" /></Link></TableHead>
                 <TableHead>Event</TableHead>
                 <TableHead><Link href={buildSortHref("invoiceDate")} className="hover:text-foreground">Date<SortIcon k="invoiceDate" /></Link></TableHead>
@@ -119,6 +117,7 @@ export default async function InvoicesPage({
                 <TableHead className="text-right"><Link href={buildSortHref("total")} className="hover:text-foreground">Total<SortIcon k="total" /></Link></TableHead>
                 <TableHead><Link href={buildSortHref("status")} className="hover:text-foreground">Status<SortIcon k="status" /></Link></TableHead>
                 <TableHead>Created by</TableHead>
+                <TableHead className="text-center">Photo</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -127,10 +126,9 @@ export default async function InvoicesPage({
                 <TableRow key={i.id}>
                   <TableCell className="font-medium">
                     <Link href={`/purchasing/invoices/${i.id}`} className="hover:underline">
-                      {i.invoiceNumber}
+                      {i.supplier.name}
                     </Link>
                   </TableCell>
-                  <TableCell>{i.supplier.name}</TableCell>
                   <TableCell>
                     {i.event ? (
                       <span className="inline-flex items-center gap-1.5 text-xs">
@@ -157,12 +155,27 @@ export default async function InvoicesPage({
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">{i.createdBy.name}</TableCell>
+                  <TableCell className="text-center">
+                    {i.hasImage ? (
+                      <a
+                        href={`/api/purchasing/invoices/${i.id}/photo`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open invoice photo"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-brand hover:bg-brand/10 transition-colors"
+                      >
+                        <Camera className="h-4 w-4" />
+                      </a>
+                    ) : (
+                      <span className="text-2xs text-muted-foreground/50">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <DeleteButton
                       action={deleteInvoiceAction.bind(null, i.id)}
                       itemLabel="invoice"
-                      itemName={`${i.invoiceNumber} (${i.supplier.name})`}
-                      confirmText={`This will delete invoice ${i.invoiceNumber} and REVERSE its inventory impact (subtract ${i._count.items} items' quantities from on-hand).`}
+                      itemName={`${i.supplier.name} · ${fmtDate(i.invoiceDate)}`}
+                      confirmText={`This will delete the ${i.supplier.name} invoice from ${fmtDate(i.invoiceDate)} and REVERSE its inventory impact (subtract ${i._count.items} items' quantities from on-hand).`}
                     />
                   </TableCell>
                 </TableRow>

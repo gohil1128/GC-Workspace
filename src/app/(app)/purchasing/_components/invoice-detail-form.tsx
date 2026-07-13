@@ -19,7 +19,6 @@ type Initial = {
   locationName: string;
   createdByName: string;
   createdAt: string;
-  invoiceNumber: string;
   invoiceDate: string;
   dateReceived: string;
   internalMemo: string;
@@ -42,7 +41,6 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
   const [pending, start] = React.useTransition();
   const [eventPending, startEvent] = React.useTransition();
   const [eventId, setEventId] = React.useState<string>(initial.eventId ?? "none");
-  const [invoiceNumber, setInvoiceNumber] = React.useState(initial.invoiceNumber);
   const [invoiceDate, setInvoiceDate] = React.useState(initial.invoiceDate);
   const [dateReceived, setDateReceived] = React.useState(initial.dateReceived);
   const [internalMemo, setInternalMemo] = React.useState(initial.internalMemo);
@@ -103,7 +101,6 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     const fd = new FormData();
-    fd.set("invoiceNumber", invoiceNumber);
     fd.set("invoiceDate", invoiceDate);
     fd.set("dateReceived", dateReceived);
     fd.set("internalMemo", internalMemo);
@@ -131,11 +128,7 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
         <Read label="Created by" value={`${initial.createdByName} · ${initial.createdAt}`} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="invNum">Invoice Number</Label>
-          <Input id="invNum" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} disabled={readOnly} required />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="grid gap-1.5">
           <Label htmlFor="invDate">Invoice Date</Label>
           <Input id="invDate" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} disabled={readOnly} required />
@@ -165,7 +158,7 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
         <Label>Invoice photo {imagePending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
         {image ? (
           <div className="flex items-start gap-3">
-            <a href={image} target="_blank" rel="noreferrer" title="Open full size">
+            <a href={`/api/purchasing/invoices/${invoiceId}/photo`} target="_blank" rel="noreferrer" title="Open full size">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={image} alt="Invoice" className="h-32 w-auto rounded-lg border object-cover hover:opacity-90 transition-opacity" />
             </a>
