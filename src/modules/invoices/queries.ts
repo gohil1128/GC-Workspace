@@ -21,24 +21,33 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
     if (filters.to) where.invoiceDate.lte = endOfDay(new Date(filters.to));
   }
   // Explicit select keeps the (potentially large) imageDataUrl out of the
-  // list query — the photo is only loaded on the invoice detail page.
-  return prisma.invoice.findMany({
-    where,
-    select: {
-      id: true,
-      invoiceNumber: true,
-      invoiceDate: true,
-      dateReceived: true,
-      subtotalCents: true,
-      totalCents: true,
-      closedAt: true,
-      supplier: { select: { name: true } },
-      createdBy: { select: { name: true } },
-      event: { select: { id: true, name: true, color: true } },
-      _count: { select: { items: true } },
-    },
-    orderBy: { invoiceDate: "desc" },
-  });
+  // list query — a cheap second query flags which rows have a photo so the
+  // list can show a clickable thumbnail icon.
+  const [rows, withPhoto] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        invoiceDate: true,
+        dateReceived: true,
+        subtotalCents: true,
+        totalCents: true,
+        closedAt: true,
+        supplier: { select: { name: true } },
+        createdBy: { select: { name: true } },
+        event: { select: { id: true, name: true, color: true } },
+        _count: { select: { items: true } },
+      },
+      orderBy: { invoiceDate: "desc" },
+    }),
+    prisma.invoice.findMany({
+      where: { ...where, imageDataUrl: { not: null } },
+      select: { id: true },
+    }),
+  ]);
+  const photoIds = new Set(withPhoto.map((r) => r.id));
+  return rows.map((r) => ({ ...r, hasImage: photoIds.has(r.id) }));
 }
 
 export async function getInvoice(locationId: string, id: string) {

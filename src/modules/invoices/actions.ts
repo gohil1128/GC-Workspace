@@ -59,6 +59,10 @@ export async function createInvoiceAction(formData: FormData) {
   const subtotalCents = toCents(parsed.subtotalDollars);
   const gstCents = toCents(parsed.gstDollars);
   const pstCents = toCents(parsed.pstDollars);
+  // Auto-generate a short internal reference when none is typed — keeps the
+  // supplier+number uniqueness happy without asking the operator for one.
+  const invoiceNumber =
+    (parsed.invoiceNumber ?? "").trim() || `INV-${Date.now().toString(36).toUpperCase()}`;
 
   const invoice = await prisma.$transaction(async (tx) => {
     const inv = await tx.invoice.create({
@@ -67,7 +71,7 @@ export async function createInvoiceAction(formData: FormData) {
         supplierId: parsed.supplierId,
         poId: parsed.poId || null,
         eventId,
-        invoiceNumber: parsed.invoiceNumber,
+        invoiceNumber,
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
@@ -142,7 +146,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
     await tx.invoice.update({
       where: { id },
       data: {
-        invoiceNumber: parsed.invoiceNumber,
+        invoiceNumber: (parsed.invoiceNumber ?? "").trim() || inv.invoiceNumber,
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
