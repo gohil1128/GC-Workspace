@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PhotoInput } from "@/components/ui/photo-input";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updateInvoiceAction, setInvoiceEventAction, setInvoiceImageAction } from "@/modules/invoices/actions";
-import { compressImageToDataUrl } from "@/lib/image-client";
+import { fileToAttachmentDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
 type Event = { id: string; name: string; color: string | null };
@@ -68,9 +68,9 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
 
   const onPhotoPick = async (f: File) => {
     try {
-      saveImage(await compressImageToDataUrl(f));
-    } catch {
-      toast({ title: "Could not read the photo", variant: "destructive" });
+      saveImage(await fileToAttachmentDataUrl(f));
+    } catch (err: any) {
+      toast({ title: "Could not read the file", description: String(err?.message ?? ""), variant: "destructive" });
     }
   };
 
@@ -155,22 +155,28 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
 
       {/* Attached photo of the paper invoice — editable even when closed */}
       <div className="grid gap-1.5">
-        <Label>Invoice photo {imagePending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
+        <Label>Invoice photo / PDF {imagePending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
         {image ? (
           <div className="flex items-start gap-3">
             <a href={`/api/purchasing/invoices/${invoiceId}/photo`} target="_blank" rel="noreferrer" title="Open full size">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image} alt="Invoice" className="h-32 w-auto rounded-lg border object-cover hover:opacity-90 transition-opacity" />
+              {image.startsWith("data:application/pdf") ? (
+                <span className="inline-flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
+                  <FileText className="h-4 w-4 text-brand" /> PDF attached — open
+                </span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="Invoice" className="h-32 w-auto rounded-lg border object-cover hover:opacity-90 transition-opacity" />
+              )}
             </a>
             <div className="flex flex-col gap-2">
-              <PhotoInput onPick={onPhotoPick} disabled={imagePending} />
+              <PhotoInput onPick={onPhotoPick} disabled={imagePending} allowPdf />
               <button type="button" onClick={() => saveImage(null)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive">
                 <X className="h-3.5 w-3.5" /> Remove
               </button>
             </div>
           </div>
         ) : (
-          <PhotoInput onPick={onPhotoPick} disabled={imagePending} />
+          <PhotoInput onPick={onPhotoPick} disabled={imagePending} allowPdf />
         )}
         <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
       </div>
