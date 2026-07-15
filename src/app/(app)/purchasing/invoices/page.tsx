@@ -40,7 +40,7 @@ export default async function InvoicesPage({
     listInvoices(scope.locationId, filters),
     listSuppliersForInvoice(scope.businessId),
   ]);
-  const invoices = onlyUntagged ? allInvoices.filter((i) => !i.event) : allInvoices;
+  const invoices = onlyUntagged ? allInvoices.filter((i) => !i.event && !i.appliesToAllEvents) : allInvoices;
 
   const sortKey: SortKey = (sp.sort as SortKey) ?? "invoiceDate";
   const sortDir: SortDir = (sp.dir as SortDir) ?? "desc";
@@ -130,7 +130,9 @@ export default async function InvoicesPage({
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {i.event ? (
+                    {i.appliesToAllEvents ? (
+                      <Badge variant="brand">All events</Badge>
+                    ) : i.event ? (
                       <span className="inline-flex items-center gap-1.5 text-xs">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: i.event.color ?? "hsl(var(--muted-foreground))" }} />
                         {i.event.name}

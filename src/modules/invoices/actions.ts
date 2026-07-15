@@ -55,7 +55,8 @@ export async function createInvoiceAction(formData: FormData) {
     pstDollars: formData.get("pstDollars") || 0,
     imageDataUrl: formData.get("imageDataUrl") || null,
   });
-  const eventId = parsed.eventId && parsed.eventId !== "none" ? parsed.eventId : null;
+  const appliesToAllEvents = parsed.eventId === "all";
+  const eventId = parsed.eventId && parsed.eventId !== "none" && !appliesToAllEvents ? parsed.eventId : null;
   if (eventId) {
     const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
     if (!ev) throw new Error("Selected event not found");
@@ -76,6 +77,7 @@ export async function createInvoiceAction(formData: FormData) {
         supplierId: parsed.supplierId,
         poId: parsed.poId || null,
         eventId,
+        appliesToAllEvents,
         invoiceNumber,
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
@@ -137,7 +139,8 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
     rebateDollars: formData.get("rebateDollars"),
     eventId: formData.get("eventId") || null,
   });
-  const eventId = parsed.eventId && parsed.eventId !== "none" ? parsed.eventId : null;
+  const appliesToAllEvents = parsed.eventId === "all";
+  const eventId = parsed.eventId && parsed.eventId !== "none" && !appliesToAllEvents ? parsed.eventId : null;
   if (eventId) {
     const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
     if (!ev) throw new Error("Selected event not found");
@@ -156,6 +159,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
         dateReceived: new Date(parsed.dateReceived),
         internalMemo: parsed.internalMemo || null,
         eventId,
+        appliesToAllEvents,
         // Manual subtotal — recompute overrides it whenever line items exist.
         subtotalCents: toCents(parsed.subtotalDollars),
         gstCents: toCents(parsed.gstDollars),
@@ -274,12 +278,13 @@ export async function setInvoiceEventAction(id: string, eventIdRaw: string | nul
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
-  const eventId = eventIdRaw && eventIdRaw !== "none" ? eventIdRaw : null;
+  const appliesToAllEvents = eventIdRaw === "all";
+  const eventId = eventIdRaw && eventIdRaw !== "none" && !appliesToAllEvents ? eventIdRaw : null;
   if (eventId) {
     const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
     if (!ev) throw new Error("Selected event not found");
   }
-  await prisma.invoice.update({ where: { id }, data: { eventId } });
+  await prisma.invoice.update({ where: { id }, data: { eventId, appliesToAllEvents } });
   await writeAudit({
     businessId: scope.businessId, userId: scope.userId,
     action: "invoice.set_event", entityType: "Invoice", entityId: id,

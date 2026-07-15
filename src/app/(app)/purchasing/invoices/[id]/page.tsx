@@ -82,6 +82,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 dateReceived: inv.dateReceived.toISOString().slice(0, 10),
                 internalMemo: inv.internalMemo ?? "",
                 eventId: inv.eventId ?? null,
+                appliesToAllEvents: inv.appliesToAllEvents,
                 imageDataUrl: inv.imageDataUrl ?? null,
                 subtotalDollars: fromCents(inv.subtotalCents),
                 gstDollars: fromCents(inv.gstCents),

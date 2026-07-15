@@ -23,6 +23,7 @@ type Initial = {
   dateReceived: string;
   internalMemo: string;
   eventId: string | null;
+  appliesToAllEvents: boolean;
   imageDataUrl: string | null;
   subtotalDollars: number;
   gstDollars: number;
@@ -40,7 +41,7 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
   const router = useRouter();
   const [pending, start] = React.useTransition();
   const [eventPending, startEvent] = React.useTransition();
-  const [eventId, setEventId] = React.useState<string>(initial.eventId ?? "none");
+  const [eventId, setEventId] = React.useState<string>(initial.appliesToAllEvents ? "all" : (initial.eventId ?? "none"));
   const [invoiceDate, setInvoiceDate] = React.useState(initial.invoiceDate);
   const [dateReceived, setDateReceived] = React.useState(initial.dateReceived);
   const [internalMemo, setInternalMemo] = React.useState(initial.internalMemo);
@@ -188,6 +189,9 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
             <SelectTrigger id="inv-event"><SelectValue placeholder="No event" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No event</SelectItem>
+              <SelectItem value="all">
+                <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
+              </SelectItem>
               {events.map((e) => (
                 <SelectItem key={e.id} value={e.id}>
                   <span className="inline-flex items-center gap-2">
