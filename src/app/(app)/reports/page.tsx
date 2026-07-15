@@ -44,8 +44,9 @@ export default async function ReportsPage() {
             <CardTitle>Profit &amp; Loss · by event and overall</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               Sales minus supplier invoices, labor, expenses and event fees. Event columns use each
-              item&apos;s event tag (labor uses the event&apos;s dates); Overall covers everything,
-              including untagged items. Tips are shown for reference — they belong to staff, not profit.
+              item&apos;s event tag (labor uses the event&apos;s dates); invoices tagged &quot;All events&quot;
+              are split evenly across event columns. Overall covers everything, including untagged items.
+              Tips are shown for reference — they belong to staff, not profit.
             </p>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
@@ -204,8 +205,8 @@ export default async function ReportsPage() {
           <CardHeader>
             <CardTitle>Supplier spend by event · all-time</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Every supplier invoice, split by the event it&apos;s tagged to. &quot;Untagged&quot; is
-              spend with no event — tag those invoices to make per-event costs exact.
+              Every supplier invoice, split by the event it&apos;s tagged to. &quot;All events (shared)&quot; is spend that covers every event (split evenly in the P&amp;L);
+              &quot;Untagged&quot; is spend with no event — tag those invoices to make per-event costs exact.
             </p>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
@@ -224,6 +225,7 @@ export default async function ReportsPage() {
                         </span>
                       </TableHead>
                     ))}
+                    {supplierMatrix.hasShared && <TableHead className="text-right">All events (shared)</TableHead>}
                     {supplierMatrix.hasUntagged && <TableHead className="text-right">Untagged</TableHead>}
                     <TableHead className="text-right font-semibold">Total</TableHead>
                   </TableRow>
@@ -237,6 +239,11 @@ export default async function ReportsPage() {
                           {s.byEvent[e.id] ? formatMoney(s.byEvent[e.id]) : "—"}
                         </TableCell>
                       ))}
+                      {supplierMatrix.hasShared && (
+                        <TableCell className="text-right num text-muted-foreground">
+                          {s.sharedCents ? formatMoney(s.sharedCents) : "—"}
+                        </TableCell>
+                      )}
                       {supplierMatrix.hasUntagged && (
                         <TableCell className="text-right num text-muted-foreground">
                           {s.untaggedCents ? formatMoney(s.untaggedCents) : "—"}
@@ -252,6 +259,9 @@ export default async function ReportsPage() {
                         {formatMoney(supplierMatrix.eventTotals[e.id] ?? 0)}
                       </TableCell>
                     ))}
+                    {supplierMatrix.hasShared && (
+                      <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandShared)}</TableCell>
+                    )}
                     {supplierMatrix.hasUntagged && (
                       <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandUntagged)}</TableCell>
                     )}

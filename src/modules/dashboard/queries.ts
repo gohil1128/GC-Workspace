@@ -75,13 +75,18 @@ export async function getDashboard(params: {
     // date (suppliers are often invoiced before the event begins).
     prisma.invoice.findMany({
       where: params.eventId
-        ? { locationId: params.locationId, eventId: params.eventId }
+        ? { locationId: params.locationId, OR: [{ eventId: params.eventId }, { appliesToAllEvents: true }] }
         : { locationId: params.locationId, invoiceDate: { gte: from, lte: to } },
-      select: { totalCents: true },
+      select: { totalCents: true, appliesToAllEvents: true },
     }),
   ]);
+  const eventCountForShare = params.eventId ? await prisma.event.count({ where: { businessId: params.businessId } }) : 1;
   const theoreticalFoodCostCents = usage.reduce((acc, m) => acc + Math.round(Math.abs(m.qty) * m.ingredient.avgCostCents), 0);
-  const invoiceFoodCostCents = invoicesForFood.reduce((a, i) => a + i.totalCents, 0);
+  const shareDivFood = Math.max(1, eventCountForShare);
+  const invoiceFoodCostCents = invoicesForFood.reduce(
+    (a, i) => a + (params.eventId && i.appliesToAllEvents ? Math.round(i.totalCents / shareDivFood) : i.totalCents),
+    0,
+  );
   const foodCostCents = theoreticalFoodCostCents > 0 ? theoreticalFoodCostCents : invoiceFoodCostCents;
   const foodCostBasis: "usage" | "invoices" | "none" =
     theoreticalFoodCostCents > 0 ? "usage" : invoiceFoodCostCents > 0 ? "invoices" : "none";

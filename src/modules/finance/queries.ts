@@ -64,7 +64,7 @@ export async function getFinanceSummary(params: {
         endDate: { gte: from },
       };
 
-  const [business, sales, shifts, usage, expenses, feeEvents, invoices] = await Promise.all([
+  const [business, sales, shifts, usage, expenses, feeEvents, invoices, eventCount] = await Promise.all([
     prisma.business.findUnique({
       where: { id: params.businessId },
       select: { ebitdaMultiplier: true, revenueMultiplier: true },
@@ -90,13 +90,15 @@ export async function getFinanceSummary(params: {
     }),
     prisma.event.findMany({ where: eventFeeWhere, select: { feeCents: true } }),
     // Supplier invoices: same rule — when event-scoped, trust the tag and
-    // ignore date (supplies are often bought before the event starts).
+    // ignore date (supplies are often bought before the event starts). Shared
+    // "all events" invoices always join event-scoped views at 1/N of total.
     prisma.invoice.findMany({
       where: params.eventId
-        ? { locationId: params.locationId, eventId: params.eventId }
+        ? { locationId: params.locationId, OR: [{ eventId: params.eventId }, { appliesToAllEvents: true }] }
         : { locationId: params.locationId, invoiceDate: { gte: from, lte: to } },
-      select: { totalCents: true },
+      select: { totalCents: true, appliesToAllEvents: true },
     }),
+    prisma.event.count({ where: { businessId: params.businessId } }),
   ]);
 
   const netSalesCents = sales.reduce((a, s) => a + s.netSalesCents, 0);
@@ -112,14 +114,18 @@ export async function getFinanceSummary(params: {
     return a + Math.round((minutes / 60) * s.employee.hourlyRateCents);
   }, 0);
 
-  const invoicePurchaseCents = invoices.reduce((a, i) => a + i.totalCents, 0);
+  const shareDiv = Math.max(1, eventCount);
+  const invoicePurchaseCents = invoices.reduce(
+    (a, i) => a + (params.eventId && i.appliesToAllEvents ? Math.round(i.totalCents / shareDiv) : i.totalCents),
+    0,
+  );
   const invoiceCount = invoices.length;
 
   // Always look up how many invoices have NO event tag — surfaces them on the
   // dashboard so the operator can fix the tagging instead of silently missing
   // them when switching to an event-scoped view.
   const untagged = await prisma.invoice.aggregate({
-    where: { locationId: params.locationId, eventId: null },
+    where: { locationId: params.locationId, eventId: null, appliesToAllEvents: false },
     _count: { _all: true },
     _sum: { totalCents: true },
   });

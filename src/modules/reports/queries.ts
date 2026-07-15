@@ -102,6 +102,7 @@ export async function supplierSpendByEvent(locationId: string) {
     select: {
       supplierId: true,
       totalCents: true,
+      appliesToAllEvents: true,
       supplier: { select: { name: true } },
       event: { select: { id: true, name: true, color: true, startDate: true } },
     },
@@ -114,21 +115,25 @@ export async function supplierSpendByEvent(locationId: string) {
   }
   const events = [...eventMap.values()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
-  type Row = { supplierId: string; name: string; byEvent: Record<string, number>; untaggedCents: number; totalCents: number };
+  type Row = { supplierId: string; name: string; byEvent: Record<string, number>; sharedCents: number; untaggedCents: number; totalCents: number };
   const rows = new Map<string, Row>();
   let grandTotal = 0;
   let grandUntagged = 0;
+  let grandShared = 0;
   const eventTotals: Record<string, number> = {};
 
   for (const inv of invoices) {
     let row = rows.get(inv.supplierId);
     if (!row) {
-      row = { supplierId: inv.supplierId, name: inv.supplier.name, byEvent: {}, untaggedCents: 0, totalCents: 0 };
+      row = { supplierId: inv.supplierId, name: inv.supplier.name, byEvent: {}, sharedCents: 0, untaggedCents: 0, totalCents: 0 };
       rows.set(inv.supplierId, row);
     }
     row.totalCents += inv.totalCents;
     grandTotal += inv.totalCents;
-    if (inv.event) {
+    if (inv.appliesToAllEvents) {
+      row.sharedCents += inv.totalCents;
+      grandShared += inv.totalCents;
+    } else if (inv.event) {
       row.byEvent[inv.event.id] = (row.byEvent[inv.event.id] ?? 0) + inv.totalCents;
       eventTotals[inv.event.id] = (eventTotals[inv.event.id] ?? 0) + inv.totalCents;
     } else {
@@ -141,8 +146,10 @@ export async function supplierSpendByEvent(locationId: string) {
     events: events.map((e) => ({ id: e.id, name: e.name, color: e.color })),
     suppliers: [...rows.values()].sort((a, b) => b.totalCents - a.totalCents),
     eventTotals,
+    grandShared,
     grandUntagged,
     grandTotal,
+    hasShared: grandShared > 0,
     hasUntagged: grandUntagged > 0,
   };
 }
@@ -177,7 +184,7 @@ export async function pnlByEvent(businessId: string, locationId: string): Promis
       where: { locationId },
       select: { eventId: true, netSalesCents: true, tipsCents: true, guestCount: true },
     }),
-    prisma.invoice.findMany({ where: { locationId }, select: { eventId: true, totalCents: true } }),
+    prisma.invoice.findMany({ where: { locationId }, select: { eventId: true, totalCents: true, appliesToAllEvents: true } }),
     prisma.expense.findMany({ where: { locationId }, select: { eventId: true, amountCents: true } }),
     prisma.shift.findMany({
       where: { locationId },
@@ -193,6 +200,7 @@ export async function pnlByEvent(businessId: string, locationId: string): Promis
   const shiftCost = (s: (typeof shifts)[number]) =>
     Math.round(((s.timeEntry?.actualMinutes ?? s.scheduledMinutes) / 60) * s.employee.hourlyRateCents);
 
+  const shareDiv = Math.max(1, events.length);
   const build = (key: string, name: string, color: string | null, filter: {
     eventId?: string;
     window?: { start: Date; end: Date };
@@ -201,7 +209,13 @@ export async function pnlByEvent(businessId: string, locationId: string): Promis
     const matchTag = <T extends { eventId: string | null }>(rows: T[]) =>
       filter.eventId ? rows.filter((r) => r.eventId === filter.eventId) : rows;
     const s = matchTag(sales);
-    const inv = matchTag(invoices);
+    // Shared "all events" invoices join every event column at 1/N; the
+    // overall column includes them once at full value.
+    const inv = filter.eventId
+      ? invoices
+          .filter((r) => r.eventId === filter.eventId || r.appliesToAllEvents)
+          .map((r) => (r.appliesToAllEvents ? { ...r, totalCents: Math.round(r.totalCents / shareDiv) } : r))
+      : invoices;
     const exp = matchTag(expenses);
     const lab = filter.window
       ? shifts.filter((sh) => sh.start >= filter.window!.start && sh.start <= filter.window!.end)

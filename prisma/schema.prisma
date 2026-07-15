@@ -604,6 +604,10 @@ model Invoice {
   supplierId    String
   poId          String?
   eventId       String?
+  // Shared cost covering every event (bulk cups, tent, etc.). Mutually
+  // exclusive with eventId. Split evenly across events in per-event P&L;
+  // counted once in overall totals.
+  appliesToAllEvents Boolean @default(false)
   invoiceNumber String
   invoiceDate   DateTime
   dateReceived  DateTime

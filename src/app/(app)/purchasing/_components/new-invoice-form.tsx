@@ -248,6 +248,9 @@ export function NewInvoiceForm({
             <SelectTrigger id="invoice-event"><SelectValue placeholder="No event" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No event</SelectItem>
+              <SelectItem value="all">
+                <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
+              </SelectItem>
               {events.map((e) => (
                 <SelectItem key={e.id} value={e.id}>
                   <span className="inline-flex items-center gap-2">
@@ -258,7 +261,7 @@ export function NewInvoiceForm({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-2xs text-muted-foreground">Tag this bill to an event for per-event cost analysis.</span>
+          <span className="text-2xs text-muted-foreground">Tag to one event — or "All events" for shared costs (cups, tent…), split evenly across events in the P&L.</span>
         </div>
       )}
 
