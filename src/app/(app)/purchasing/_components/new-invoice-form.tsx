@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { FileText, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PhotoInput } from "@/components/ui/photo-input";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createInvoiceAction } from "@/modules/invoices/actions";
 import { quickCreateSupplierAction } from "@/modules/purchasing/actions";
-import { compressImageToDataUrl } from "@/lib/image-client";
+import { fileToAttachmentDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
 type Supplier = { id: string; name: string };
@@ -68,9 +68,9 @@ export function NewInvoiceForm({
   const onPhoto = async (f: File) => {
     setCompressing(true);
     try {
-      setImageDataUrl(await compressImageToDataUrl(f));
-    } catch {
-      toast({ title: "Could not read the photo", variant: "destructive" });
+      setImageDataUrl(await fileToAttachmentDataUrl(f));
+    } catch (err: any) {
+      toast({ title: "Could not read the file", description: String(err?.message ?? ""), variant: "destructive" });
     } finally {
       setCompressing(false);
     }
@@ -215,23 +215,29 @@ export function NewInvoiceForm({
 
       {/* Photo of the paper invoice */}
       <div className="grid gap-1.5">
-        <Label htmlFor="invoice-photo">Invoice photo (optional)</Label>
+        <Label htmlFor="invoice-photo">Invoice photo or PDF (optional)</Label>
         {imageDataUrl ? (
           <div className="flex items-start gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageDataUrl} alt="Invoice" className="h-28 w-auto rounded-lg border object-cover" />
+            {imageDataUrl.startsWith("data:application/pdf") ? (
+              <span className="inline-flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm font-medium">
+                <FileText className="h-4 w-4 text-brand" /> PDF attached
+              </span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageDataUrl} alt="Invoice" className="h-28 w-auto rounded-lg border object-cover" />
+            )}
             <Button type="button" variant="ghost" size="sm" onClick={() => setImageDataUrl("")}>
               <X className="h-3.5 w-3.5" /> Remove
             </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <PhotoInput onPick={onPhoto} disabled={compressing} />
-            {compressing && <span className="text-2xs text-muted-foreground">compressing…</span>}
+            <PhotoInput onPick={onPhoto} disabled={compressing} allowPdf />
+            {compressing && <span className="text-2xs text-muted-foreground">processing…</span>}
           </div>
         )}
         <span className="text-2xs text-muted-foreground">
-          Snap the paper bill with your camera, or pick an existing photo from your gallery / computer.
+          Snap the paper bill, pick a photo from your gallery / computer, or upload a PDF invoice.
         </span>
       </div>
 

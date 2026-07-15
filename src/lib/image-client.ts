@@ -1,3 +1,23 @@
+// Turn an invoice attachment into a storable data URL. Images get downscaled
+// and re-encoded (a 6 MB phone photo becomes a few hundred KB); PDFs can't be
+// compressed in the browser, so they're size-capped and read as-is.
+const MAX_PDF_BYTES = 4 * 1024 * 1024;
+
+export async function fileToAttachmentDataUrl(file: File): Promise<string> {
+  if (file.type === "application/pdf") {
+    if (file.size > MAX_PDF_BYTES) {
+      throw new Error("PDF too large — keep it under 4 MB");
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read the PDF"));
+      reader.readAsDataURL(file);
+    });
+  }
+  return compressImageToDataUrl(file);
+}
+
 // Client-side photo compression for invoice/receipt attachments. Downscales
 // to a max dimension and re-encodes as JPEG so a 6 MB phone photo becomes a
 // few hundred KB before it's stored as a data URL.

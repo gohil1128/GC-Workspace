@@ -24,13 +24,18 @@ async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
   });
 }
 
-// Data-URL guard for attached invoice photos: must be an image, and capped so
-// a giant original can't blow up the row size (client compresses first).
+// Data-URL guard for invoice attachments: an image (client compresses first)
+// or a PDF, capped so a giant file can't blow up the row size.
 const MAX_IMAGE_DATAURL_CHARS = 3_000_000; // ~2.2 MB binary
+const MAX_PDF_DATAURL_CHARS = 6_000_000; // ~4.4 MB binary
 function validateImageDataUrl(raw: unknown): string | null {
   const s = typeof raw === "string" ? raw.trim() : "";
   if (!s) return null;
-  if (!s.startsWith("data:image/")) throw new Error("Attachment must be an image");
+  if (s.startsWith("data:application/pdf")) {
+    if (s.length > MAX_PDF_DATAURL_CHARS) throw new Error("PDF too large — keep it under 4 MB");
+    return s;
+  }
+  if (!s.startsWith("data:image/")) throw new Error("Attachment must be an image or a PDF");
   if (s.length > MAX_IMAGE_DATAURL_CHARS) throw new Error("Image too large — retake or crop the photo");
   return s;
 }
