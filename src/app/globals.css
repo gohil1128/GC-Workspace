@@ -5,70 +5,72 @@
 @tailwind utilities;
 
 /*
-  Design system — Minimalism & Swiss Style (per ui-ux-pro-max skill, matched to
-  a food-service operations + analytics dashboard). Crisp cool-neutral slate
-  surfaces, a single chai-rust accent, hairline borders, restrained shadows,
-  Inter type. Light + full dark support.
+  Design system — Bakery/Cafe warm palette (per ui-ux-pro-max skill) executed
+  in Minimalism & Swiss structure: warm brown + cream surfaces, a single
+  chai-rust accent, hairline borders, restrained shadows, Inter type. The base
+  brown (#92400E) and cream (#FEF3C7) come straight from the skill's
+  Bakery/Cafe row; foreground uses the darker #78350F for readable warmth.
+  Light + full dark support.
 */
 @layer base {
   :root {
     --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-    /* Cool neutral slate base */
-    --background: 210 40% 98.5%;      /* near #F8FAFC */
-    --foreground: 222 47% 11%;        /* slate-900 */
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 222 47% 11%;           /* slate-900 as neutral primary */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;         /* slate-100 */
-    --secondary-foreground: 222 47% 14%;
-    --muted: 210 40% 96.5%;
-    --muted-foreground: 215 16% 47%;  /* slate-500 */
-    --accent: 210 40% 95.5%;
-    --accent-foreground: 222 47% 14%;
-    --destructive: 0 72% 51%;
+    /* Warm cream base */
+    --background: 45 60% 96%;         /* soft cream, lighter than #FEF3C7 for surfaces */
+    --foreground: 25 60% 20%;         /* #78350F warm brown ink */
+    --card: 42 60% 99%;              /* near-white warm card */
+    --card-foreground: 25 60% 20%;
+    --popover: 42 60% 99%;
+    --popover-foreground: 25 60% 20%;
+    --primary: 28 72% 31%;            /* #92400E warm brown as neutral primary */
+    --primary-foreground: 45 70% 97%;
+    --secondary: 44 45% 92%;          /* warm cream-100 */
+    --secondary-foreground: 25 55% 24%;
+    --muted: 44 42% 92.5%;
+    --muted-foreground: 30 20% 44%;   /* warm taupe grey */
+    --accent: 42 48% 90%;
+    --accent-foreground: 25 55% 24%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 56% 38%;
+    --success: 150 52% 34%;
     --success-foreground: 0 0% 100%;
-    --warning: 32 90% 48%;
+    --warning: 32 88% 46%;
     --warning-foreground: 0 0% 100%;
     /* Single accent — chai rust from the logo */
     --brand: 18 80% 46%;
     --brand-foreground: 0 0% 100%;
-    --border: 214 32% 91%;            /* slate-200 hairline */
-    --input: 214 32% 89%;
+    --border: 40 34% 86%;             /* warm hairline */
+    --input: 40 34% 84%;
     --ring: 18 80% 46%;
     --radius: 0.625rem;
   }
 
   .dark {
-    --background: 222 47% 6%;          /* deep slate */
-    --foreground: 210 40% 98%;
-    --card: 222 40% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 40% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 14%;
-    --muted-foreground: 215 20% 65%;  /* slate-400 */
-    --accent: 217 33% 16%;
-    --accent-foreground: 210 40% 98%;
+    --background: 26 30% 8%;           /* deep espresso */
+    --foreground: 42 45% 94%;
+    --card: 26 28% 11%;
+    --card-foreground: 42 45% 94%;
+    --popover: 26 28% 11%;
+    --popover-foreground: 42 45% 94%;
+    --primary: 42 45% 94%;
+    --primary-foreground: 26 30% 12%;
+    --secondary: 26 20% 17%;
+    --secondary-foreground: 42 45% 94%;
+    --muted: 26 20% 16%;
+    --muted-foreground: 38 22% 66%;   /* warm sand */
+    --accent: 26 20% 18%;
+    --accent-foreground: 42 45% 94%;
     --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 52% 46%;
+    --success: 150 48% 46%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 92% 56%;
-    --warning-foreground: 222 47% 11%;
+    --warning: 36 90% 56%;
+    --warning-foreground: 26 30% 12%;
     --brand: 18 84% 57%;
     --brand-foreground: 0 0% 100%;
-    --border: 217 33% 18%;
-    --input: 217 33% 20%;
+    --border: 28 18% 20%;
+    --input: 28 18% 22%;
     --ring: 18 84% 57%;
   }
 }
