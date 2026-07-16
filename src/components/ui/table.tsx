@@ -2,7 +2,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  // Single horizontal scroll container with momentum on touch. overscroll-x
+  // contain stops the whole page from rubber-banding while you swipe a wide
+  // table sideways.
+  <div className="relative w-full max-w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
     <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
   </div>
 ));
