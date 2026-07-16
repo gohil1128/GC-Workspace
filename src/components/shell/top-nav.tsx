@@ -105,7 +105,7 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
               )}
             >
               {s.label}
-              {active && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand" />}
+              {active && <span className="absolute inset-x-3 -bottom-px h-0.5 bg-brand" />}
             </Link>
           );
         }
@@ -120,7 +120,7 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
               >
                 {s.label}
                 <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-data-[state=open]:rotate-180" />
-                {active && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand" />}
+                {active && <span className="absolute inset-x-3 -bottom-px h-0.5 bg-brand" />}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60">
