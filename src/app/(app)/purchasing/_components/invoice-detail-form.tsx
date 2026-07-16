@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { updateInvoiceAction, setInvoiceEventAction, setInvoiceImageAction } from "@/modules/invoices/actions";
+import { CategorySelect } from "@/components/ui/category-select";
+import { INVOICE_CATEGORIES } from "@/lib/gc-categories";
+import { updateInvoiceAction, setInvoiceEventAction, setInvoiceCategoryAction, setInvoiceImageAction } from "@/modules/invoices/actions";
 import { fileToAttachmentDataUrl } from "@/lib/image-client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -24,6 +26,7 @@ type Initial = {
   internalMemo: string;
   eventId: string | null;
   appliesToAllEvents: boolean;
+  category: string | null;
   imageDataUrl: string | null;
   subtotalDollars: number;
   gstDollars: number;
@@ -42,6 +45,8 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
   const [pending, start] = React.useTransition();
   const [eventPending, startEvent] = React.useTransition();
   const [eventId, setEventId] = React.useState<string>(initial.appliesToAllEvents ? "all" : (initial.eventId ?? "none"));
+  const [categoryPending, startCategory] = React.useTransition();
+  const [category, setCategory] = React.useState<string>(initial.category ?? "");
   const [invoiceDate, setInvoiceDate] = React.useState(initial.invoiceDate);
   const [dateReceived, setDateReceived] = React.useState(initial.dateReceived);
   const [internalMemo, setInternalMemo] = React.useState(initial.internalMemo);
@@ -73,6 +78,19 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
     } catch (err: any) {
       toast({ title: "Could not read the file", description: String(err?.message ?? ""), variant: "destructive" });
     }
+  };
+
+  const onCategoryChange = (next: string) => {
+    setCategory(next);
+    startCategory(async () => {
+      try {
+        await setInvoiceCategoryAction(invoiceId, next || null);
+        toast({ title: "Category updated" });
+        router.refresh();
+      } catch (err: any) {
+        toast({ title: "Could not set category", description: String(err?.message ?? err), variant: "destructive" });
+      }
+    });
   };
 
   // Event tagging works independently of open/closed state — retag any invoice.
@@ -182,29 +200,36 @@ export function InvoiceDetailForm({ invoiceId, initial, events = [], readOnly }:
         <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
       </div>
 
-      {events.length > 0 && (
-        <div className="grid gap-1.5 md:max-w-xs">
-          <Label htmlFor="inv-event">Event {eventPending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
-          <Select value={eventId} onValueChange={onEventChange}>
-            <SelectTrigger id="inv-event"><SelectValue placeholder="No event" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No event</SelectItem>
-              <SelectItem value="all">
-                <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
-              </SelectItem>
-              {events.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
-                    {e.name}
-                  </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {events.length > 0 && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="inv-event">Event {eventPending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
+            <Select value={eventId} onValueChange={onEventChange}>
+              <SelectTrigger id="inv-event"><SelectValue placeholder="No event" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No event</SelectItem>
+                <SelectItem value="all">
+                  <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
+                {events.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                      {e.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-2xs text-muted-foreground">Saved instantly — works even when the invoice is closed.</span>
+          </div>
+        )}
+        <div className="grid gap-1.5">
+          <Label htmlFor="inv-category">Category {categoryPending && <span className="text-2xs text-muted-foreground">· saving…</span>}</Label>
+          <CategorySelect id="inv-category" options={INVOICE_CATEGORIES} value={category} onValueChange={onCategoryChange} />
+          <span className="text-2xs text-muted-foreground">Saved instantly.</span>
         </div>
-      )}
+      </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="memo">Internal Memo</Label>

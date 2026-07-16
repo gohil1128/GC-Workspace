@@ -110,6 +110,7 @@ export default async function InvoicesPage({
               <TableRow>
                 <TableHead><Link href={buildSortHref("supplier")} className="hover:text-foreground">Supplier<SortIcon k="supplier" /></Link></TableHead>
                 <TableHead>Event</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead><Link href={buildSortHref("invoiceDate")} className="hover:text-foreground">Date<SortIcon k="invoiceDate" /></Link></TableHead>
                 <TableHead>Received</TableHead>
                 <TableHead className="text-right">Items</TableHead>
@@ -140,6 +141,9 @@ export default async function InvoicesPage({
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    {i.category ? <Badge variant="muted">{i.category}</Badge> : <span className="text-xs text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{fmtDate(i.invoiceDate)}</TableCell>
                   <TableCell className="text-muted-foreground">{fmtDate(i.dateReceived)}</TableCell>
@@ -184,7 +188,7 @@ export default async function InvoicesPage({
               ))}
               {sorted.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-10">
+                  <TableCell colSpan={12} className="text-center text-sm text-muted-foreground py-10">
                     <FileText className="h-6 w-6 mx-auto mb-2 opacity-40" />
                     {activeFilterCount > 0
                       ? "No invoices match the current filters. Adjust filters above."

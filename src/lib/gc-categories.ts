@@ -27,3 +27,16 @@ export const RECIPE_CATEGORIES = [
   "Seasonal / Specials",
   "Other",
 ] as const;
+
+// What a supplier invoice was for — drives the "spend by category" report.
+export const INVOICE_CATEGORIES = [
+  "Ingredients & Supplies",
+  "Packaging",
+  "Beverages",
+  "Equipment & Smallwares",
+  "Cleaning",
+  "Marketing",
+  "Rent / Venue",
+  "Repairs & Maintenance",
+  "Other",
+] as const;

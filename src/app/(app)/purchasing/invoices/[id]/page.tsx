@@ -83,6 +83,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 internalMemo: inv.internalMemo ?? "",
                 eventId: inv.eventId ?? null,
                 appliesToAllEvents: inv.appliesToAllEvents,
+                category: inv.category ?? null,
                 imageDataUrl: inv.imageDataUrl ?? null,
                 subtotalDollars: fromCents(inv.subtotalCents),
                 gstDollars: fromCents(inv.gstCents),

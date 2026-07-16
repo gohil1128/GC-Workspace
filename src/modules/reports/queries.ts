@@ -154,6 +154,68 @@ export async function supplierSpendByEvent(locationId: string) {
   };
 }
 
+// Invoice spend by CATEGORY × event — mirrors supplierSpendByEvent but grouped
+// by what the bill was for (Ingredients & Supplies, Packaging, etc.) instead
+// of who it was billed by. Shared "all events" invoices get their own column,
+// same as the supplier matrix; uncategorized invoices get an "Uncategorized"
+// bucket instead of being dropped.
+export async function categorySpendByEvent(locationId: string) {
+  const invoices = await prisma.invoice.findMany({
+    where: { locationId },
+    select: {
+      category: true,
+      totalCents: true,
+      appliesToAllEvents: true,
+      event: { select: { id: true, name: true, color: true, startDate: true } },
+    },
+  });
+
+  const eventMap = new Map<string, { id: string; name: string; color: string | null; startDate: Date }>();
+  for (const inv of invoices) {
+    if (inv.event && !eventMap.has(inv.event.id)) eventMap.set(inv.event.id, inv.event);
+  }
+  const events = [...eventMap.values()].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+  type Row = { category: string; byEvent: Record<string, number>; sharedCents: number; untaggedCents: number; totalCents: number };
+  const rows = new Map<string, Row>();
+  let grandTotal = 0;
+  let grandUntagged = 0;
+  let grandShared = 0;
+  const eventTotals: Record<string, number> = {};
+
+  for (const inv of invoices) {
+    const key = inv.category?.trim() || "Uncategorized";
+    let row = rows.get(key);
+    if (!row) {
+      row = { category: key, byEvent: {}, sharedCents: 0, untaggedCents: 0, totalCents: 0 };
+      rows.set(key, row);
+    }
+    row.totalCents += inv.totalCents;
+    grandTotal += inv.totalCents;
+    if (inv.appliesToAllEvents) {
+      row.sharedCents += inv.totalCents;
+      grandShared += inv.totalCents;
+    } else if (inv.event) {
+      row.byEvent[inv.event.id] = (row.byEvent[inv.event.id] ?? 0) + inv.totalCents;
+      eventTotals[inv.event.id] = (eventTotals[inv.event.id] ?? 0) + inv.totalCents;
+    } else {
+      row.untaggedCents += inv.totalCents;
+      grandUntagged += inv.totalCents;
+    }
+  }
+
+  return {
+    events: events.map((e) => ({ id: e.id, name: e.name, color: e.color })),
+    categories: [...rows.values()].sort((a, b) => b.totalCents - a.totalCents),
+    eventTotals,
+    grandShared,
+    grandUntagged,
+    grandTotal,
+    hasShared: grandShared > 0,
+    hasUntagged: grandUntagged > 0,
+  };
+}
+
 // P&L per event + overall. Event columns use the event tag for sales,
 // invoices (COGS) and expenses, the event's own fee, and its date window for
 // labor (shifts carry no tag). Overall covers everything all-time, including
