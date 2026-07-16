@@ -205,6 +205,24 @@
     scroll-margin-top: 5rem;
   }
 
+  /* Wide report matrices: size to content so they always overflow (and thus
+     scroll) on narrow screens, with the first column pinned so row labels stay
+     visible while swiping through event columns. */
+  .report-matrix table {
+    min-width: max-content;
+  }
+  .report-matrix thead th:first-child,
+  .report-matrix tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: hsl(var(--card));
+    box-shadow: 1px 0 0 hsl(var(--border));
+  }
+  .report-matrix thead th:first-child {
+    background: hsl(var(--muted) / 0.4);
+  }
+
   /* Display-style numerals for the hero figure */
   .display-num {
     font-feature-settings: "tnum" 1, "ss01" 1, "cv11" 1;

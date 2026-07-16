@@ -50,7 +50,7 @@ export default async function ReportsPage() {
               Tips are shown for reference — they belong to staff, not profit.
             </p>
           </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
+          <CardContent className="p-0 report-matrix">
             {pnl.length <= 1 && pnl[0]?.netSalesCents === 0 ? (
               <p className="text-sm text-muted-foreground px-4 pb-4">
                 No data yet — import sales and enter invoices to see your P&amp;L.
@@ -157,7 +157,7 @@ export default async function ReportsPage() {
             <CardTitle>Daily summary (14d)</CardTitle>
             <Button asChild variant="outline" size="sm"><a href="/api/exports/daily"><Download className="h-3.5 w-3.5" /> CSV</a></Button>
           </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
+          <CardContent className="p-0 report-matrix">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -210,7 +210,7 @@ export default async function ReportsPage() {
               &quot;Untagged&quot; is spend with no event — tag those invoices to make per-event costs exact.
             </p>
           </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
+          <CardContent className="p-0 report-matrix">
             {supplierMatrix.suppliers.length === 0 ? (
               <p className="text-sm text-muted-foreground px-4 pb-4">No invoices yet.</p>
             ) : (
@@ -283,7 +283,7 @@ export default async function ReportsPage() {
               (create or detail page) to see it here.
             </p>
           </CardHeader>
-          <CardContent className="p-0 overflow-x-auto">
+          <CardContent className="p-0 report-matrix">
             {categoryMatrix.categories.length === 0 ? (
               <p className="text-sm text-muted-foreground px-4 pb-4">No invoices yet.</p>
             ) : (
