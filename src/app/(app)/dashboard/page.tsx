@@ -189,7 +189,7 @@ export default async function DashboardPage() {
               title="Your four key health numbers"
               subtitle="Food cost = what ingredients cost vs what you sold. Labor = wages vs sales. Prime = food + labor together. Lower is better on all four — the small tick on each ring is your target."
             />
-            <div className="rounded-2xl border bg-card shadow-card p-6">
+            <div className="rounded-xl border bg-card shadow-soft p-6">
               <div className="grid grid-cols-2 gap-y-6 md:grid-cols-4">
                 <MetricRing
                   label="Food cost"
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
               href="/reports"
               cta="Open reports"
             />
-            <div className="rounded-2xl border bg-card shadow-card p-4 sm:p-6">
+            <div className="rounded-xl border bg-card shadow-soft p-4 sm:p-6">
               <AreaStory data={data.trends.sales} height={300} />
             </div>
           </section>
@@ -323,7 +323,7 @@ export default async function DashboardPage() {
                   <Link
                     key={e.id}
                     href={e.href ?? "#"}
-                    className="group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+                    className="group relative overflow-hidden rounded-xl border bg-card p-4 shadow-soft transition-colors duration-200 hover:border-foreground/15"
                   >
                     <div
                       className={`absolute inset-x-0 top-0 h-[3px] ${
@@ -458,7 +458,7 @@ export default async function DashboardPage() {
 
           {/* ─────── Twin lists ─────── */}
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border bg-card shadow-card">
+            <div className="rounded-xl border bg-card shadow-soft">
               <div className="flex items-center justify-between p-4 pb-2">
                 <div className="flex items-center gap-2">
                   <Boxes className="h-4 w-4 text-brand" />
@@ -499,7 +499,7 @@ export default async function DashboardPage() {
               )}
             </div>
 
-            <div className="rounded-2xl border bg-card shadow-card">
+            <div className="rounded-xl border bg-card shadow-soft">
               <div className="flex items-center justify-between p-4 pb-2">
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4 text-brand" />
@@ -604,7 +604,7 @@ function GuideCard({
   cta: string;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl border bg-card p-4 shadow-card">
+    <div className="flex flex-col rounded-xl border bg-card p-4 shadow-soft">
       <div className="flex items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand text-sm font-bold">
           {step}
@@ -640,7 +640,7 @@ function FinanceTile({
 }) {
   const text = tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-warning" : "text-foreground";
   return (
-    <div className="group rounded-2xl border bg-card p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift">
+    <div className="group rounded-xl border bg-card p-5 shadow-soft transition-colors duration-200 hover:border-foreground/15">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-muted-foreground">
           <span className="rounded-lg bg-brand/10 p-1.5 text-brand">{icon}</span>
@@ -668,7 +668,7 @@ function JumpTile({
   return (
     <Link
       href={href}
-      className="group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+      className="group relative overflow-hidden rounded-xl border bg-card p-4 shadow-soft transition-colors duration-200 hover:border-foreground/15"
     >
       <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-brand/10 transition-transform duration-300 group-hover:scale-110" />
       <div className="relative flex items-start gap-3">

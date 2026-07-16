@@ -54,6 +54,9 @@ const config: Config = {
           foreground: "hsl(var(--brand-foreground))",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       borderRadius: {
         "2xl": "calc(var(--radius) + 6px)",
         xl: "calc(var(--radius) + 2px)",
@@ -64,11 +67,12 @@ const config: Config = {
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
+      /* Restrained Swiss shadows — hairline-first, very light elevation. */
       boxShadow: {
-        soft: "0 1px 2px 0 hsl(24 24% 12% / 0.04), 0 1px 3px 0 hsl(24 24% 12% / 0.06)",
-        card: "0 1px 3px hsl(24 24% 12% / 0.05), 0 8px 24px -12px hsl(24 24% 12% / 0.10)",
-        lift: "0 4px 12px -2px hsl(24 24% 12% / 0.10), 0 12px 32px -8px hsl(24 24% 12% / 0.14)",
-        glow: "0 0 0 1px hsl(var(--brand) / 0.2), 0 8px 24px -8px hsl(var(--brand) / 0.35)",
+        soft: "0 1px 2px 0 hsl(222 47% 11% / 0.04)",
+        card: "0 1px 2px 0 hsl(222 47% 11% / 0.04), 0 1px 3px 0 hsl(222 47% 11% / 0.03)",
+        lift: "0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 6px 16px -6px hsl(222 47% 11% / 0.10)",
+        glow: "0 0 0 1px hsl(var(--brand) / 0.18)",
       },
       keyframes: {
         "fade-in-up": {

@@ -97,7 +97,7 @@ export default async function ExpensesPage({
 
         <div className="space-y-2">
           <h2 className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground px-1">All expenses</h2>
-          <div className="rounded-2xl border bg-card shadow-card overflow-hidden">
+          <div className="rounded-xl border bg-card shadow-soft overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
