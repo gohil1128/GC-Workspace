@@ -67,11 +67,11 @@ const config: Config = {
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
-      /* Restrained Swiss shadows — hairline-first, very light elevation. */
+      /* Restrained Swiss shadows — hairline-first, warm-tinted elevation. */
       boxShadow: {
-        soft: "0 1px 2px 0 hsl(222 47% 11% / 0.04)",
-        card: "0 1px 2px 0 hsl(222 47% 11% / 0.04), 0 1px 3px 0 hsl(222 47% 11% / 0.03)",
-        lift: "0 2px 4px -1px hsl(222 47% 11% / 0.06), 0 6px 16px -6px hsl(222 47% 11% / 0.10)",
+        soft: "0 1px 2px 0 hsl(25 60% 20% / 0.05)",
+        card: "0 1px 2px 0 hsl(25 60% 20% / 0.05), 0 1px 3px 0 hsl(25 60% 20% / 0.04)",
+        lift: "0 2px 4px -1px hsl(25 60% 20% / 0.07), 0 6px 16px -6px hsl(25 60% 20% / 0.12)",
         glow: "0 0 0 1px hsl(var(--brand) / 0.18)",
       },
       keyframes: {
