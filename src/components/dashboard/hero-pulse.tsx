@@ -27,34 +27,33 @@ export function HeroPulse({
     yesterdayCents > 0 ? ((todayCents - yesterdayCents) / yesterdayCents) * 100 : null;
   const trendUp = (deltaPct ?? 0) >= 0;
   return (
-    <div className="relative overflow-hidden rounded-[28px] border bg-card shadow-lift">
-      {/* Ambient gradient orbs */}
+    <div className="relative overflow-hidden rounded-xl border bg-card shadow-soft">
+      {/* Single whisper-subtle accent wash — Swiss restraint */}
       <div aria-hidden className="absolute inset-0 overflow-hidden">
-        <div className="orb orb--brand h-[420px] w-[420px] -top-32 -left-24" />
-        <div className="orb orb--success h-[300px] w-[300px] -bottom-24 -right-16" style={{ animationDelay: "2s" }} />
-        <div className="orb orb--warning h-[220px] w-[220px] top-1/2 right-1/3" style={{ animationDelay: "4s" }} />
+        <div className="orb orb--brand h-[360px] w-[360px] -top-40 -right-24" />
       </div>
 
-      <div className="relative grid gap-8 p-6 md:p-10 lg:grid-cols-[1.4fr_1fr] lg:items-end">
-        <div className="space-y-5">
+      <div className="relative grid gap-8 p-6 md:p-8 lg:grid-cols-[1.35fr_1fr] lg:items-end">
+        <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
-            <span className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+            <span className="text-2xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               {periodLabel}
             </span>
           </div>
           <div>
+            <div className="text-2xs font-medium uppercase tracking-wider text-muted-foreground mb-1.5">Net sales</div>
             <CountUp
               value={netSalesCents / 100}
               format="currency"
-              duration={1100}
-              className="display-num block text-[clamp(2.75rem,7vw,5.25rem)] font-semibold text-foreground"
+              duration={900}
+              className="display-num block text-[clamp(2.5rem,6vw,4.5rem)] font-bold text-foreground"
             />
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
               {deltaPct !== null && (
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    trendUp ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${
+                    trendUp ? "bg-success/12 text-success" : "bg-destructive/12 text-destructive"
                   }`}
                 >
                   {trendUp ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
@@ -73,10 +72,10 @@ export function HeroPulse({
         </div>
 
         <div className="text-brand">
-          <Spark data={spark.length > 0 ? spark : [0, 0]} width={520} height={120} fill="hsl(var(--brand))" className="w-full" />
+          <Spark data={spark.length > 0 ? spark : [0, 0]} width={520} height={110} fill="hsl(var(--brand))" className="w-full" />
           <div className="mt-2 flex items-center justify-between text-2xs text-muted-foreground">
             <span>Net sales · daily</span>
-            <span>last point = most recent</span>
+            <span>latest →</span>
           </div>
         </div>
       </div>

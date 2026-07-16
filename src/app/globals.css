@@ -1,65 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Design system — Minimalism & Swiss Style (per ui-ux-pro-max skill, matched to
+  a food-service operations + analytics dashboard). Crisp cool-neutral slate
+  surfaces, a single chai-rust accent, hairline borders, restrained shadows,
+  Inter type. Light + full dark support.
+*/
 @layer base {
   :root {
-    /* Warm, premium neutral base with a chai-rust accent */
-    --background: 36 30% 98%;
-    --foreground: 24 24% 12%;
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+    /* Cool neutral slate base */
+    --background: 210 40% 98.5%;      /* near #F8FAFC */
+    --foreground: 222 47% 11%;        /* slate-900 */
     --card: 0 0% 100%;
-    --card-foreground: 24 24% 12%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 24 24% 12%;
-    --primary: 24 22% 13%;
-    --primary-foreground: 36 40% 98%;
-    --secondary: 32 18% 95%;
-    --secondary-foreground: 24 24% 14%;
-    --muted: 32 16% 95.5%;
-    --muted-foreground: 25 8% 45%;
-    --accent: 30 22% 94%;
-    --accent-foreground: 24 24% 14%;
-    --destructive: 0 72% 50%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;           /* slate-900 as neutral primary */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;         /* slate-100 */
+    --secondary-foreground: 222 47% 14%;
+    --muted: 210 40% 96.5%;
+    --muted-foreground: 215 16% 47%;  /* slate-500 */
+    --accent: 210 40% 95.5%;
+    --accent-foreground: 222 47% 14%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 55% 38%;
+    --success: 152 56% 38%;
     --success-foreground: 0 0% 100%;
     --warning: 32 90% 48%;
     --warning-foreground: 0 0% 100%;
-    /* Brand — the rust/terracotta from the logo */
-    --brand: 18 78% 47%;
+    /* Single accent — chai rust from the logo */
+    --brand: 18 80% 46%;
     --brand-foreground: 0 0% 100%;
-    --border: 28 16% 90%;
-    --input: 28 16% 88%;
-    --ring: 18 78% 47%;
-    --radius: 0.85rem;
+    --border: 214 32% 91%;            /* slate-200 hairline */
+    --input: 214 32% 89%;
+    --ring: 18 80% 46%;
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 24 16% 7%;
-    --foreground: 36 24% 95%;
-    --card: 24 15% 10%;
-    --card-foreground: 36 24% 95%;
-    --popover: 24 15% 11%;
-    --popover-foreground: 36 24% 95%;
-    --primary: 36 30% 96%;
-    --primary-foreground: 24 22% 12%;
-    --secondary: 24 12% 16%;
-    --secondary-foreground: 36 24% 95%;
-    --muted: 24 12% 15%;
-    --muted-foreground: 30 10% 60%;
-    --accent: 24 12% 17%;
-    --accent-foreground: 36 24% 95%;
-    --destructive: 0 70% 55%;
+    --background: 222 47% 6%;          /* deep slate */
+    --foreground: 210 40% 98%;
+    --card: 222 40% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;  /* slate-400 */
+    --accent: 217 33% 16%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 50% 45%;
+    --success: 152 52% 46%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 90% 55%;
-    --warning-foreground: 24 22% 12%;
-    --brand: 18 82% 54%;
+    --warning: 36 92% 56%;
+    --warning-foreground: 222 47% 11%;
+    --brand: 18 84% 57%;
     --brand-foreground: 0 0% 100%;
-    --border: 28 10% 18%;
-    --input: 28 10% 20%;
-    --ring: 18 82% 54%;
+    --border: 217 33% 18%;
+    --input: 217 33% 20%;
+    --ring: 18 84% 57%;
   }
 }
 
@@ -73,13 +83,15 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "tnum" 1;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11" 1, "ss01" 1, "tnum" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.018em;
+    font-weight: 600;
   }
   table {
     font-variant-numeric: tabular-nums;
@@ -156,17 +168,18 @@
     from { stroke-dashoffset: var(--ring-circumference, 251); }
     to   { stroke-dashoffset: var(--ring-target, 0); }
   }
+  /* Ambient accent wash — kept whisper-subtle per Swiss minimalism. */
   .orb {
     position: absolute;
     pointer-events: none;
     border-radius: 9999px;
-    filter: blur(60px);
-    opacity: 0.55;
-    animation: orb-drift 14s ease-in-out infinite;
+    filter: blur(72px);
+    opacity: 0.16;
+    animation: orb-drift 18s ease-in-out infinite;
   }
-  .orb--brand   { background: radial-gradient(circle at 30% 30%, hsl(var(--brand) / 0.75), transparent 60%); }
-  .orb--success { background: radial-gradient(circle at 70% 70%, hsl(var(--success) / 0.55), transparent 60%); }
-  .orb--warning { background: radial-gradient(circle at 50% 50%, hsl(var(--warning) / 0.45), transparent 60%); }
+  .orb--brand   { background: radial-gradient(circle at 30% 30%, hsl(var(--brand) / 0.6), transparent 62%); }
+  .orb--success { background: radial-gradient(circle at 70% 70%, hsl(var(--success) / 0.4), transparent 62%); }
+  .orb--warning { background: radial-gradient(circle at 50% 50%, hsl(var(--warning) / 0.32), transparent 62%); }
 
   .cascade > * {
     opacity: 0;

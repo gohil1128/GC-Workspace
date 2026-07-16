@@ -31,7 +31,7 @@ export function TopItems({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border bg-card p-8 shadow-card text-center">
+      <div className="rounded-xl border bg-card p-8 shadow-soft text-center">
         <Sparkles className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
         <div className="text-sm font-medium">No item-level sales yet</div>
         <p className="mt-1 max-w-md mx-auto text-xs text-muted-foreground">
@@ -46,7 +46,7 @@ export function TopItems({
   const topShare = items[0]?.sharePct ?? 0;
 
   return (
-    <div className="rounded-2xl border bg-card shadow-card overflow-hidden">
+    <div className="rounded-xl border bg-card shadow-soft overflow-hidden">
       <div className="grid grid-cols-3 divide-x border-b bg-muted/20">
         <Stat label="Items sold" value={totalQty.toLocaleString()} />
         <Stat label="Item revenue" value={formatMoney(totalCents)} />
