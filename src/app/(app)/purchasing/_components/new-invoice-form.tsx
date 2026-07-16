@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategorySelect } from "@/components/ui/category-select";
+import { INVOICE_CATEGORIES } from "@/lib/gc-categories";
 import { createInvoiceAction } from "@/modules/invoices/actions";
 import { quickCreateSupplierAction } from "@/modules/purchasing/actions";
 import { fileToAttachmentDataUrl } from "@/lib/image-client";
@@ -241,29 +243,36 @@ export function NewInvoiceForm({
         </span>
       </div>
 
-      {events.length > 0 && (
-        <div className="grid gap-1.5 md:max-w-xs">
-          <Label htmlFor="invoice-event">Event (optional)</Label>
-          <Select value={eventId} onValueChange={setEventId}>
-            <SelectTrigger id="invoice-event"><SelectValue placeholder="No event" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No event</SelectItem>
-              <SelectItem value="all">
-                <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
-              </SelectItem>
-              {events.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
-                    {e.name}
-                  </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {events.length > 0 && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="invoice-event">Event (optional)</Label>
+            <Select value={eventId} onValueChange={setEventId}>
+              <SelectTrigger id="invoice-event"><SelectValue placeholder="No event" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No event</SelectItem>
+                <SelectItem value="all">
+                  <span className="inline-flex items-center gap-2 font-medium">🌐 All events (shared cost)</span>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-2xs text-muted-foreground">Tag to one event — or "All events" for shared costs (cups, tent…), split evenly across events in the P&L.</span>
+                {events.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                      {e.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-2xs text-muted-foreground">Or "All events" for shared costs (cups, tent…), split evenly in the P&L.</span>
+          </div>
+        )}
+        <div className="grid gap-1.5">
+          <Label htmlFor="invoice-category">Category (optional)</Label>
+          <CategorySelect id="invoice-category" name="category" options={INVOICE_CATEGORIES} />
+          <span className="text-2xs text-muted-foreground">What the bill was for — powers the spend-by-category report.</span>
         </div>
-      )}
+      </div>
 
       <div className="grid gap-1.5">
         <Label htmlFor="internalMemo">Internal Memo</Label>

@@ -608,6 +608,10 @@ model Invoice {
   // exclusive with eventId. Split evenly across events in per-event P&L;
   // counted once in overall totals.
   appliesToAllEvents Boolean @default(false)
+  // What the bill was for (Ingredients & Supplies, Packaging, Equipment...).
+  // Free-text so custom values already saved never get clobbered by preset
+  // changes — see src/lib/gc-categories.ts INVOICE_CATEGORIES.
+  category      String?
   invoiceNumber String
   invoiceDate   DateTime
   dateReceived  DateTime

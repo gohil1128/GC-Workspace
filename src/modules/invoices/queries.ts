@@ -35,6 +35,7 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
         totalCents: true,
         closedAt: true,
         appliesToAllEvents: true,
+        category: true,
         supplier: { select: { name: true } },
         createdBy: { select: { name: true } },
         event: { select: { id: true, name: true, color: true } },

@@ -50,6 +50,7 @@ export async function createInvoiceAction(formData: FormData) {
     internalMemo: formData.get("internalMemo"),
     poId: formData.get("poId") || null,
     eventId: formData.get("eventId") || null,
+    category: formData.get("category") || null,
     subtotalDollars: formData.get("subtotalDollars") || 0,
     gstDollars: formData.get("gstDollars") || 0,
     pstDollars: formData.get("pstDollars") || 0,
@@ -78,6 +79,7 @@ export async function createInvoiceAction(formData: FormData) {
         poId: parsed.poId || null,
         eventId,
         appliesToAllEvents,
+        category: parsed.category?.trim() || null,
         invoiceNumber,
         invoiceDate: new Date(parsed.invoiceDate),
         dateReceived: new Date(parsed.dateReceived),
@@ -138,6 +140,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
     shippingDollars: formData.get("shippingDollars"),
     rebateDollars: formData.get("rebateDollars"),
     eventId: formData.get("eventId") || null,
+    category: formData.get("category") || null,
   });
   const appliesToAllEvents = parsed.eventId === "all";
   const eventId = parsed.eventId && parsed.eventId !== "none" && !appliesToAllEvents ? parsed.eventId : null;
@@ -160,6 +163,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
         internalMemo: parsed.internalMemo || null,
         eventId,
         appliesToAllEvents,
+        category: parsed.category?.trim() || null,
         // Manual subtotal — recompute overrides it whenever line items exist.
         subtotalCents: toCents(parsed.subtotalDollars),
         gstCents: toCents(parsed.gstDollars),
@@ -289,6 +293,23 @@ export async function setInvoiceEventAction(id: string, eventIdRaw: string | nul
     businessId: scope.businessId, userId: scope.userId,
     action: "invoice.set_event", entityType: "Invoice", entityId: id,
     diff: { eventId },
+  });
+  revalidatePath("/purchasing/invoices");
+  revalidatePath(`/purchasing/invoices/${id}`);
+}
+
+// Lightweight category tag for an existing invoice — same instant-save
+// pattern as the event tagger, works on closed invoices.
+export async function setInvoiceCategoryAction(id: string, categoryRaw: string | null) {
+  const scope = await getScope();
+  const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
+  if (!inv) throw new Error("Not found");
+  const category = categoryRaw?.trim() || null;
+  await prisma.invoice.update({ where: { id }, data: { category } });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "invoice.set_category", entityType: "Invoice", entityId: id,
+    diff: { category },
   });
   revalidatePath("/purchasing/invoices");
   revalidatePath(`/purchasing/invoices/${id}`);

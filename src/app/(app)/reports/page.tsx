@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getScope } from "@/lib/scope";
-import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent, pnlByEvent } from "@/modules/reports/queries";
+import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent, categorySpendByEvent, pnlByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
@@ -16,13 +16,14 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const scope = await getScope();
   const isOwner = scope.role === "OWNER";
-  const [daily, weekly, labor, spend, variance, supplierMatrix, pnl] = await Promise.all([
+  const [daily, weekly, labor, spend, variance, supplierMatrix, categoryMatrix, pnl] = await Promise.all([
     dailySummary(scope.locationId, 14),
     weeklyTrend(scope.locationId, 4),
     getLaborReport(scope.locationId, 14),
     purchaseSpendByPeriod(scope.locationId, 30),
     getVarianceReport(scope.locationId),
     supplierSpendByEvent(scope.locationId),
+    categorySpendByEvent(scope.locationId),
     pnlByEvent(scope.businessId, scope.locationId),
   ]);
 
@@ -266,6 +267,79 @@ export default async function ReportsPage() {
                       <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandUntagged)}</TableCell>
                     )}
                     <TableCell className="text-right num font-semibold text-brand">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Invoice spend by category × event matrix */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Spend by category · by event and overall</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Every supplier invoice grouped by what it was for. Set a category on any invoice
+              (create or detail page) to see it here.
+            </p>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            {categoryMatrix.categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground px-4 pb-4">No invoices yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-40">Category</TableHead>
+                    {categoryMatrix.events.map((e) => (
+                      <TableHead key={e.id} className="text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }} />
+                          {e.name}
+                        </span>
+                      </TableHead>
+                    ))}
+                    {categoryMatrix.hasShared && <TableHead className="text-right">All events (shared)</TableHead>}
+                    {categoryMatrix.hasUntagged && <TableHead className="text-right">Untagged</TableHead>}
+                    <TableHead className="text-right font-semibold">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categoryMatrix.categories.map((c) => (
+                    <TableRow key={c.category}>
+                      <TableCell className="font-medium">{c.category}</TableCell>
+                      {categoryMatrix.events.map((e) => (
+                        <TableCell key={e.id} className="text-right num text-muted-foreground">
+                          {c.byEvent[e.id] ? formatMoney(c.byEvent[e.id]) : "—"}
+                        </TableCell>
+                      ))}
+                      {categoryMatrix.hasShared && (
+                        <TableCell className="text-right num text-muted-foreground">
+                          {c.sharedCents ? formatMoney(c.sharedCents) : "—"}
+                        </TableCell>
+                      )}
+                      {categoryMatrix.hasUntagged && (
+                        <TableCell className="text-right num text-muted-foreground">
+                          {c.untaggedCents ? formatMoney(c.untaggedCents) : "—"}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right num font-semibold">{formatMoney(c.totalCents)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/30">
+                    <TableCell className="font-semibold">All categories</TableCell>
+                    {categoryMatrix.events.map((e) => (
+                      <TableCell key={e.id} className="text-right num font-semibold">
+                        {formatMoney(categoryMatrix.eventTotals[e.id] ?? 0)}
+                      </TableCell>
+                    ))}
+                    {categoryMatrix.hasShared && (
+                      <TableCell className="text-right num font-semibold">{formatMoney(categoryMatrix.grandShared)}</TableCell>
+                    )}
+                    {categoryMatrix.hasUntagged && (
+                      <TableCell className="text-right num font-semibold">{formatMoney(categoryMatrix.grandUntagged)}</TableCell>
+                    )}
+                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(categoryMatrix.grandTotal)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
