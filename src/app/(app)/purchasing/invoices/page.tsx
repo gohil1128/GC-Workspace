@@ -10,6 +10,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { deleteInvoiceAction } from "@/modules/invoices/actions";
 import { ReopenInvoiceButton } from "../_components/reopen-invoice-button";
 import { InvoiceFilters } from "./_components/invoice-filters";
+import { ExportInvoicesButton } from "./_components/export-invoices-button";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
 
@@ -89,7 +90,10 @@ export default async function InvoicesPage({
         title="Invoices"
         description={`${sorted.length} invoice${sorted.length === 1 ? "" : "s"}${activeFilterCount > 0 ? " (filtered)" : ""} · ${formatMoney(totalSpend)} total`}
         actions={
-          <Button asChild variant="outline" size="sm"><Link href="/purchasing">All purchasing</Link></Button>
+          <>
+            <ExportInvoicesButton count={sorted.length} />
+            <Button asChild variant="outline" size="sm"><Link href="/purchasing">All purchasing</Link></Button>
+          </>
         }
       />
       <div className="p-4 sm:p-6 space-y-4">
