@@ -9,7 +9,9 @@ export type InvoiceFilters = {
   to?: string;
 };
 
-export async function listInvoices(locationId: string, filters: InvoiceFilters = {}) {
+// Shared by the list view and the CSV export so a download always reflects
+// exactly the same filter semantics as what the operator sees on screen.
+function buildInvoiceWhere(locationId: string, filters: InvoiceFilters) {
   const where: any = { locationId };
   if (filters.supplierId) where.supplierId = filters.supplierId;
   if (filters.invoiceNumber) where.invoiceNumber = { contains: filters.invoiceNumber.trim(), mode: "insensitive" };
@@ -20,6 +22,11 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
     if (filters.from) where.invoiceDate.gte = startOfDay(new Date(filters.from));
     if (filters.to) where.invoiceDate.lte = endOfDay(new Date(filters.to));
   }
+  return where;
+}
+
+export async function listInvoices(locationId: string, filters: InvoiceFilters = {}) {
+  const where = buildInvoiceWhere(locationId, filters);
   // Explicit select keeps the (potentially large) imageDataUrl out of the
   // list query — a cheap second query flags which rows have a photo so the
   // list can show a clickable thumbnail icon.
@@ -50,6 +57,47 @@ export async function listInvoices(locationId: string, filters: InvoiceFilters =
   ]);
   const photoIds = new Set(withPhoto.map((r) => r.id));
   return rows.map((r) => ({ ...r, hasImage: photoIds.has(r.id) }));
+}
+
+// Full invoice detail for CSV export — includes the tax/shipping/rebate
+// breakdown and line items that the list view omits. Same filter semantics as
+// listInvoices so a download always matches what's on screen.
+export async function listInvoicesForExport(locationId: string, filters: InvoiceFilters = {}) {
+  return prisma.invoice.findMany({
+    where: buildInvoiceWhere(locationId, filters),
+    select: {
+      id: true,
+      invoiceNumber: true,
+      invoiceDate: true,
+      dateReceived: true,
+      category: true,
+      subtotalCents: true,
+      gstCents: true,
+      pstCents: true,
+      shippingCents: true,
+      rebateCents: true,
+      totalCents: true,
+      internalMemo: true,
+      appliesToAllEvents: true,
+      closedAt: true,
+      createdAt: true,
+      imageDataUrl: false,
+      supplier: { select: { name: true } },
+      event: { select: { name: true } },
+      createdBy: { select: { name: true } },
+      items: {
+        select: {
+          qty: true,
+          unit: true,
+          unitCostCents: true,
+          lineTotalCents: true,
+          ingredient: { select: { name: true } },
+        },
+        orderBy: { id: "asc" },
+      },
+    },
+    orderBy: { invoiceDate: "desc" },
+  });
 }
 
 export async function getInvoice(locationId: string, id: string) {

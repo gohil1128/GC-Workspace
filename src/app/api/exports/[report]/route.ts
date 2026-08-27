@@ -6,15 +6,95 @@ import { dailySummary, weeklyTrend, purchaseSpendByPeriod } from "@/modules/repo
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport } from "@/modules/inventory/queries";
 import { listCashCloses } from "@/modules/cash/queries";
+import { listInvoicesForExport, type InvoiceFilters } from "@/modules/invoices/queries";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ report: string }> }) {
+// The list page narrows to event-untagged invoices in JS rather than SQL;
+// mirror that here so the export matches the filtered view.
+function onlyUntagged<T extends { event: unknown; appliesToAllEvents: boolean }>(
+  rows: T[],
+  sp: URLSearchParams,
+): T[] {
+  if (sp.get("untagged") !== "1") return rows;
+  return rows.filter((r) => !r.event && !r.appliesToAllEvents);
+}
+
+// Mirrors the invoice list page's query params so "Download CSV" exports
+// exactly the rows the operator is looking at.
+function invoiceFiltersFrom(sp: URLSearchParams): InvoiceFilters {
+  const status = sp.get("status");
+  return {
+    supplierId: sp.get("supplier") ?? undefined,
+    invoiceNumber: sp.get("number") ?? undefined,
+    status: status === "open" || status === "closed" ? status : "all",
+    from: sp.get("from") ?? undefined,
+    to: sp.get("to") ?? undefined,
+  };
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ report: string }> }) {
   const { report } = await params;
   const scope = await getScope();
+  const sp = new URL(req.url).searchParams;
 
   let rows: Record<string, unknown>[] = [];
   let columns: string[] = [];
 
   switch (report) {
+    // One row per invoice — the header-level view, with the full tax and
+    // adjustment breakdown that the on-screen table leaves out.
+    case "invoices": {
+      const data = onlyUntagged(await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp)), sp);
+      columns = [
+        "invoiceNumber", "supplier", "event", "category", "invoiceDate", "dateReceived",
+        "itemCount", "subtotal", "gst", "pst", "shipping", "rebate", "total",
+        "status", "closedAt", "createdBy", "memo",
+      ];
+      rows = data.map((i) => ({
+        invoiceNumber: i.invoiceNumber,
+        supplier: i.supplier.name,
+        event: i.appliesToAllEvents ? "All events" : (i.event?.name ?? ""),
+        category: i.category ?? "",
+        invoiceDate: i.invoiceDate.toISOString().slice(0, 10),
+        dateReceived: i.dateReceived.toISOString().slice(0, 10),
+        itemCount: i.items.length,
+        subtotal: fromCents(i.subtotalCents).toFixed(2),
+        gst: fromCents(i.gstCents).toFixed(2),
+        pst: fromCents(i.pstCents).toFixed(2),
+        shipping: fromCents(i.shippingCents).toFixed(2),
+        rebate: fromCents(i.rebateCents).toFixed(2),
+        total: fromCents(i.totalCents).toFixed(2),
+        status: i.closedAt ? "Closed" : "Open",
+        closedAt: i.closedAt ? i.closedAt.toISOString().slice(0, 10) : "",
+        createdBy: i.createdBy.name,
+        memo: i.internalMemo ?? "",
+      }));
+      break;
+    }
+    // One row per line item, each carrying its parent invoice's identifying
+    // columns so the file pivots cleanly in a spreadsheet.
+    case "invoice-items": {
+      const data = onlyUntagged(await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp)), sp);
+      columns = [
+        "invoiceNumber", "supplier", "event", "category", "invoiceDate",
+        "ingredient", "qty", "unit", "unitCost", "lineTotal", "status",
+      ];
+      rows = data.flatMap((i) =>
+        i.items.map((it) => ({
+          invoiceNumber: i.invoiceNumber,
+          supplier: i.supplier.name,
+          event: i.appliesToAllEvents ? "All events" : (i.event?.name ?? ""),
+          category: i.category ?? "",
+          invoiceDate: i.invoiceDate.toISOString().slice(0, 10),
+          ingredient: it.ingredient.name,
+          qty: it.qty,
+          unit: it.unit,
+          unitCost: fromCents(it.unitCostCents).toFixed(2),
+          lineTotal: fromCents(it.lineTotalCents).toFixed(2),
+          status: i.closedAt ? "Closed" : "Open",
+        }))
+      );
+      break;
+    }
     case "daily": {
       const data = await dailySummary(scope.locationId, 30);
       columns = ["date", "netSales", "tips", "guests", "foodCost", "foodPct", "laborCost", "laborPct", "cashOverShort"];
