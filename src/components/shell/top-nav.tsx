@@ -71,6 +71,7 @@ const SECTIONS: Section[] = [
       { href: "/settings", label: "Business & events", note: "Locations, events, fees" },
       { href: "/settings/users", label: "Team", note: "Invite & roles" },
       { href: "/settings/integrations", label: "Integrations", note: "CSV imports, data" },
+      { href: "/settings/exports", label: "Data export", note: "Download everything as CSV" },
     ],
   },
 ];
