@@ -20,6 +20,7 @@ export default async function PurchasingPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Purchasing · Purchase orders"
         title="Purchasing"
         description={`${pos.length} purchase orders · ${pos.filter((p) => p.status === "DRAFT" || p.status === "SENT").length} open`}
         actions={
@@ -29,8 +30,8 @@ export default async function PurchasingPage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6">
-        <div className="rounded-lg border">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>

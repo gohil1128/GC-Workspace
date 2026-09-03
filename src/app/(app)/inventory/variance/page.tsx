@@ -18,6 +18,7 @@ export default async function VariancePage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Inventory · Variance"
         title="Inventory variance"
         description={report ? `Last count ${fmtDateTime(report.count.countedAt)}` : "No counts yet"}
         actions={
@@ -29,7 +30,7 @@ export default async function VariancePage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 space-y-4">
         {!report ? (
           <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No counts recorded yet. Start a weekly count.</CardContent></Card>
         ) : (
@@ -40,7 +41,7 @@ export default async function VariancePage() {
               <Tile label="Negative lines" value={String(report.lines.filter((l) => l.variance < 0).length)} tone="bad" />
               <Tile label="Positive lines" value={String(report.lines.filter((l) => l.variance > 0).length)} tone="warn" />
             </div>
-            <div className="rounded-lg border">
+            <div className="bento">
               <Table>
                 <TableHeader>
                   <TableRow>

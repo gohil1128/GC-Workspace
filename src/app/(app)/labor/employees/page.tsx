@@ -15,9 +15,9 @@ export default async function EmployeesPage() {
   const employees = await listEmployees(scope.businessId);
   return (
     <div>
-      <PageHeader title="Employees" description={`${employees.length} employees · ${employees.filter((e) => e.isActive).length} active`} actions={<NewEmployeeButton />} />
-      <div className="p-4 sm:p-6">
-        <div className="rounded-lg border">
+      <PageHeader eyebrow="Labor · Employees" title="Employees" description={`${employees.length} employees · ${employees.filter((e) => e.isActive).length} active`} actions={<NewEmployeeButton />} />
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>

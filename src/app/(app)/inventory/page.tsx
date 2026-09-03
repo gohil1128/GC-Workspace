@@ -21,6 +21,7 @@ export default async function InventoryPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Inventory · Ingredients"
         title="Inventory"
         description={`${items.length} ingredients · ${lowCount} below reorder point`}
         actions={
@@ -31,8 +32,8 @@ export default async function InventoryPage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6">
-        <div className="rounded-lg border">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>

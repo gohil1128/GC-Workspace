@@ -71,8 +71,10 @@ export default async function DashboardPage() {
 
   // Cost line for the chart: labor is the only real per-day cost series the
   // dashboard query returns, so that's what the dashed line shows.
-  const salesPoints = data.trends.sales.map((s) => ({ x: fmtDate(new Date(s.x)), y: s.y }));
-  const costPoints = data.trends.labor.map((s) => ({ x: fmtDate(new Date(s.x)), y: s.y }));
+  // trends.*.x is already a formatted "MMM d" label — re-parsing it would
+  // lose the year (new Date("Aug 21") lands in 2001).
+  const salesPoints = data.trends.sales.map((s) => ({ x: s.x, y: s.y }));
+  const costPoints = data.trends.labor.map((s) => ({ x: s.x, y: s.y }));
 
   const periodLabel = activeEvent
     ? `${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`

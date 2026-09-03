@@ -92,7 +92,10 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
   };
 
   return (
-    <nav className="flex items-center gap-0.5 overflow-x-auto scroll-fluid rounded-full border border-border bg-card p-1">
+    <nav
+      className="flex max-w-full items-center gap-0.5 overflow-x-auto scroll-fluid rounded-full border border-border bg-card p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{ maskImage: "linear-gradient(to right, #000 calc(100% - 24px), transparent)", WebkitMaskImage: "linear-gradient(to right, #000 calc(100% - 24px), transparent)" }}
+    >
       {sections.map((s) => {
         const active = isSectionActive(s);
         if (!s.children) {

@@ -28,7 +28,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           <Button asChild variant="outline" size="sm"><Link href="/recipes"><ArrowLeft className="h-3.5 w-3.5" /> All recipes</Link></Button>
         }
       />
-      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-1">
           <CardHeader><CardTitle>Costing</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">

@@ -18,11 +18,12 @@ export default async function CountsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Inventory · Counts"
         title="Inventory counts"
         description="Enter physical counts to calculate variance"
         actions={<Button asChild variant="outline" size="sm"><Link href="/inventory/variance"><ClipboardList className="h-3.5 w-3.5" /> Variance report</Link></Button>}
       />
-      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>New count</CardTitle></CardHeader>
           <CardContent>

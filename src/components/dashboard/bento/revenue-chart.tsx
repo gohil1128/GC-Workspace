@@ -4,6 +4,15 @@ import { formatMoney } from "@/lib/money";
 // line beneath it and a callout on the best day (design 1a).
 type Point = { x: string; y: number };
 
+// Short axis money ($6k, $850) so labels don't run into the plot area.
+function compactAxis(v: number) {
+  if (v >= 1000) {
+    const k = v / 1000;
+    return `$${k % 1 === 0 ? k : k.toFixed(1)}k`;
+  }
+  return `$${Math.round(v)}`;
+}
+
 export function RevenueChart({
   sales,
   costs,
@@ -36,8 +45,13 @@ export function RevenueChart({
   const bestX = xAt(bestIdx), bestY = yAt(best.y);
   const calloutX = Math.min(Math.max(bestX, 96), W - 96);
 
-  // Four gridlines, labelled at real dollar values.
-  const gridVals = [1, 0.75, 0.5, 0.25].map((f) => peak * f);
+  // Gridlines snap to a round step (1/2/5 x 10^n) so the axis reads
+  // "$2,000" rather than "$2,076.07".
+  const roughStep = peak / 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.max(roughStep, 1))));
+  const gridStep = [1, 2, 5, 10].map((m) => m * mag).find((v) => v >= roughStep) ?? mag * 10;
+  const gridVals: number[] = [];
+  for (let v = gridStep; v <= peak * 1.0001; v += gridStep) gridVals.push(v);
   const ticks = [0, Math.floor(sales.length / 2), sales.length - 1].filter((v, i, a) => a.indexOf(v) === i);
 
   return (
@@ -53,7 +67,7 @@ export function RevenueChart({
       </g>
       <g fontSize="10" fill="hsl(var(--muted-foreground))">
         {gridVals.map((v) => (
-          <text key={v} x="0" y={yAt(v) - 4}>{formatMoney(Math.round(v * 100))}</text>
+          <text key={v} x="0" y={yAt(v) - 4}>{compactAxis(v)}</text>
         ))}
       </g>
       <path d={area} fill="url(#revArea)" />

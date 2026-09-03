@@ -11,7 +11,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-bento border",
+      "min-w-0 rounded-bento border",
       variant === "dark"
         ? "bg-espresso text-espresso-foreground border-espresso"
         : "bg-card text-card-foreground border-border",

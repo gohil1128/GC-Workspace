@@ -28,13 +28,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Single-row header (design 1a): logo left, pill nav centre, utilities right. */}
       <header className="sticky top-0 z-40 glass">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2.5 px-4 py-3 sm:px-6 lg:px-8">
           <BrandBar businessName={business?.name ?? "Operations"} />
           {/* Nav takes the middle; it scrolls horizontally before it wraps. */}
-          <div className="min-w-0 flex-1 flex justify-center">
+          <div className="order-last flex w-full min-w-0 justify-start overflow-hidden 2xl:order-none 2xl:w-auto 2xl:flex-1 2xl:justify-center">
             <TopNav role={scope.role} recipesLocked={recipesLocked} />
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
             <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
             <ThemeToggle />

@@ -30,6 +30,7 @@ export default async function ReportsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Sales · Reports"
         title="Reports"
         description="Daily, weekly, labor, variance, and purchase spend"
         actions={
@@ -41,7 +42,7 @@ export default async function ReportsPage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6 grid gap-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 grid gap-4">
         {/* P&L — profit and loss per event + overall */}
         <Card className="border-brand/40">
           <CardHeader>

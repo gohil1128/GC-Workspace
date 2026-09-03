@@ -21,13 +21,14 @@ export default async function NewInvoicePage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Purchasing · New invoice"
         title="Create invoice"
         description={`Recording a new supplier bill at ${scope.locationName}`}
         actions={
           <Button asChild variant="outline" size="sm"><Link href="/purchasing/invoices"><ArrowLeft className="h-3.5 w-3.5" /> All invoices</Link></Button>
         }
       />
-      <div className="p-4 sm:p-6">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <Card className="max-w-3xl">
           <CardHeader><CardTitle>Invoice details</CardTitle></CardHeader>
           <CardContent>

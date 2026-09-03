@@ -25,6 +25,7 @@ export default async function LaborPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader
+        eyebrow="Labor · Schedule"
         title="Labor"
         description={`Schedule · ${fmtDate(weekStart)} – ${fmtDate(weekEnd)}`}
         actions={
@@ -36,7 +37,7 @@ export default async function LaborPage({ searchParams }: { searchParams: Promis
           </>
         }
       />
-      <div className="p-4 sm:p-6">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <ScheduleGrid
           weekStart={weekStart.toISOString()}
           employees={employees.filter((e) => e.isActive).map((e) => ({ id: e.id, name: e.name, position: e.position, rateCents: e.hourlyRateCents }))}

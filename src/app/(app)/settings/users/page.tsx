@@ -25,6 +25,7 @@ export default async function UsersPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Settings · Team"
         title="Users"
         description={`${users.length} user${users.length === 1 ? "" : "s"} in this business`}
         actions={
@@ -34,8 +35,8 @@ export default async function UsersPage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6">
-        <div className="rounded-lg border">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>

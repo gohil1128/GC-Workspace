@@ -19,11 +19,12 @@ export default async function LaborReportPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Labor · Report"
         title="Labor performance"
         description={`${fmtDate(r.period.from)} – ${fmtDate(r.period.to)} · ${r.period.days} days`}
         actions={<Button asChild variant="outline" size="sm"><a href="/api/exports/labor"><Download className="h-3.5 w-3.5" /> CSV</a></Button>}
       />
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard label="Net Sales" value={formatMoney(r.netSalesCents)} />
           <KpiCard label="Labor Cost" value={formatMoney(r.totalCostCents)} />
@@ -31,7 +32,7 @@ export default async function LaborReportPage() {
           <KpiCard label="Scheduled hrs" value={r.totalScheduledHours.toFixed(1)} delta={`Actual ${r.totalActualHours.toFixed(1)}`} />
         </div>
 
-        <div className="rounded-lg border">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>

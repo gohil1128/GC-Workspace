@@ -11,6 +11,7 @@ import { deleteInvoiceAction } from "@/modules/invoices/actions";
 import { ReopenInvoiceButton } from "../_components/reopen-invoice-button";
 import { InvoiceFilters } from "./_components/invoice-filters";
 import { ExportInvoicesButton } from "./_components/export-invoices-button";
+import { StatTile, StatTileRow } from "@/components/stat-tile";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
 
@@ -61,6 +62,14 @@ export default async function InvoicesPage({
   });
 
   const totalSpend = sorted.reduce((a, i) => a + i.totalCents, 0);
+  const openInvoices = sorted.filter((i) => !i.closedAt);
+  const openTotal = openInvoices.reduce((a, i) => a + i.totalCents, 0);
+  const untaggedCount = allInvoices.filter((i) => !i.event && !i.appliesToAllEvents).length;
+  // Oldest still-open bill — the schema has no due date, so this is the real
+  // stand-in for "what has been sitting unpaid longest".
+  const oldestOpen = [...openInvoices].sort(
+    (a, b) => a.invoiceDate.getTime() - b.invoiceDate.getTime(),
+  )[0];
   const activeFilterCount =
     (filters.supplierId ? 1 : 0) +
     (filters.status && filters.status !== "all" ? 1 : 0) +
@@ -87,7 +96,8 @@ export default async function InvoicesPage({
   return (
     <div>
       <PageHeader
-        title="Invoices"
+        eyebrow="Purchasing · Invoices"
+        title="Invoice tracking"
         description={`${sorted.length} invoice${sorted.length === 1 ? "" : "s"}${activeFilterCount > 0 ? " (filtered)" : ""} · ${formatMoney(totalSpend)} total`}
         actions={
           <>
@@ -96,10 +106,39 @@ export default async function InvoicesPage({
           </>
         }
       />
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 space-y-4">
+        <StatTileRow>
+          <StatTile
+            label="Total · all invoices"
+            value={formatMoney(totalSpend)}
+            meta={`${sorted.length} invoice${sorted.length === 1 ? "" : "s"}`}
+          />
+          <StatTile
+            label="Open"
+            value={formatMoney(openTotal)}
+            meta={`${openInvoices.length} invoice${openInvoices.length === 1 ? "" : "s"}`}
+          />
+          <StatTile
+            variant="dark"
+            label="Oldest open"
+            value={oldestOpen ? fmtDate(oldestOpen.invoiceDate) : "—"}
+            meta={oldestOpen ? oldestOpen.supplier.name : "nothing open"}
+          />
+          <StatTile
+            variant="amber"
+            label="Untagged to an event"
+            value={untaggedCount}
+            action={
+              untaggedCount > 0 ? (
+                <Button asChild size="sm"><Link href="/purchasing/invoices?untagged=1">Tag them</Link></Button>
+              ) : undefined
+            }
+          />
+        </StatTileRow>
+
         <InvoiceFilters suppliers={suppliers} />
         {onlyUntagged && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning-muted px-3 py-2 text-xs">
             <span>
               Showing only invoices <span className="font-semibold">not tagged to any event</span>.
               Open each one and pick an event from the event dropdown.
@@ -108,7 +147,7 @@ export default async function InvoicesPage({
           </div>
         )}
 
-        <div className="rounded-lg border">
+        <div className="bento">
           <Table>
             <TableHeader>
               <TableRow>
