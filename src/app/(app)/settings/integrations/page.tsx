@@ -55,8 +55,8 @@ export default async function IntegrationsPage() {
 
   return (
     <div>
-      <PageHeader title="Integrations" description="Upload Square's Sales Summary and Item Sales Summary CSVs · external APIs are wired as placeholders" />
-      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <PageHeader eyebrow="Settings · Integrations" title="Integrations" description="Upload Square's Sales Summary and Item Sales Summary CSVs · external APIs are wired as placeholders" />
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         <Card className="border-brand/50">
           <CardHeader>

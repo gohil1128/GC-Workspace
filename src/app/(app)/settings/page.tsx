@@ -39,6 +39,7 @@ export default async function SettingsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Settings · Business & events"
         title="Settings"
         description="Business, locations, users, and integrations"
         actions={
@@ -48,7 +49,7 @@ export default async function SettingsPage() {
           </>
         }
       />
-      <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Business</CardTitle>

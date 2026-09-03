@@ -14,7 +14,7 @@ export default async function NewPoPage() {
   return (
     <div>
       <PageHeader title="New purchase order" description="Reorder suggestions are grouped by supplier" />
-      <div className="p-4 sm:p-6">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <ReorderBuilder
           groups={groups.map((g) => ({
             supplier: g.supplier ? { id: g.supplier.id, name: g.supplier.name, leadTimeDays: g.supplier.leadTimeDays } : null,

@@ -153,7 +153,7 @@ export function SquareItemSummaryImporter({
       </Button>
 
       {error && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive p-2 text-xs whitespace-pre-wrap">
+        <div className="rounded-md border border-destructive/25 bg-destructive-muted text-destructive p-2 text-xs whitespace-pre-wrap">
           {error}
         </div>
       )}

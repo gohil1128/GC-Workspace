@@ -116,7 +116,7 @@ export function BomEditor({ recipeId, initial, catalog }: { recipeId: string; in
       </div>
 
       {anyIncompatible && (
-        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning-foreground">
+        <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning-muted p-2 text-xs text-warning-foreground">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-warning" />
           <span>
             Some lines use a unit that can&apos;t be converted to the ingredient&apos;s stock unit

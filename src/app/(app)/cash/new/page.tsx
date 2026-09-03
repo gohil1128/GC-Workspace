@@ -30,6 +30,7 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
   return (
     <div>
       <PageHeader
+        eyebrow="Cash · New close"
         title="Daily entry"
         description={`${scope.locationName} · ${fmtDate(new Date(dateStr))}`}
         actions={
@@ -40,7 +41,7 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
           </>
         }
       />
-      <div className="p-4 sm:p-6">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <CashEntry
           businessDate={dateStr}
           locationName={scope.locationName}

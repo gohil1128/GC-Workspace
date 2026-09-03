@@ -74,11 +74,12 @@ export default async function ExpensesPage({
   return (
     <div>
       <PageHeader
+        eyebrow="Expenses"
         title="Operating expenses"
         description={`${expenses.length} entries · ${formatMoney(total)} total`}
         actions={<NewExpenseButton events={events.map((e) => ({ id: e.id, name: e.name }))} />}
       />
-      <div className="p-4 sm:p-8 space-y-6 animate-fade">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 space-y-6 animate-fade">
         <VendorsSection
           vendors={vendors.map((v) => ({
             id: v.id, name: v.name, role: v.role, country: v.country,
@@ -97,7 +98,7 @@ export default async function ExpensesPage({
 
         <div className="space-y-2">
           <h2 className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground px-1">All expenses</h2>
-          <div className="rounded-xl border bg-card shadow-soft overflow-hidden">
+          <div className="bento overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>

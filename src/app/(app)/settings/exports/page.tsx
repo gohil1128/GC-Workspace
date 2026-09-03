@@ -11,10 +11,11 @@ export default function ExportsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Settings · Data export"
         title="Data export"
         description={`Download any of your ${EXPORTS.length} datasets as a CSV — opens in Excel, Numbers or Google Sheets`}
       />
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8 animate-fade">
+      <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 space-y-8 animate-fade">
         <p className="max-w-3xl text-sm text-muted-foreground">
           Transaction data (sales, invoices, cash, counts) covers your selected location; shared
           catalogs (ingredients, recipes, vendors, employees, events) cover the whole business.
