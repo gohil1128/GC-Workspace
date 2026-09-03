@@ -52,3 +52,22 @@ export async function getAllEventsRange(
   return { start: agg._min.startDate, end };
 }
 
+
+// Events that haven't finished yet, soonest first — for the dashboard's
+// "Upcoming events" card. EventLite omits feeCents, which the card shows, so
+// this selects the fee explicitly.
+export async function listUpcomingEvents(businessId: string, now: Date, limit = 3) {
+  return prisma.event.findMany({
+    where: { businessId, endDate: { gte: now } },
+    select: {
+      id: true,
+      name: true,
+      startDate: true,
+      endDate: true,
+      feeCents: true,
+      color: true,
+    },
+    orderBy: { startDate: "asc" },
+    take: limit,
+  });
+}

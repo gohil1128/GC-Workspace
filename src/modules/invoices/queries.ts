@@ -153,3 +153,37 @@ export async function listOpenPosForSupplier(locationId: string, supplierId: str
     take: 10,
   });
 }
+
+// Powers the dashboard's dark "Invoice tracking" card. The schema has no
+// due-date column, so "overdue" isn't derivable — we report paid/open counts,
+// the real open balance, and the oldest still-open bill instead of inventing
+// a due date.
+export async function getInvoiceTracking(locationId: string) {
+  const rows = await prisma.invoice.findMany({
+    where: { locationId },
+    select: {
+      totalCents: true,
+      closedAt: true,
+      invoiceDate: true,
+      supplier: { select: { name: true } },
+    },
+    orderBy: { invoiceDate: "asc" },
+  });
+
+  const open = rows.filter((r) => !r.closedAt);
+  const oldestOpen = open[0] ?? null;
+
+  return {
+    paidCount: rows.length - open.length,
+    openCount: open.length,
+    totalCount: rows.length,
+    openBalanceCents: open.reduce((a, r) => a + r.totalCents, 0),
+    oldestOpen: oldestOpen
+      ? { supplier: oldestOpen.supplier.name, date: oldestOpen.invoiceDate }
+      : null,
+    // Newest-first paid/open flags drive the contribution-dot grid.
+    recentStatuses: rows
+      .slice(-48)
+      .map((r) => (r.closedAt ? "paid" : "open")),
+  };
+}

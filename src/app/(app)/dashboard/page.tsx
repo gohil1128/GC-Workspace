@@ -1,56 +1,39 @@
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Boxes,
-  Coins,
-  Gem,
-  Package,
-  ScanLine,
-  ShoppingCart,
-  Sparkles,
-  Wallet,
-  Wrench,
-} from "lucide-react";
+import { CalendarDays, Coffee, FileText, ArrowUpRight } from "lucide-react";
 import { getScope } from "@/lib/scope";
+import { auth } from "@/lib/auth";
 import { getDashboard } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
-import { getActiveEvent, getAllEventsRange } from "@/modules/events/queries";
-import { getFinanceSummary } from "@/modules/finance/queries";
-import { getCapitalSummary } from "@/modules/capital/queries";
+import { getActiveEvent, getAllEventsRange, listAllEvents, listUpcomingEvents } from "@/modules/events/queries";
+import { getInvoiceTracking } from "@/modules/invoices/queries";
+import { pnlByEvent } from "@/modules/reports/queries";
 import { fmtDate } from "@/lib/date";
-import { formatMoney, formatPercent } from "@/lib/money";
-import { PageHeader } from "@/components/page-header";
-import { HeroPulse } from "@/components/dashboard/hero-pulse";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { MetricRing } from "@/components/dashboard/metric-ring";
-import { AreaStory } from "@/components/dashboard/area-story";
-import { SectionTitle } from "@/components/dashboard/section-title";
-import { TopItems } from "@/components/dashboard/top-items";
+import { formatMoney } from "@/lib/money";
+import { EventMixBar } from "@/components/dashboard/bento/event-mix-bar";
+import { UpcomingEvents } from "@/components/dashboard/bento/upcoming-events";
+import { PnlByEvent } from "@/components/dashboard/bento/pnl-by-event";
+import { InvoiceTracking } from "@/components/dashboard/bento/invoice-tracking";
+import { RevenueChart } from "@/components/dashboard/bento/revenue-chart";
+import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
 
 export const dynamic = "force-dynamic";
 
-type Tone = "good" | "warn" | "bad" | "neutral";
-
-function toneFor(value: number, target: number, slack = 2): Tone {
-  if (value > target) return "bad";
-  if (value > target - slack) return "warn";
-  return "good";
+function greeting(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 export default async function DashboardPage() {
-  const scope = await getScope();
+  const [session, scope] = await Promise.all([auth(), getScope()]);
   const activeEvent = await getActiveEvent(scope.businessId);
-  // "All events" (no specific event picked): span the full date range covering
-  // every event so the dashboard aggregates ALL event data, not just a recent
-  // window. A specific event uses its own range. No events at all → default
-  // windows (last 14d / YTD).
   const allEventsRange = activeEvent ? null : await getAllEventsRange(scope.businessId);
   const dashboardRange = activeEvent
     ? { start: activeEvent.startDate, end: activeEvent.endDate }
     : allEventsRange;
 
-  const [data, finance] = await Promise.all([
+  const now = new Date();
+  const [data, pnl, invoiceTracking, allEvents, upcoming] = await Promise.all([
     getDashboard({
       businessId: scope.businessId,
       locationId: scope.locationId,
@@ -58,19 +41,11 @@ export default async function DashboardPage() {
       eventId: activeEvent?.id ?? null,
       eventRange: dashboardRange,
     }),
-    getFinanceSummary({
-      businessId: scope.businessId,
-      locationId: scope.locationId,
-      eventId: activeEvent?.id ?? null,
-      eventRange: dashboardRange,
-    }),
+    pnlByEvent(scope.businessId, scope.locationId),
+    getInvoiceTracking(scope.locationId),
+    listAllEvents(scope.businessId),
+    listUpcomingEvents(scope.businessId, now, 3),
   ]);
-  const capital = await getCapitalSummary({
-    locationId: scope.locationId,
-    from: finance.range.from,
-    to: finance.range.to,
-    eventId: activeEvent?.id ?? null,
-  });
 
   const topItems = await getTopItems({
     locationId: scope.locationId,
@@ -80,605 +55,123 @@ export default async function DashboardPage() {
     limit: 12,
   });
 
-  const salesSpark = data.trends.sales.map((s) => s.y);
-  const laborSpark = data.trends.labor.map((s) => s.y);
-  const todayCents = data.trends.sales.length > 0
-    ? Math.round(data.trends.sales[data.trends.sales.length - 1].y * 100)
-    : 0;
-  const yesterdayCents = data.trends.sales.length > 1
-    ? Math.round(data.trends.sales[data.trends.sales.length - 2].y * 100)
-    : 0;
+  const firstName = (session?.user?.name ?? "there").split(" ")[0];
 
-  const foodTone = toneFor(data.kpis.foodPct, data.kpis.foodTarget);
-  const laborTone = toneFor(data.kpis.laborPct, data.kpis.laborTarget);
-  const primeTone = toneFor(data.kpis.primePct, 60);
-  const varianceTone: Tone =
-    data.kpis.inventoryVariancePct > 2 ? "bad" : data.kpis.inventoryVariancePct > 1 ? "warn" : "good";
-  const cashTone: Tone =
-    Math.abs(data.kpis.cashOverShortCents) > 5000 ? "bad"
-      : Math.abs(data.kpis.cashOverShortCents) > 2000 ? "warn"
-        : "good";
+  // Event-mix bar: real share of net sales per event, biggest first.
+  const eventCols = pnl.filter((c) => c.key !== "overall" && c.netSalesCents > 0);
+  const mixTotal = eventCols.reduce((a, c) => a + c.netSalesCents, 0);
+  const mixSegments = eventCols
+    .map((c) => ({
+      name: c.name,
+      netSalesCents: c.netSalesCents,
+      sharePct: mixTotal > 0 ? (c.netSalesCents / mixTotal) * 100 : 0,
+    }))
+    .sort((a, b) => b.netSalesCents - a.netSalesCents)
+    .slice(0, 4);
 
-  type Exception = { id: string; title: string; detail: string; tone: "warn" | "bad"; href?: string };
-  const exceptions: Exception[] = [];
-  if (data.kpis.laborPct > data.kpis.laborTarget) {
-    exceptions.push({
-      id: "labor",
-      title: "Labor over target",
-      detail: `${formatPercent(data.kpis.laborPct)} vs ${data.kpis.laborTarget}% target — review schedule`,
-      tone: "bad",
-      href: "/labor/report",
-    });
-  }
-  if (data.kpis.inventoryVariancePct > 2) {
-    exceptions.push({
-      id: "variance",
-      title: "High inventory variance",
-      detail: `${formatPercent(data.kpis.inventoryVariancePct)} on last count — investigate top variances`,
-      tone: "bad",
-      href: "/inventory/variance",
-    });
-  }
-  if (!data.lastCountAt) {
-    exceptions.push({
-      id: "missing-count",
-      title: "Missing inventory count",
-      detail: "No counts recorded yet — start the weekly count",
-      tone: "warn",
-      href: "/inventory/counts",
-    });
-  }
-  if (data.missingCloseDays.length > 0) {
-    exceptions.push({
-      id: "missing-close",
-      title: `${data.missingCloseDays.length} missing cash close${data.missingCloseDays.length === 1 ? "" : "s"}`,
-      detail: `Last 7 days — most recent missing: ${fmtDate(data.missingCloseDays[data.missingCloseDays.length - 1])}`,
-      tone: "warn",
-      href: "/cash",
-    });
-  }
-  if (Math.abs(data.kpis.cashOverShortCents) > 5000) {
-    exceptions.push({
-      id: "cash",
-      title: "Cash variance over $50",
-      detail: `${formatMoney(data.kpis.cashOverShortCents, { signed: true })} across period`,
-      tone: "bad",
-      href: "/cash",
-    });
-  }
+  // Cost line for the chart: labor is the only real per-day cost series the
+  // dashboard query returns, so that's what the dashed line shows.
+  const salesPoints = data.trends.sales.map((s) => ({ x: fmtDate(new Date(s.x)), y: s.y }));
+  const costPoints = data.trends.labor.map((s) => ({ x: fmtDate(new Date(s.x)), y: s.y }));
 
   const periodLabel = activeEvent
-    ? `Event · ${activeEvent.name}`
-    : allEventsRange
-      ? `All events · ${scope.locationName}`
-      : `Last ${data.period.days} days · ${scope.locationName}`;
+    ? `${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
+    : `All events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`;
 
   return (
-    <div>
-      <PageHeader
-        title="Dashboard"
-        description={
-          activeEvent
-            ? `${scope.locationName} · event: ${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
-            : allEventsRange
-              ? `${scope.locationName} · all events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
-              : `${scope.locationName} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)} (${data.period.days} days)`
-        }
-      />
+    <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+      {/* Greeting + the three headline counts */}
+      <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="display-num text-[40px] font-medium">
+            {greeting(now.getHours())}, {firstName}
+          </h1>
+          <div className="mt-2.5 text-[13px] text-muted-foreground">
+            {scope.locationName} · {periodLabel}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-8 sm:gap-10">
+          <StatCluster icon={<CalendarDays className="h-3.5 w-3.5" />} value={allEvents.length} label="Events" />
+          <StatCluster icon={<Coffee className="h-3.5 w-3.5" />} value={topItems.totalQty} label="Items sold" />
+          <StatCluster icon={<FileText className="h-3.5 w-3.5" />} value={invoiceTracking.totalCount} label="Invoices" />
+        </div>
+      </div>
 
-      <div className="snap-dashboard scroll-fluid">
-        <div className="mx-auto max-w-[1400px] p-4 sm:p-6 lg:p-8 space-y-10 cascade">
+      {/* Event revenue mix */}
+      {mixSegments.length > 0 && (
+        <div className="mt-7">
+          <EventMixBar segments={mixSegments} />
+        </div>
+      )}
 
-          {/* ─────── Hero ─────── */}
-          <section>
-            <HeroPulse
-              netSalesCents={data.kpis.netSalesCents}
-              guestCount={data.kpis.guestCount}
-              tipsCents={data.kpis.tipsCents}
-              spark={salesSpark}
-              periodLabel={periodLabel}
-              todayCents={todayCents}
-              yesterdayCents={yesterdayCents}
-            />
-          </section>
+      {/* Bento grid — 320px | 1fr | 300px on desktop, stacking down */}
+      <div className="mt-7 grid gap-[18px] lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
+        <UpcomingEvents events={upcoming} />
+        <PnlByEvent columns={pnl} />
+        <div className="lg:col-span-2 xl:col-span-1">
+          <InvoiceTracking
+            paidCount={invoiceTracking.paidCount}
+            openCount={invoiceTracking.openCount}
+            openBalanceCents={invoiceTracking.openBalanceCents}
+            oldestOpen={invoiceTracking.oldestOpen}
+            recentStatuses={invoiceTracking.recentStatuses}
+          />
+        </div>
 
-          {/* ─────── Vitals (rings) ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow="Vitals"
-              title="Your four key health numbers"
-              subtitle="Food cost = what ingredients cost vs what you sold. Labor = wages vs sales. Prime = food + labor together. Lower is better on all four — the small tick on each ring is your target."
-            />
-            <div className="rounded-xl border bg-card shadow-soft p-6">
-              <div className="grid grid-cols-2 gap-y-6 md:grid-cols-4">
-                <MetricRing
-                  label="Food cost"
-                  value={data.kpis.foodPct}
-                  target={data.kpis.foodTarget}
-                  tone={foodTone}
-                  caption={`Target ${data.kpis.foodTarget}%`}
-                />
-                <MetricRing
-                  label="Labor"
-                  value={data.kpis.laborPct}
-                  target={data.kpis.laborTarget}
-                  tone={laborTone}
-                  caption={`Target ${data.kpis.laborTarget}%`}
-                />
-                <MetricRing
-                  label="Prime cost"
-                  value={data.kpis.primePct}
-                  target={60}
-                  tone={primeTone}
-                  caption="Target ≤60%"
-                />
-                <MetricRing
-                  label="Inventory variance"
-                  value={data.kpis.inventoryVariancePct}
-                  target={2}
-                  tone={varianceTone}
-                  caption={data.lastCountAt ? `Last ${fmtDate(data.lastCountAt)}` : "No count yet"}
-                />
-              </div>
+        <div className="bento p-[22px] lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-5">
+              <span className="text-base font-semibold">Revenue · day by day</span>
+              <span className="flex gap-3.5 text-xs text-muted-foreground">
+                <span>● Net sales</span>
+                <span className="text-brand">● Labor cost</span>
+              </span>
             </div>
-          </section>
-
-          {/* ─────── Pulse strip ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow="Pulse"
-              title="At-a-glance"
-              subtitle="Six tiles that tell you whether to celebrate, investigate, or move on."
-            />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-              <StatCard
-                label="Tips collected"
-                value={formatMoney(data.kpis.tipsCents)}
-                tone={data.kpis.tipsCents > 0 ? "good" : "neutral"}
-                hint={data.kpis.netSalesCents > 0 ? `${((data.kpis.tipsCents / data.kpis.netSalesCents) * 100).toFixed(1)}% of sales` : "—"}
-                spark={salesSpark}
-                sparkColor="hsl(var(--success))"
-              />
-              <StatCard
-                label="Cash over/short"
-                value={formatMoney(data.kpis.cashOverShortCents, { signed: true })}
-                tone={cashTone}
-                hint={`${data.period.days}d total`}
-              />
-              <StatCard
-                label="Low stock"
-                value={String(data.lowStockItems.length)}
-                tone={data.lowStockItems.length > 0 ? "warn" : "good"}
-                hint={`of ${data.ingredientsCount} tracked`}
-              />
-              <StatCard
-                label="Open POs"
-                value={String(data.openPos.length)}
-                hint="draft + sent"
-              />
-              <StatCard
-                label="Food cost (period)"
-                value={formatMoney(data.kpis.foodCostCents)}
-                hint={
-                  data.kpis.foodCostBasis === "usage" ? "recipe usage (theoretical)"
-                    : data.kpis.foodCostBasis === "invoices" ? "supplier invoices"
-                      : "no data yet"
-                }
-              />
-              <StatCard
-                label="Labor cost"
-                value={formatMoney(data.kpis.laborCostCents)}
-                hint="incl. completed shifts"
-                spark={laborSpark}
-                sparkColor="hsl(var(--brand))"
-              />
-            </div>
-          </section>
-
-          {/* ─────── Revenue story (big chart) ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow="The story so far"
-              title="Net sales · day by day"
-              subtitle="Brand gradient peaks where money came in. Hover any point for the exact figure."
+            <Link
               href="/reports"
-              cta="Open reports"
-            />
-            <div className="rounded-xl border bg-card shadow-soft p-4 sm:p-6">
-              <AreaStory data={data.trends.sales} height={300} />
-            </div>
-          </section>
+              className="grid h-7 w-7 place-items-center rounded-full border border-border transition-colors hover:bg-accent"
+              aria-label="Reports"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <RevenueChart sales={salesPoints} costs={costPoints} label="Net sales and labor cost by day" />
+        </div>
 
-          {/* ─────── Top selling items ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow="What sold"
-              title="Top items by revenue"
-              subtitle={
-                activeEvent
-                  ? `Items ranked for the "${activeEvent.name}" event window. Bars show share of total item revenue.`
-                  : `Items ranked across the last ${data.period.days} days. Bars show share of total item revenue.`
-              }
-              href="/settings/integrations"
-              cta="Upload more"
-            />
-            <TopItems
-              items={topItems.items}
-              byCategory={topItems.byCategory}
-              totalCents={topItems.totalCents}
-              totalQty={topItems.totalQty}
-            />
-          </section>
-
-          {/* ─────── Exceptions ─────── */}
-          {exceptions.length > 0 && (
-            <section className="space-y-4">
-              <SectionTitle
-                eyebrow="Needs you"
-                title="What needs attention"
-                subtitle="Sorted by impact. Tap any card to dive into the source."
-              />
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 cascade">
-                {exceptions.map((e) => (
-                  <Link
-                    key={e.id}
-                    href={e.href ?? "#"}
-                    className="group relative overflow-hidden rounded-xl border bg-card p-4 shadow-soft transition-colors duration-200 hover:border-foreground/15"
-                  >
-                    <div
-                      className={`absolute inset-x-0 top-0 h-[3px] ${
-                        e.tone === "bad" ? "bg-destructive" : "bg-warning"
-                      }`}
-                    />
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`shrink-0 rounded-xl p-2 ${
-                          e.tone === "bad"
-                            ? "bg-destructive/15 text-destructive"
-                            : "bg-warning/15 text-warning"
-                        }`}
-                      >
-                        <AlertTriangle className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold">{e.title}</span>
-                          <ArrowUpRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{e.detail}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
+        <div className="bento p-[22px]">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-semibold">Item mix</span>
+            <Link
+              href="/reports"
+              className="grid h-7 w-7 place-items-center rounded-full border border-border transition-colors hover:bg-accent"
+              aria-label="Item sales"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          {topItems.byCategory.length > 0 ? (
+            <ItemMixDonut slices={topItems.byCategory} totalQty={topItems.totalQty} />
+          ) : (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              No item-level sales yet. Upload the Square per-item CSV to see the mix.
+            </p>
           )}
-
-          {/* ─────── Financial ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow={`Financial · ${finance.range.label}`}
-              title="What the business is worth"
-              subtitle={
-                <>
-                  Revenue {formatMoney(finance.netSalesCents)} · Costs{" "}
-                  {formatMoney(finance.effectiveCogsCents + finance.laborCostCents + finance.operatingExpensesCents)}
-                  {finance.invoicePurchaseCents > 0 && (
-                    <> · {finance.invoiceCount} invoice{finance.invoiceCount === 1 ? "" : "s"} {formatMoney(finance.invoicePurchaseCents)}</>
-                  )}
-                  {capital.totalInvestedCents > 0 && (
-                    <> · Capital {formatMoney(capital.totalInvestedCents)} ({capital.count} item{capital.count === 1 ? "" : "s"})</>
-                  )}
-                </>
-              }
-              href="/settings"
-              cta="Set multipliers"
-            />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
-              <FinanceTile
-                icon={<Coins className="h-4 w-4" />}
-                label="Profit (EBITDA)"
-                value={formatMoney(finance.ebitdaCents, { signed: true })}
-                tone={finance.ebitdaCents < 0 ? "bad" : finance.ebitdaMarginPct > 15 ? "good" : "warn"}
-                hint={`${formatPercent(finance.ebitdaMarginPct)} margin`}
-                sub="What's left: sales minus ingredients, wages & expenses"
-              />
-              <FinanceTile
-                icon={<ShoppingCart className="h-4 w-4" />}
-                label="Supplier invoices"
-                value={formatMoney(finance.invoicePurchaseCents)}
-                tone={finance.invoicePurchaseCents > 0 ? "warn" : "neutral"}
-                hint={`${finance.invoiceCount} invoice${finance.invoiceCount === 1 ? "" : "s"}`}
-                sub={finance.cogsCents > 0 ? "Real supplier spend (incl. taxes/shipping)" : "Used as proxy COGS — no recipe usage yet"}
-              />
-              <FinanceTile
-                icon={<Wrench className="h-4 w-4" />}
-                label="Capital invested"
-                value={formatMoney(capital.totalInvestedCents)}
-                tone={capital.totalInvestedCents > 0 ? "good" : "neutral"}
-                hint={`${capital.count} item${capital.count === 1 ? "" : "s"} in service`}
-                sub={
-                  capital.depreciationCents > 0
-                    ? `Period depreciation ${formatMoney(capital.depreciationCents)} · NBV ${formatMoney(capital.netBookValueCents)}`
-                    : "Separate from opex · doesn't reduce EBITDA"
-                }
-              />
-              <FinanceTile
-                icon={<Gem className="h-4 w-4" />}
-                label="Valuation"
-                value={formatMoney(finance.valuationCents)}
-                tone="neutral"
-                hint={
-                  finance.valuationBasis === "ebitda" ? "EBITDA multiple"
-                    : finance.valuationBasis === "revenue" ? "Revenue multiple (EBITDA ≤ 0)"
-                      : "Need sales to estimate"
-                }
-                sub="Set multipliers in Settings"
-              />
-              <FinanceTile
-                icon={<Wallet className="h-4 w-4" />}
-                label="Marketing / guest"
-                value={formatMoney(finance.marketingPerGuestCents)}
-                tone={finance.marketingPerGuestCents > 500 ? "warn" : "good"}
-                hint={`${formatMoney(finance.marketingCents)} mkt · ${finance.guestCount.toLocaleString()} guests`}
-                sub="Ad spend it took to bring in each customer"
-              />
-            </div>
-            {finance.untaggedInvoiceCount > 0 && (
-              <Link
-                href="/purchasing/invoices?untagged=1"
-                className="flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-xs hover:bg-warning/15 transition-colors"
-              >
-                <span className="text-warning-foreground">
-                  <span className="font-semibold">{finance.untaggedInvoiceCount} invoice{finance.untaggedInvoiceCount === 1 ? "" : "s"}</span>
-                  {" "}({formatMoney(finance.untaggedInvoiceCents)}) are <span className="font-semibold">not tagged to any event</span>
-                  {activeEvent ? <> — they&apos;re excluded from the &quot;{activeEvent.name}&quot; view.</> : <> — tag them so per-event analysis works.</>}
-                </span>
-                <span className="text-2xs text-warning-foreground/80 underline shrink-0">Tag invoices →</span>
-              </Link>
-            )}
-            {finance.expenseByCategory.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5 px-1">
-                {finance.expenseByCategory.map((e) => (
-                  <span key={e.category} className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-2xs">
-                    <span className="capitalize text-muted-foreground">{e.category.toLowerCase()}</span>
-                    <span className="num font-semibold">{formatMoney(e.amountCents)}</span>
-                  </span>
-                ))}
-                <Link href="/expenses" className="ml-1 text-2xs text-muted-foreground hover:text-foreground">
-                  Manage expenses →
-                </Link>
-              </div>
-            ) : (
-              <p className="px-1 text-2xs text-muted-foreground">
-                <Link href="/expenses" className="underline">Log your operating expenses</Link> (rent, marketing, utilities) for accurate EBITDA and CAC.
-              </p>
-            )}
-          </section>
-
-          {/* ─────── Twin lists ─────── */}
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border bg-card shadow-soft">
-              <div className="flex items-center justify-between p-4 pb-2">
-                <div className="flex items-center gap-2">
-                  <Boxes className="h-4 w-4 text-brand" />
-                  <h3 className="text-sm font-semibold tracking-tight">Low stock</h3>
-                </div>
-                <Link href="/inventory" className="text-2xs text-muted-foreground hover:text-foreground">
-                  All inventory →
-                </Link>
-              </div>
-              {data.lowStockItems.length === 0 ? (
-                <div className="p-4 pt-2 text-xs text-muted-foreground">
-                  Everything is above reorder point. ✦
-                </div>
-              ) : (
-                <ul className="px-2 pb-2">
-                  {data.lowStockItems.slice(0, 6).map((i) => {
-                    const fillPct = Math.max(0, Math.min(100, (i.onHand / Math.max(i.reorderPoint, 0.01)) * 100));
-                    const tone = fillPct < 50 ? "bg-destructive" : fillPct < 90 ? "bg-warning" : "bg-success";
-                    return (
-                      <li key={i.id} className="rounded-xl px-3 py-2.5 hover:bg-accent/40 transition-colors">
-                        <div className="flex items-center justify-between gap-3 text-sm">
-                          <span className="font-medium truncate">{i.name}</span>
-                          <span className="num text-2xs text-muted-foreground shrink-0">
-                            <span className="text-destructive font-medium">{i.onHand.toFixed(2)}</span>
-                            <span className="text-muted-foreground/70"> / {i.reorderPoint.toFixed(2)} {i.unit}</span>
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={`h-full ${tone} transition-all duration-700`}
-                            style={{ width: `${Math.min(100, fillPct)}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className="rounded-xl border bg-card shadow-soft">
-              <div className="flex items-center justify-between p-4 pb-2">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4 text-brand" />
-                  <h3 className="text-sm font-semibold tracking-tight">Upcoming POs</h3>
-                </div>
-                <Link href="/purchasing" className="text-2xs text-muted-foreground hover:text-foreground">
-                  All purchasing →
-                </Link>
-              </div>
-              {data.openPos.length === 0 ? (
-                <div className="p-4 pt-2 text-xs text-muted-foreground">No open POs.</div>
-              ) : (
-                <ul className="px-2 pb-2">
-                  {data.openPos.map((po) => (
-                    <li key={po.id}>
-                      <Link
-                        href={`/purchasing/${po.id}`}
-                        className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-accent/40 transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{po.supplier.name}</div>
-                          <div className="text-2xs text-muted-foreground">
-                            {po.status === "SENT" ? "Sent" : "Draft"}
-                            {po.expectedAt ? ` · expected ${fmtDate(po.expectedAt)}` : ""}
-                          </div>
-                        </div>
-                        <div className="num text-sm font-semibold shrink-0">{formatMoney(po.totalCents)}</div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </section>
-
-          {/* ─────── Jump strip ─────── */}
-          <section className="space-y-4">
-            <SectionTitle eyebrow="Jump in" title="One tap to common flows" />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <JumpTile href="/cash/new" icon={<Wallet className="h-4 w-4" />} title="Close cash" hint="Run today's cash close" />
-              <JumpTile href="/purchasing/invoices/new" icon={<Package className="h-4 w-4" />} title="New invoice" hint="Enter a supplier invoice" />
-              <JumpTile href="/expenses" icon={<ScanLine className="h-4 w-4" />} title="Log expense" hint="Rent, marketing, vendors" />
-              <JumpTile href="/inventory/counts" icon={<Sparkles className="h-4 w-4" />} title="Weekly count" hint="Reconcile inventory" />
-            </div>
-          </section>
-
-          {/* ─────── How it all connects (beginner guide) ─────── */}
-          <section className="space-y-4">
-            <SectionTitle
-              eyebrow="New here?"
-              title="How this dashboard works"
-              subtitle="Every number above is fed by something you enter. Here's the map — do these four things and the whole dashboard fills itself in."
-            />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <GuideCard
-                step="1"
-                title="Upload your sales"
-                body="After each event day, upload the two Square CSVs (Sales Summary + Item Sales) in Settings → Integrations. That powers Net sales, Tips, Top items, and the category bars."
-                href="/settings/integrations"
-                cta="Go to imports"
-              />
-              <GuideCard
-                step="2"
-                title="Enter supplier invoices"
-                body="Every bill you pay goes in as an invoice, tagged to its event. Line items automatically add stock to Inventory and update ingredient costs — and the totals drive Food cost and Profit."
-                href="/purchasing/invoices/new"
-                cta="Enter an invoice"
-              />
-              <GuideCard
-                step="3"
-                title="Close cash each day"
-                body="Count the drawer, log deposits. This powers Cash over/short — the number that tells you if money is leaking."
-                href="/cash/new"
-                cta="Close cash"
-              />
-              <GuideCard
-                step="4"
-                title="Tag everything to events"
-                body="Pick an event when importing sales or entering invoices. Then use the event picker in the top bar to see any single event's profit — or 'All events' for the big picture."
-                href="/settings"
-                cta="Manage events"
-              />
-            </div>
-          </section>
         </div>
       </div>
     </div>
   );
 }
 
-function GuideCard({
-  step,
-  title,
-  body,
-  href,
-  cta,
-}: {
-  step: string;
-  title: string;
-  body: string;
-  href: string;
-  cta: string;
-}) {
+function StatCluster({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
-    <div className="flex flex-col rounded-xl border bg-card p-4 shadow-soft">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand text-sm font-bold">
-          {step}
-        </span>
-        <span className="text-sm font-semibold tracking-tight">{title}</span>
+    <div className="flex items-start gap-2.5">
+      <span className="grid h-[26px] w-[26px] place-items-center rounded-lg border border-border bg-card text-muted-foreground">
+        {icon}
+      </span>
+      <div>
+        <div className="display-num text-[38px] font-medium">{value.toLocaleString()}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
       </div>
-      <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
-      <Link
-        href={href}
-        className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
-      >
-        {cta}
-        <ArrowUpRight className="h-3 w-3" />
-      </Link>
     </div>
-  );
-}
-
-function FinanceTile({
-  icon,
-  label,
-  value,
-  tone,
-  hint,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: "good" | "warn" | "bad" | "neutral";
-  hint?: string;
-  sub?: string;
-}) {
-  const text = tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-warning" : "text-foreground";
-  return (
-    <div className="group rounded-xl border bg-card p-5 shadow-soft transition-colors duration-200 hover:border-foreground/15">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="rounded-lg bg-brand/10 p-1.5 text-brand">{icon}</span>
-          <span className="text-2xs font-semibold uppercase tracking-wider">{label}</span>
-        </div>
-        {hint && <span className="text-2xs text-muted-foreground">{hint}</span>}
-      </div>
-      <div className={`mt-3 num text-3xl font-semibold leading-none tracking-tight ${text}`}>{value}</div>
-      {sub && <div className="mt-2 text-2xs text-muted-foreground">{sub}</div>}
-    </div>
-  );
-}
-
-function JumpTile({
-  href,
-  icon,
-  title,
-  hint,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative overflow-hidden rounded-xl border bg-card p-4 shadow-soft transition-colors duration-200 hover:border-foreground/15"
-    >
-      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-brand/10 transition-transform duration-300 group-hover:scale-110" />
-      <div className="relative flex items-start gap-3">
-        <span className="rounded-xl bg-brand/15 p-2 text-brand">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold tracking-tight">{title}</div>
-          <div className="mt-0.5 text-2xs text-muted-foreground">{hint}</div>
-        </div>
-        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-all group-hover:text-brand group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-      </div>
-    </Link>
   );
 }
