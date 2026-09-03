@@ -25,18 +25,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const activeLocation = scope.availableLocations.find((l) => l.id === scope.locationId)!;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      {/* Row 1 — brand bar with utility cluster */}
-      <header className="sticky top-0 z-40 border-b glass">
-        <BrandBar businessName={business?.name ?? "Operations"}>
-          <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
-          <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
-          <ThemeToggle />
-          <UserMenu name={session.user.name ?? "User"} email={session.user.email ?? ""} role={scope.role} />
-        </BrandBar>
-        {/* Row 2 — horizontal section nav with dropdown subsections */}
-        <div className="border-t bg-card/40">
-          <TopNav role={scope.role} recipesLocked={recipesLocked} />
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Single-row header (design 1a): logo left, pill nav centre, utilities right. */}
+      <header className="sticky top-0 z-40 glass">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+          <BrandBar businessName={business?.name ?? "Operations"} />
+          {/* Nav takes the middle; it scrolls horizontally before it wraps. */}
+          <div className="min-w-0 flex-1 flex justify-center">
+            <TopNav role={scope.role} recipesLocked={recipesLocked} />
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
+            <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
+            <ThemeToggle />
+            <UserMenu name={session.user.name ?? "User"} email={session.user.email ?? ""} role={scope.role} />
+          </div>
         </div>
       </header>
 

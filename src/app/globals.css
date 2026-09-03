@@ -1,77 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
-  Design system — Bakery/Cafe warm palette (per ui-ux-pro-max skill) executed
-  in Minimalism & Swiss structure: warm brown + cream surfaces, a single
-  chai-rust accent, hairline borders, restrained shadows, Inter type. The base
-  brown (#92400E) and cream (#FEF3C7) come straight from the skill's
-  Bakery/Cafe row; foreground uses the darker #78350F for readable warmth.
-  Light + full dark support.
+  God's Chai Operations — "Cream bento" design system (handoff direction 1a).
+
+  Warm cream canvas, rounded bento cards on hairline borders, espresso ink,
+  a single chai-rust accent, and one dark card per screen for contrast.
+  Display numerals use Bricolage Grotesque; UI text uses DM Sans.
+  Shadows are deliberately absent — depth comes from borders and gradients.
 */
 @layer base {
   :root {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-    /* Warm cream base */
-    --background: 45 60% 96%;         /* soft cream, lighter than #FEF3C7 for surfaces */
-    --foreground: 25 60% 20%;         /* #78350F warm brown ink */
-    --card: 42 60% 99%;              /* near-white warm card */
-    --card-foreground: 25 60% 20%;
-    --popover: 42 60% 99%;
-    --popover-foreground: 25 60% 20%;
-    --primary: 28 72% 31%;            /* #92400E warm brown as neutral primary */
-    --primary-foreground: 45 70% 97%;
-    --secondary: 44 45% 92%;          /* warm cream-100 */
-    --secondary-foreground: 25 55% 24%;
-    --muted: 44 42% 92.5%;
-    --muted-foreground: 30 20% 44%;   /* warm taupe grey */
-    --accent: 42 48% 90%;
-    --accent-foreground: 25 55% 24%;
-    --destructive: 0 72% 48%;
+    /* Canvas + surfaces */
+    --background: 39 25% 89%;          /* #EAE5DC flat canvas */
+    --canvas-from: 40 46% 95%;         /* #F8F4EC ─┐ page gradient */
+    --canvas-via:  38 38% 92%;         /* #F2ECE2  │ */
+    --canvas-to:   33 64% 91%;         /* #F7EADA ─┘ */
+    --foreground: 23 45% 11%;          /* #2A1A10 espresso ink */
+    --card: 40 50% 98%;                /* #FCFAF6 bento card */
+    --card-foreground: 23 45% 11%;
+    --popover: 40 50% 98%;
+    --popover-foreground: 23 45% 11%;
+
+    /* Espresso — dark cards, active nav pill, primary buttons */
+    --primary: 24 47% 16%;             /* #3A2415 */
+    --primary-foreground: 37 56% 94%;  /* #F8F1E6 */
+    --espresso: 24 47% 16%;
+    --espresso-foreground: 37 56% 94%;
+
+    --secondary: 40 47% 96%;           /* #FAF7F1 */
+    --secondary-foreground: 26 21% 30%;
+    --muted: 40 47% 96%;
+    --muted-foreground: 29 13% 48%;    /* #8B7B6C */
+    --accent: 33 36% 92%;
+    --accent-foreground: 26 21% 30%;
+
+    /* Status — foreground on its own tinted background */
+    --destructive: 0 54% 51%;          /* #C63F3F */
     --destructive-foreground: 0 0% 100%;
-    --success: 150 52% 34%;
+    --destructive-muted: 0 65% 93%;    /* #F9E3E3 */
+    --success: 148 51% 37%;            /* #2F8F5B */
     --success-foreground: 0 0% 100%;
-    --warning: 32 88% 46%;
+    --success-muted: 144 39% 92%;      /* #E4F3EA */
+    --warning: 39 79% 34%;             /* #9A6A12 */
     --warning-foreground: 0 0% 100%;
-    /* Single accent — chai rust from the logo */
-    --brand: 18 80% 46%;
+    --warning-muted: 41 81% 92%;       /* #FBF0D9 */
+
+    /* Single accent + data highlight */
+    --brand: 17 54% 50%;               /* #C4623A chai rust */
     --brand-foreground: 0 0% 100%;
-    --border: 40 34% 86%;             /* warm hairline */
-    --input: 40 34% 84%;
-    --ring: 18 80% 46%;
-    --radius: 0.625rem;
+    --amber: 36 79% 58%;               /* #E8A33D data highlight */
+    --amber-foreground: 24 47% 16%;
+
+    --border: 33 36% 87%;              /* #EADFD2 hairline */
+    --input: 34 32% 86%;               /* #E6DCCF */
+    --ring: 17 54% 50%;
+    --radius: 1.5rem;                  /* 24px bento card */
   }
 
+  /* Espresso dark mode — same system inverted onto the dark card colour. */
   .dark {
-    --background: 26 30% 8%;           /* deep espresso */
-    --foreground: 42 45% 94%;
-    --card: 26 28% 11%;
-    --card-foreground: 42 45% 94%;
-    --popover: 26 28% 11%;
-    --popover-foreground: 42 45% 94%;
-    --primary: 42 45% 94%;
-    --primary-foreground: 26 30% 12%;
-    --secondary: 26 20% 17%;
-    --secondary-foreground: 42 45% 94%;
-    --muted: 26 20% 16%;
-    --muted-foreground: 38 22% 66%;   /* warm sand */
-    --accent: 26 20% 18%;
-    --accent-foreground: 42 45% 94%;
-    --destructive: 0 72% 58%;
+    --background: 23 45% 8%;
+    --canvas-from: 23 45% 9%;
+    --canvas-via:  24 40% 8%;
+    --canvas-to:   20 42% 10%;
+    --foreground: 37 56% 94%;
+    --card: 24 42% 12%;
+    --card-foreground: 37 56% 94%;
+    --popover: 24 42% 13%;
+    --popover-foreground: 37 56% 94%;
+    --primary: 37 56% 94%;
+    --primary-foreground: 24 47% 14%;
+    --espresso: 24 40% 18%;
+    --espresso-foreground: 37 56% 94%;
+    --secondary: 24 26% 18%;
+    --secondary-foreground: 37 56% 94%;
+    --muted: 24 26% 17%;
+    --muted-foreground: 33 18% 66%;
+    --accent: 24 26% 20%;
+    --accent-foreground: 37 56% 94%;
+    --destructive: 0 62% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 150 48% 46%;
+    --destructive-muted: 0 40% 22%;
+    --success: 148 45% 48%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 90% 56%;
-    --warning-foreground: 26 30% 12%;
-    --brand: 18 84% 57%;
+    --success-muted: 148 34% 20%;
+    --warning: 39 74% 52%;
+    --warning-foreground: 24 47% 14%;
+    --warning-muted: 39 44% 22%;
+    --brand: 17 62% 58%;
     --brand-foreground: 0 0% 100%;
-    --border: 28 18% 20%;
-    --input: 28 18% 22%;
-    --ring: 18 84% 57%;
+    --amber: 36 79% 60%;
+    --amber-foreground: 24 47% 14%;
+    --border: 26 22% 22%;
+    --input: 26 22% 24%;
+    --ring: 17 62% 58%;
   }
 }
 
@@ -84,56 +113,77 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "cv11" 1, "ss01" 1, "tnum" 1, "calt" 1;
+    /* Warm cream gradient canvas, fixed so it doesn't band on long pages. */
+    background-color: hsl(var(--background));
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--canvas-from)) 0%,
+      hsl(var(--canvas-via)) 55%,
+      hsl(var(--canvas-to)) 100%
+    );
+    background-attachment: fixed;
+    font-feature-settings: "tnum" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
-    letter-spacing: -0.018em;
+    font-family: var(--font-display);
     font-weight: 600;
+    letter-spacing: -0.02em;
   }
   table {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Premium thin scrollbars */
+  /* Thin warm scrollbars */
   * {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
   }
-  *::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
-  }
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  *::-webkit-scrollbar { width: 9px; height: 9px; }
+  *::-webkit-scrollbar-track { background: transparent; }
   *::-webkit-scrollbar-thumb {
     background-color: hsl(var(--border));
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
-  }
+  *::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--muted-foreground) / 0.5); }
 }
 
 @layer utilities {
-  .num {
-    font-variant-numeric: tabular-nums;
+  /* Display numerals — the big friendly stat figures. */
+  .display-num {
+    font-family: var(--font-display);
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.02em;
+    line-height: 1;
   }
+  .font-display { font-family: var(--font-display); }
+  .num { font-variant-numeric: tabular-nums; }
 
-  /* Fluid momentum scrolling for scroll containers */
   .scroll-fluid {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
-  /* Subtle entrance animations */
+  /* Bento card — the system's primary surface. */
+  .bento {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 1.5rem;
+  }
+  /* The one dark card per screen that carries contrast. */
+  .bento-dark {
+    background-color: hsl(var(--espresso));
+    color: hsl(var(--espresso-foreground));
+    border: 1px solid hsl(var(--espresso));
+    border-radius: 1.5rem;
+  }
+
   @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -142,46 +192,14 @@
     from { opacity: 0; }
     to   { opacity: 1; }
   }
-  .animate-page {
-    animation: fade-in-up 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .animate-fade {
-    animation: fade-in 0.3s ease-out;
-  }
+  .animate-page { animation: fade-in-up 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+  .animate-fade { animation: fade-in 0.3s ease-out; }
 
-  /* Glass surface for sticky bars */
   .glass {
-    background-color: hsl(var(--background) / 0.72);
+    background-color: hsl(var(--canvas-from) / 0.78);
     backdrop-filter: saturate(180%) blur(14px);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
   }
-
-  /* Cinematic dashboard touches — orbs + cascade + scroll-snap */
-  @keyframes orb-drift {
-    0%   { transform: translate3d(0,0,0) scale(1); }
-    50%  { transform: translate3d(2%, -1%, 0) scale(1.04); }
-    100% { transform: translate3d(0,0,0) scale(1); }
-  }
-  @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  @keyframes ring-fill {
-    from { stroke-dashoffset: var(--ring-circumference, 251); }
-    to   { stroke-dashoffset: var(--ring-target, 0); }
-  }
-  /* Ambient accent wash — kept whisper-subtle per Swiss minimalism. */
-  .orb {
-    position: absolute;
-    pointer-events: none;
-    border-radius: 9999px;
-    filter: blur(72px);
-    opacity: 0.16;
-    animation: orb-drift 18s ease-in-out infinite;
-  }
-  .orb--brand   { background: radial-gradient(circle at 30% 30%, hsl(var(--brand) / 0.6), transparent 62%); }
-  .orb--success { background: radial-gradient(circle at 70% 70%, hsl(var(--success) / 0.4), transparent 62%); }
-  .orb--warning { background: radial-gradient(circle at 50% 50%, hsl(var(--warning) / 0.32), transparent 62%); }
 
   .cascade > * {
     opacity: 0;
@@ -196,21 +214,9 @@
   .cascade > *:nth-child(7) { animation-delay: 0.40s; }
   .cascade > *:nth-child(8) { animation-delay: 0.46s; }
 
-  /* Soft scroll-snap on the dashboard sections for that "premium magazine" pace */
-  .snap-dashboard {
-    scroll-snap-type: y proximity;
-  }
-  .snap-dashboard > section {
-    scroll-snap-align: start;
-    scroll-margin-top: 5rem;
-  }
-
   /* Wide report matrices: size to content so they always overflow (and thus
-     scroll) on narrow screens, with the first column pinned so row labels stay
-     visible while swiping through event columns. */
-  .report-matrix table {
-    min-width: max-content;
-  }
+     scroll) on narrow screens, with the first column pinned. */
+  .report-matrix table { min-width: max-content; }
   .report-matrix thead th:first-child,
   .report-matrix tbody td:first-child {
     position: sticky;
@@ -219,19 +225,10 @@
     background: hsl(var(--card));
     box-shadow: 1px 0 0 hsl(var(--border));
   }
-  .report-matrix thead th:first-child {
-    background: hsl(var(--muted) / 0.4);
-  }
-
-  /* Display-style numerals for the hero figure */
-  .display-num {
-    font-feature-settings: "tnum" 1, "ss01" 1, "cv11" 1;
-    letter-spacing: -0.04em;
-    line-height: 0.95;
-  }
+  .report-matrix thead th:first-child { background: hsl(var(--muted)); }
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .animate-page, .animate-fade, .orb, .cascade > * { animation: none; opacity: 1; }
+    .animate-page, .animate-fade, .cascade > * { animation: none; opacity: 1; }
   }
 }

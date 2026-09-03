@@ -1,8 +1,24 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("rounded-xl border bg-card text-card-foreground shadow-soft", className)} {...props} />
+// Bento card — the design system's primary surface: cream fill, hairline
+// border, 24px radius, no elevation. Pass `variant="dark"` for the single
+// espresso contrast card each screen is allowed.
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "dark" }
+>(({ className, variant = "default", ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-bento border",
+      variant === "dark"
+        ? "bg-espresso text-espresso-foreground border-espresso"
+        : "bg-card text-card-foreground border-border",
+      className,
+    )}
+    {...props}
+  />
 ));
 Card.displayName = "Card";
 
@@ -12,7 +28,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 CardHeader.displayName = "CardHeader";
 
 const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
-  <h3 ref={ref} className={cn("font-semibold leading-none tracking-tight text-[0.95rem]", className)} {...props} />
+  <h3 ref={ref} className={cn("font-semibold leading-none tracking-tight text-base", className)} {...props} />
 ));
 CardTitle.displayName = "CardTitle";
 

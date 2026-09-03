@@ -92,7 +92,7 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
   };
 
   return (
-    <nav className="flex items-stretch gap-0.5 overflow-x-auto scroll-fluid px-2 sm:px-4">
+    <nav className="flex items-center gap-0.5 overflow-x-auto scroll-fluid rounded-full border border-border bg-card p-1">
       {sections.map((s) => {
         const active = isSectionActive(s);
         if (!s.children) {
@@ -101,12 +101,13 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
               key={s.label}
               href={s.href}
               className={cn(
-                "relative inline-flex shrink-0 items-center px-3.5 py-2.5 text-sm font-medium transition-colors whitespace-nowrap",
-                active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                "inline-flex shrink-0 items-center rounded-full px-4 py-2 text-[13px] font-medium transition-colors whitespace-nowrap",
+                active
+                  ? "bg-espresso text-espresso-foreground font-semibold"
+                  : "text-secondary-foreground hover:bg-accent",
               )}
             >
               {s.label}
-              {active && <span className="absolute inset-x-3 -bottom-px h-0.5 bg-brand" />}
             </Link>
           );
         }
@@ -115,13 +116,14 @@ export function TopNav({ role, recipesLocked }: { role: "OWNER" | "MANAGER"; rec
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "group relative inline-flex shrink-0 items-center gap-1 px-3.5 py-2.5 text-sm font-medium transition-colors whitespace-nowrap outline-none",
-                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                  "group inline-flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-[13px] font-medium transition-colors whitespace-nowrap outline-none",
+                  active
+                    ? "bg-espresso text-espresso-foreground font-semibold"
+                    : "text-secondary-foreground hover:bg-accent",
                 )}
               >
                 {s.label}
                 <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-data-[state=open]:rotate-180" />
-                {active && <span className="absolute inset-x-3 -bottom-px h-0.5 bg-brand" />}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60">
