@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Content top strip: scope on the left, switchers on the right. */}
-        <header className="sticky top-0 z-40 glass pt-safe">
+        <header className="sticky top-0 z-40 border-b border-border/70 glass pt-safe">
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
             {/* The logo lives in the sidebar on web, so show it here only on mobile. */}
             <div className="flex min-w-0 items-center gap-3">

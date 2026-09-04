@@ -107,10 +107,10 @@ export default async function DashboardPage() {
       )}
 
       {/* Bento grid — 320px | 1fr | 300px on desktop, stacking down */}
-      <div className="mt-7 grid gap-[18px] lg:grid-cols-[320px_1fr] xl:grid-cols-[320px_1fr_300px]">
+      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_300px]">
         <UpcomingEvents events={upcoming} />
         <PnlByEvent columns={pnl} />
-        <div className="lg:col-span-2 xl:col-span-1">
+        <div className="min-w-0 lg:col-span-2 xl:col-span-1">
           <InvoiceTracking
             paidCount={invoiceTracking.paidCount}
             openCount={invoiceTracking.openCount}
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="bento p-4 sm:p-[22px] lg:col-span-2">
+        <div className="bento min-w-0 p-4 sm:p-[22px] lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
               <span className="text-base font-semibold">Revenue · day by day</span>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
           <RevenueChart sales={salesPoints} costs={costPoints} label="Net sales and labor cost by day" />
         </div>
 
-        <div className="bento p-4 sm:p-[22px]">
+        <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex items-center justify-between">
             <span className="text-base font-semibold">Item mix</span>
             <Link

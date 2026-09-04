@@ -1,8 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
+
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+
+// Self-hosted at build time and exposed as CSS variables that feed
+// --font-display / --font-sans in globals.css.
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display-src",
+  display: "swap",
+});
+const sans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans-src",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "God's Chai Operations",
@@ -22,8 +39,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf4e6" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a140f" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f4ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0a07" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -32,7 +49,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${sans.variable}`}>
       <body className="min-h-screen antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

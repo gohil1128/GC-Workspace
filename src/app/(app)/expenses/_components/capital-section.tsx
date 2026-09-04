@@ -53,9 +53,9 @@ export function CapitalSection({ assets, events }: { assets: Asset[]; events: Ev
 
   return (
     <Card className="border-warning/40">
-      <CardHeader className="flex-row items-start justify-between space-y-0 gap-3">
-        <div>
-          <CardTitle className="flex items-center gap-2">
+      <CardHeader className="flex-col items-start gap-3 space-y-0 sm:flex-row sm:justify-between">
+        <div className="min-w-0">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <Wrench className="h-4 w-4 text-warning" />
             Capital equipment
             <Badge variant="muted" className="ml-1">Separate from opex</Badge>
@@ -66,7 +66,7 @@ export function CapitalSection({ assets, events }: { assets: Asset[]; events: Ev
             Optional straight-line depreciation gives you a monthly cost number.
           </CardDescription>
         </div>
-        <NewAssetButton events={events} />
+        <div className="shrink-0"><NewAssetButton events={events} /></div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/30 p-3 text-center">

@@ -42,6 +42,33 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
   // Close the sheet on navigation.
   React.useEffect(() => { setMoreOpen(false); }, [pathname]);
 
+  // Lock the page while the sheet is open, otherwise a swipe on the dim overlay
+  // scrolls the content behind it. Preserving/restoring scrollTop avoids the
+  // jump-to-top that a bare `overflow:hidden` causes on iOS.
+  React.useEffect(() => {
+    if (!moreOpen) return;
+    const y = window.scrollY;
+    const { body } = document;
+    const prev = { position: body.style.position, top: body.style.top, width: body.style.width };
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.width = "100%";
+    return () => {
+      body.style.position = prev.position;
+      body.style.top = prev.top;
+      body.style.width = prev.width;
+      window.scrollTo(0, y);
+    };
+  }, [moreOpen]);
+
+  // Escape closes the sheet.
+  React.useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMoreOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   const moreItems = role === "OWNER" ? [...MORE, ...OWNER_MORE] : MORE;
   const moreActive = moreItems.some((m) => isActive(m.href)) && !TABS.some((t) => isActive(t.href));
@@ -50,7 +77,7 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
     <>
       {moreOpen && (
         <div
-          className="fixed inset-0 z-50 bg-espresso/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-50 overscroll-contain bg-espresso/40 backdrop-blur-sm lg:hidden"
           onClick={() => setMoreOpen(false)}
           aria-hidden
         />
@@ -59,11 +86,12 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
       {/* "More" sheet */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 rounded-t-bento-lg border-t border-border bg-card px-4 pt-5 transition-transform duration-200 lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-bento-lg border-t border-border bg-card px-4 pt-5 transition-transform duration-200 lg:hidden",
           "pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]",
           moreOpen ? "translate-y-0" : "pointer-events-none translate-y-full",
         )}
         role="dialog"
+        aria-modal={moreOpen}
         aria-hidden={!moreOpen}
         aria-label="More sections"
       >
