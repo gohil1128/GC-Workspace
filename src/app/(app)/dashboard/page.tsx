@@ -85,14 +85,14 @@ export default async function DashboardPage() {
       {/* Greeting + the three headline counts */}
       <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="display-num text-[40px] font-medium">
+          <h1 className="display-num text-[30px] font-medium sm:text-[40px]">
             {greeting(now.getHours())}, {firstName}
           </h1>
           <div className="mt-2.5 text-[13px] text-muted-foreground">
             {scope.locationName} · {periodLabel}
           </div>
         </div>
-        <div className="flex flex-wrap gap-8 sm:gap-10">
+        <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-10">
           <StatCluster icon={<CalendarDays className="h-3.5 w-3.5" />} value={allEvents.length} label="Events" />
           <StatCluster icon={<Coffee className="h-3.5 w-3.5" />} value={topItems.totalQty} label="Items sold" />
           <StatCluster icon={<FileText className="h-3.5 w-3.5" />} value={invoiceTracking.totalCount} label="Invoices" />
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        <div className="bento p-[22px] lg:col-span-2">
+        <div className="bento p-4 sm:p-[22px] lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
               <span className="text-base font-semibold">Revenue · day by day</span>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
           <RevenueChart sales={salesPoints} costs={costPoints} label="Net sales and labor cost by day" />
         </div>
 
-        <div className="bento p-[22px]">
+        <div className="bento p-4 sm:p-[22px]">
           <div className="flex items-center justify-between">
             <span className="text-base font-semibold">Item mix</span>
             <Link
@@ -167,11 +167,11 @@ export default async function DashboardPage() {
 function StatCluster({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (
     <div className="flex items-start gap-2.5">
-      <span className="grid h-[26px] w-[26px] place-items-center rounded-lg border border-border bg-card text-muted-foreground">
+      <span className="hidden h-[26px] w-[26px] place-items-center rounded-lg border border-border bg-card text-muted-foreground sm:grid">
         {icon}
       </span>
       <div>
-        <div className="display-num text-[38px] font-medium">{value.toLocaleString()}</div>
+        <div className="display-num text-[26px] font-medium sm:text-[38px]">{value.toLocaleString()}</div>
         <div className="mt-1 text-xs text-muted-foreground">{label}</div>
       </div>
     </div>

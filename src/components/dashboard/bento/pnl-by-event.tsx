@@ -19,7 +19,7 @@ export function PnlByEvent({ columns }: { columns: PnlColumn[] }) {
   const costsOf = (c: PnlColumn) => c.cogsCents + c.laborCents + c.opexCents + c.feeCents;
 
   return (
-    <div className="bento p-[22px]">
+    <div className="bento p-4 sm:p-[22px]">
       <div className="flex items-center justify-between">
         <span className="text-base font-semibold">P&amp;L by event</span>
         <Link

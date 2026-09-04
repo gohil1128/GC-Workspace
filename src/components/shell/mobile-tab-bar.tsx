@@ -1,0 +1,145 @@
+"use client";
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard, BarChart3, Wallet, FileText, Menu,
+  Boxes, Users, Receipt, Settings as SettingsIcon, ChefHat, X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Primary destinations get a thumb-reachable bottom bar; everything else
+// lives behind "More". Five slots is the practical maximum before targets
+// get too narrow to hit reliably.
+const TABS = [
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/cash", label: "Cash", icon: Wallet },
+  { href: "/purchasing/invoices", label: "Invoices", icon: FileText },
+] as const;
+
+const MORE = [
+  { href: "/inventory", label: "Ingredients", icon: Boxes },
+  { href: "/inventory/counts", label: "Counts", icon: Boxes },
+  { href: "/inventory/variance", label: "Variance", icon: BarChart3 },
+  { href: "/recipes", label: "Recipes", icon: ChefHat },
+  { href: "/labor", label: "Schedule", icon: Users },
+  { href: "/labor/employees", label: "Employees", icon: Users },
+  { href: "/expenses", label: "Expenses", icon: Receipt },
+  { href: "/purchasing", label: "Purchase orders", icon: FileText },
+] as const;
+
+const OWNER_MORE = [
+  { href: "/settings", label: "Business & events", icon: SettingsIcon },
+  { href: "/settings/users", label: "Team", icon: Users },
+  { href: "/settings/exports", label: "Data export", icon: FileText },
+] as const;
+
+export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
+  const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = React.useState(false);
+
+  // Close the sheet on navigation.
+  React.useEffect(() => { setMoreOpen(false); }, [pathname]);
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const moreItems = role === "OWNER" ? [...MORE, ...OWNER_MORE] : MORE;
+  const moreActive = moreItems.some((m) => isActive(m.href)) && !TABS.some((t) => isActive(t.href));
+
+  return (
+    <>
+      {moreOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-espresso/40 backdrop-blur-sm lg:hidden"
+          onClick={() => setMoreOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* "More" sheet */}
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 rounded-t-bento-lg border-t border-border bg-card px-4 pt-5 transition-transform duration-200 lg:hidden",
+          "pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]",
+          moreOpen ? "translate-y-0" : "pointer-events-none translate-y-full",
+        )}
+        role="dialog"
+        aria-hidden={!moreOpen}
+        aria-label="More sections"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <span className="font-display text-lg font-semibold">More</span>
+          <button
+            onClick={() => setMoreOpen(false)}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {moreItems.map((m) => {
+            const Icon = m.icon;
+            return (
+              <Link
+                key={m.href}
+                href={m.href}
+                className={cn(
+                  "touch-target flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-[13px] font-medium",
+                  isActive(m.href)
+                    ? "border-espresso bg-espresso text-espresso-foreground"
+                    : "border-border bg-card",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0 opacity-70" />
+                <span className="truncate">{m.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Fixed bottom bar — hidden once the desktop pill nav has room. */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass px-2 pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+        aria-label="Primary"
+      >
+        <div className="mx-auto flex max-w-lg items-stretch">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const active = isActive(t.href);
+            return (
+              <Link
+                key={t.href}
+                href={t.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
+                  active ? "text-brand" : "text-muted-foreground",
+                )}
+              >
+                <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", active && "bg-brand/12")}>
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                {t.label}
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            className={cn(
+              "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
+              moreActive || moreOpen ? "text-brand" : "text-muted-foreground",
+            )}
+          >
+            <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", (moreActive || moreOpen) && "bg-brand/12")}>
+              <Menu className="h-[18px] w-[18px]" />
+            </span>
+            More
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}

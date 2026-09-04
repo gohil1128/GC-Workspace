@@ -3,6 +3,7 @@ import { Plus, FileBarChart, ClipboardList } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listIngredients } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +35,8 @@ export default async function InventoryPage() {
       />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -101,6 +103,59 @@ export default async function InventoryPage() {
               )}
             </TableBody>
           </Table>
+          </TableOnDesktop>
+
+          <MobileList>
+            {items.map((i) => {
+              const low = i.onHand <= i.reorderPoint && i.reorderPoint > 0;
+              return (
+                <MobileRow
+                  key={i.id}
+                  title={
+                    <Link href={`/inventory/${i.id}`} className="hover:underline">{i.name}</Link>
+                  }
+                  subtitle={[i.category, i.supplier?.name].filter(Boolean).join(" · ") || undefined}
+                  meta={
+                    <span className={low ? "text-destructive" : undefined}>
+                      {i.onHand.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">{i.unit}</span>
+                    </span>
+                  }
+                  badges={
+                    <>
+                      {low ? <Badge variant="danger">Low</Badge> : <Badge variant="muted">OK</Badge>}
+                      {i.sku && <Badge variant="muted">{i.sku}</Badge>}
+                      <span className="ml-auto flex items-center gap-0.5">
+                        <EditIngredientButton
+                          ingredient={{
+                            id: i.id,
+                            name: i.name,
+                            category: i.category,
+                            sku: i.sku,
+                            unit: i.unit,
+                            onHand: i.onHand,
+                            parLevel: i.parLevel,
+                            reorderPoint: i.reorderPoint,
+                            reorderQty: i.reorderQty,
+                            lastCostDollars: i.lastCostCents / 100,
+                          }}
+                        />
+                        <DeleteButton
+                          action={deleteIngredientAction.bind(null, i.id)}
+                          itemLabel="ingredient"
+                          itemName={i.name}
+                        />
+                      </span>
+                    </>
+                  }
+                >
+                  <MobileField label="Par" value={i.parLevel.toFixed(2)} />
+                  <MobileField label="Reorder pt" value={i.reorderPoint.toFixed(2)} />
+                  <MobileField label="Last cost" value={formatMoney(i.lastCostCents)} />
+                </MobileRow>
+              );
+            })}
+            {items.length === 0 && <MobileEmpty>No ingredients yet.</MobileEmpty>}
+          </MobileList>
         </div>
       </div>
     </div>

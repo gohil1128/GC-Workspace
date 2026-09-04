@@ -42,8 +42,8 @@ export function EventSwitcher({ events, activeEventId }: { events: Ev[]; activeE
           ) : (
             <Calendar className="h-3.5 w-3.5" />
           )}
-          <span className="font-medium max-w-[140px] truncate">{active ? active.name : "All events"}</span>
-          <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+          <span className="hidden max-w-[140px] truncate font-medium sm:inline">{active ? active.name : "All events"}</span>
+          <ChevronsUpDown className="hidden h-3.5 w-3.5 opacity-60 sm:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
