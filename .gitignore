@@ -13,3 +13,9 @@ next-env.d.ts
 prisma/dev.db*
 tsconfig.tsbuildinfo
 .next/
+
+# Scratch probe scripts written by audit agents at the repo root.
+_probe_*.mjs
+_vfy*.mjs
+_auth.mjs
+_enrich.ts
