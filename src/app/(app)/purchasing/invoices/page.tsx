@@ -14,7 +14,7 @@ import { InvoiceFilters } from "./_components/invoice-filters";
 import { ExportInvoicesButton } from "./_components/export-invoices-button";
 import { StatTile, StatTileRow } from "@/components/stat-tile";
 import { formatMoney } from "@/lib/money";
-import { fmtDate } from "@/lib/date";
+import { fmtDate, safeDateParam } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +33,8 @@ export default async function InvoicesPage({
     supplierId: sp.supplier,
     status: (sp.status as "open" | "closed" | "all" | undefined) ?? "all",
     invoiceNumber: sp.number,
-    from: sp.from,
-    to: sp.to,
+    from: safeDateParam(sp.from),
+    to: safeDateParam(sp.to),
   };
 
   const onlyUntagged = sp.untagged === "1";
@@ -89,6 +89,9 @@ export default async function InvoicesPage({
     params.set("dir", sortKey === key && sortDir === "desc" ? "asc" : "desc");
     return `/purchasing/invoices?${params.toString()}`;
   };
+
+  const ariaSort = (k: SortKey): "ascending" | "descending" | "none" =>
+    sortKey !== k ? "none" : sortDir === "asc" ? "ascending" : "descending";
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey !== k ? <ArrowUpDown className="inline h-3 w-3 ml-1 opacity-40" /> :
@@ -152,15 +155,15 @@ export default async function InvoicesPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><Link href={buildSortHref("supplier")} className="hover:text-foreground">Supplier<SortIcon k="supplier" /></Link></TableHead>
+                <TableHead aria-sort={ariaSort("supplier")}><Link href={buildSortHref("supplier")} className="hover:text-foreground">Supplier<SortIcon k="supplier" /></Link></TableHead>
                 <TableHead>Event</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead><Link href={buildSortHref("invoiceDate")} className="hover:text-foreground">Date<SortIcon k="invoiceDate" /></Link></TableHead>
+                <TableHead aria-sort={ariaSort("invoiceDate")}><Link href={buildSortHref("invoiceDate")} className="hover:text-foreground">Date<SortIcon k="invoiceDate" /></Link></TableHead>
                 <TableHead>Received</TableHead>
                 <TableHead className="text-right">Items</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
-                <TableHead className="text-right"><Link href={buildSortHref("total")} className="hover:text-foreground">Total<SortIcon k="total" /></Link></TableHead>
-                <TableHead><Link href={buildSortHref("status")} className="hover:text-foreground">Status<SortIcon k="status" /></Link></TableHead>
+                <TableHead className="text-right" aria-sort={ariaSort("total")}><Link href={buildSortHref("total")} className="hover:text-foreground">Total<SortIcon k="total" /></Link></TableHead>
+                <TableHead aria-sort={ariaSort("status")}><Link href={buildSortHref("status")} className="hover:text-foreground">Status<SortIcon k="status" /></Link></TableHead>
                 <TableHead>Created by</TableHead>
                 <TableHead className="text-center">Photo</TableHead>
                 <TableHead className="w-12" />

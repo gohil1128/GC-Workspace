@@ -36,7 +36,7 @@ export function EventSwitcher({ events, activeEventId }: { events: Ev[]; activeE
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={pending} className="gap-2">
+        <Button variant="outline" size="sm" disabled={pending} className="gap-2 data-[state=open]:border-foreground/20 data-[state=open]:bg-accent">
           {active ? (
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: active.color ?? "hsl(var(--muted-foreground))" }} />
           ) : (

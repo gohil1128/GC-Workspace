@@ -15,7 +15,7 @@ export function UserMenu({ name, email, role }: { name: string; email: string; r
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button variant="ghost" size="sm" className="gap-2 data-[state=open]:bg-accent">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
             {name.slice(0, 1).toUpperCase()}
           </div>
@@ -34,7 +34,14 @@ export function UserMenu({ name, email, role }: { name: string; email: string; r
         <DropdownMenuItem disabled>
           <UserIcon className="h-3.5 w-3.5" /> Account
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => signOutAction()}>
+        <DropdownMenuItem
+          onClick={() => {
+            // Purge the service-worker cache on sign-out so nothing from this
+            // session can be served to whoever signs in next.
+            navigator.serviceWorker?.controller?.postMessage("clear-cache");
+            signOutAction();
+          }}
+        >
           <LogOut className="h-3.5 w-3.5" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

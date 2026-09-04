@@ -58,6 +58,7 @@ const config: Config = {
           ink: "hsl(var(--brand-ink))",
           strong: "hsl(var(--brand-strong))",
         },
+        "chart-ink": "hsl(var(--chart-ink))",
         espresso: {
           DEFAULT: "hsl(var(--espresso))",
           foreground: "hsl(var(--espresso-foreground))",

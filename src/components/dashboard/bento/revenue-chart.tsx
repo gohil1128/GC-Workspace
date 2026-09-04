@@ -58,8 +58,8 @@ export function RevenueChart({
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} className="mt-3.5 block overflow-visible">
       <defs>
         <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="hsl(var(--espresso))" stopOpacity=".18" />
-          <stop offset="1" stopColor="hsl(var(--espresso))" stopOpacity="0" />
+          <stop offset="0" stopColor="hsl(var(--chart-ink))" stopOpacity=".18" />
+          <stop offset="1" stopColor="hsl(var(--chart-ink))" stopOpacity="0" />
         </linearGradient>
       </defs>
       <g stroke="hsl(var(--border))" strokeDasharray="3 5">
@@ -71,13 +71,13 @@ export function RevenueChart({
         ))}
       </g>
       <path d={area} fill="url(#revArea)" />
-      <path d={line(sales)} fill="none" stroke="hsl(var(--espresso))" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d={line(sales)} fill="none" stroke="hsl(var(--chart-ink))" strokeWidth="2.2" strokeLinejoin="round" />
       {costs.length === sales.length && (
         <path d={line(costs)} fill="none" stroke="hsl(var(--brand))" strokeWidth="1.6" strokeDasharray="4 4" />
       )}
-      <line x1={bestX} y1={bestY} x2={bestX} y2={BOT} stroke="hsl(var(--espresso))" strokeWidth="1" />
-      <circle cx={bestX} cy={bestY} r="5" fill="hsl(var(--card))" stroke="hsl(var(--espresso))" strokeWidth="2" />
-      <rect x={calloutX - 56} y="8" width="112" height="28" rx="14" fill="hsl(var(--espresso))" />
+      <line x1={bestX} y1={bestY} x2={bestX} y2={BOT} stroke="hsl(var(--chart-ink))" strokeWidth="1" />
+      <circle cx={bestX} cy={bestY} r="5" fill="hsl(var(--card))" stroke="hsl(var(--chart-ink))" strokeWidth="2" />
+      <rect x={calloutX - 56} y="8" width="112" height="28" rx="14" fill="hsl(var(--chart-ink))" />
       <text x={calloutX} y="27" textAnchor="middle" fontSize="12" fontWeight="600" fill="hsl(var(--espresso-foreground))">
         {formatMoney(Math.round(best.y * 100))}
       </text>

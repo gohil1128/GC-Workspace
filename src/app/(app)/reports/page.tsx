@@ -38,7 +38,6 @@ export default async function ReportsPage() {
             <Button asChild variant="outline" size="sm">
               <Link href="/settings/exports"><Download className="h-3.5 w-3.5" />Download CSV</Link>
             </Button>
-            <Button asChild variant="outline" size="sm" disabled><a aria-disabled>PDF (placeholder)</a></Button>
           </>
         }
       />

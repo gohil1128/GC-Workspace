@@ -12,7 +12,11 @@ export function ServiceWorkerRegister() {
     const register = () =>
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
-        .catch(() => undefined);
+        .catch((err) => {
+          // Was silently swallowed, which hid the fact that /sw.js was
+          // auth-gated and registration had never succeeded.
+          console.warn("Service worker registration failed:", err);
+        });
     if (document.readyState === "complete") register();
     else window.addEventListener("load", register, { once: true });
   }, []);
