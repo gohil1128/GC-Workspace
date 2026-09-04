@@ -13,9 +13,9 @@ const buttonVariants = cva(
         outline: "border border-border bg-card hover:bg-accent hover:text-accent-foreground hover:border-foreground/15",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/70",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-brand underline-offset-4 hover:underline",
+        link: "text-brand-ink underline-offset-4 hover:underline",
         success: "bg-success text-success-foreground hover:bg-success/90",
-        brand: "bg-brand text-brand-foreground hover:bg-brand/90",
+        brand: "bg-brand-strong text-brand-foreground hover:bg-brand-strong/90",
       },
       size: {
         default: "h-9 px-4 py-2",

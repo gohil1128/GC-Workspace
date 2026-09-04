@@ -20,20 +20,20 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-2 rounded-[20px] border px-3.5 py-3 sm:gap-3 sm:px-5 sm:py-4",
+        "flex flex-col items-start gap-1 rounded-bento border px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4",
         variant === "dark" && "border-espresso bg-espresso text-espresso-foreground",
         variant === "amber" && "border-warning/25 bg-warning-muted text-warning",
         variant === "default" && "border-border bg-card",
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full">
         <div className={cn("text-xs", variant === "default" ? "text-muted-foreground" : "opacity-75")}>
           {label}
         </div>
         <div
           className={cn(
-            "display-num mt-0.5 text-[20px] font-medium sm:text-[28px]",
+            "display-num mt-0.5 truncate text-[20px] font-medium sm:text-[28px]",
             variant === "dark" && "text-amber",
           )}
         >
@@ -42,7 +42,7 @@ export function StatTile({
       </div>
       {action ?? (
         meta && (
-          <span className={cn("shrink-0 text-xs", variant === "default" ? "text-muted-foreground" : "opacity-80")}>
+          <span className={cn("min-w-0 max-w-full truncate text-xs sm:shrink", variant === "default" ? "text-muted-foreground" : "opacity-80")}>
             {meta}
           </span>
         )

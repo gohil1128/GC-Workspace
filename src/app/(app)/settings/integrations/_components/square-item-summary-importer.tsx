@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { formatMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Upload, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ type Result = {
 
 type Event = { id: string; name: string; color: string | null };
 
-const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+// Shared formatter so thousands separators match the rest of the app.
+const money = (cents: number) => formatMoney(cents);
 
 // Best-effort parse of the date range from the Square filename:
 //   item-sales-summary-2026-06-06-2026-06-06.csv

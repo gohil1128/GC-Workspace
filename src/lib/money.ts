@@ -17,7 +17,7 @@ export function formatMoney(cents: number, opts?: { signed?: boolean }): string 
   const value = fromCents(cents);
   const formatted = usdFormatter.format(Math.abs(value));
   if (opts?.signed && cents > 0) return `+${formatted}`;
-  if (cents < 0) return `-${formatted}`;
+  if (cents < 0) return `−${formatted}`;   // U+2212, matching the report tables
   return formatted;
 }
 

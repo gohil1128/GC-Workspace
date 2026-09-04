@@ -37,24 +37,29 @@
     --secondary: 40 47% 96%;           /* #FAF7F1 */
     --secondary-foreground: 26 21% 30%;
     --muted: 40 47% 96%;
-    --muted-foreground: 29 13% 48%;    /* #8B7B6C */
+    --muted-foreground: 29 14% 38%;    /* darkened from #8B7B6C for 4.5:1 on card + canvas */
     --accent: 33 36% 92%;
     --accent-foreground: 26 21% 30%;
 
     /* Status — foreground on its own tinted background */
-    --destructive: 0 54% 51%;          /* #C63F3F */
+    --destructive: 0 60% 42%;          /* darkened for 4.5:1 as text on its tint and white on fill */
     --destructive-foreground: 0 0% 100%;
     --destructive-muted: 0 65% 93%;    /* #F9E3E3 */
-    --success: 148 51% 37%;            /* #2F8F5B */
+    --success: 148 55% 27%;            /* darkened for 4.5:1 on success-muted */
     --success-foreground: 0 0% 100%;
     --success-muted: 144 39% 92%;      /* #E4F3EA */
-    --warning: 39 79% 34%;             /* #9A6A12 */
+    --warning: 39 85% 26%;             /* darkened for 4.5:1 on warning-muted */
     --warning-foreground: 0 0% 100%;
     --warning-muted: 41 81% 92%;       /* #FBF0D9 */
 
     /* Single accent + data highlight */
-    --brand: 17 54% 50%;               /* #C4623A chai rust */
+    --brand: 17 54% 50%;               /* #C4623A chai rust — fills, dots, borders */
     --brand-foreground: 0 0% 100%;
+    /* Text-only rust: #C4623A is 3.4:1 on cream and fails as body text, so
+       links/labels use this darker shade while fills keep the design colour. */
+    --brand-ink: 17 60% 36%;
+    /* Filled brand buttons need a darker ground for white text to pass. */
+    --brand-strong: 17 56% 42%;
     --amber: 36 79% 58%;               /* #E8A33D data highlight */
     --amber-foreground: 24 47% 16%;
 
@@ -82,7 +87,7 @@
     --secondary: 24 26% 18%;
     --secondary-foreground: 37 56% 94%;
     --muted: 24 26% 17%;
-    --muted-foreground: 33 18% 66%;
+    --muted-foreground: 33 20% 72%;
     --accent: 24 26% 20%;
     --accent-foreground: 37 56% 94%;
     --destructive: 0 62% 60%;
@@ -96,6 +101,8 @@
     --warning-muted: 39 44% 22%;
     --brand: 17 62% 58%;
     --brand-foreground: 0 0% 100%;
+    --brand-ink: 17 70% 68%;
+    --brand-strong: 17 62% 52%;
     --amber: 36 79% 60%;
     --amber-foreground: 24 47% 14%;
     --border: 26 22% 22%;
@@ -142,6 +149,17 @@
       hsl(var(--canvas-via)) 55%,
       hsl(var(--canvas-to)) 100%
     );
+  }
+
+  /* One strong, consistent keyboard focus indicator. The rust --ring alone is
+     too low-contrast on the cream canvas to be a reliable affordance. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--espresso));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+  .dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: hsl(var(--brand));
   }
 
   h1, h2, h3, h4 {

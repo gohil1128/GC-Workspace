@@ -81,7 +81,7 @@ export default async function DashboardPage() {
     : `All events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`;
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-2 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
       {/* Greeting + the three headline counts */}
       <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -107,10 +107,10 @@ export default async function DashboardPage() {
       )}
 
       {/* Bento grid — 320px | 1fr | 300px on desktop, stacking down */}
-      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_300px]">
+      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
         <UpcomingEvents events={upcoming} />
         <PnlByEvent columns={pnl} />
-        <div className="min-w-0 lg:col-span-2 xl:col-span-1">
+        <div className="min-w-0 lg:col-span-2 2xl:col-span-1">
           <InvoiceTracking
             paidCount={invoiceTracking.paidCount}
             openCount={invoiceTracking.openCount}

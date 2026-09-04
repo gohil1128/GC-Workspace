@@ -20,12 +20,12 @@ import { cn } from "@/lib/utils";
 
 /** Hides the full table below `md`, where it would only scroll sideways. */
 export function TableOnDesktop({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("hidden md:block", className)}>{children}</div>;
+  return <div className={cn("hidden lg:block", className)}>{children}</div>;
 }
 
 /** The mobile counterpart — a stack of cards, hidden from `md` up. */
 export function MobileList({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("flex flex-col gap-2.5 md:hidden", className)}>{children}</div>;
+  return <div className={cn("flex flex-col gap-2.5 lg:hidden", className)}>{children}</div>;
 }
 
 export function MobileRow({
@@ -92,6 +92,6 @@ export function MobileField({
 /** Shared empty state so every converted screen reads the same. */
 export function MobileEmpty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bento p-8 text-center text-sm text-muted-foreground md:hidden">{children}</div>
+    <div className="bento p-8 text-center text-sm text-muted-foreground lg:hidden">{children}</div>
   );
 }

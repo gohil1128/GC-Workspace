@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { formatMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Plus, Calendar, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -17,7 +18,8 @@ type Ev = {
   feeCents: number; feeNote: string; notes: string;
 };
 
-const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+// Shared formatter so thousands separators match the rest of the app.
+const money = (cents: number) => formatMoney(cents);
 
 // Warm palette drawn from the design system — an event's colour shows up all
 // over the app, so these have to sit inside the cream/espresso world rather
