@@ -4,15 +4,24 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "God's Chai Operations",
     short_name: "God's Chai",
-    description: "Restaurant operations: inventory, labor, cash, reporting.",
+    description: "Sales, invoices, cash and labor for every event.",
     start_url: "/dashboard",
+    scope: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#1e293b",
+    orientation: "portrait-primary",
+    // Match the cream canvas so the splash and status bar don't flash slate.
+    background_color: "#F8F4EC",
+    theme_color: "#F8F4EC",
+    categories: ["business", "productivity", "finance"],
     icons: [
       { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+    shortcuts: [
+      { name: "New invoice", short_name: "Invoice", url: "/purchasing/invoices/new" },
+      { name: "New cash close", short_name: "Cash", url: "/cash/new" },
+      { name: "Reports", short_name: "Reports", url: "/reports" },
     ],
   };
 }

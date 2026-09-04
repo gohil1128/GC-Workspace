@@ -20,7 +20,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 rounded-[20px] border px-5 py-4",
+        "flex items-center justify-between gap-2 rounded-[20px] border px-3.5 py-3 sm:gap-3 sm:px-5 sm:py-4",
         variant === "dark" && "border-espresso bg-espresso text-espresso-foreground",
         variant === "amber" && "border-warning/25 bg-warning-muted text-warning",
         variant === "default" && "border-border bg-card",
@@ -33,7 +33,7 @@ export function StatTile({
         </div>
         <div
           className={cn(
-            "display-num mt-0.5 text-[28px] font-medium",
+            "display-num mt-0.5 text-[20px] font-medium sm:text-[28px]",
             variant === "dark" && "text-amber",
           )}
         >
@@ -52,5 +52,5 @@ export function StatTile({
 }
 
 export function StatTileRow({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4", className)}>{children}</div>;
+  return <div className={cn("grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4", className)}>{children}</div>;
 }

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
 
@@ -29,7 +30,8 @@ export default async function CashPage() {
         }
       />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-        <div className="bento">
+        {/* The bento shell rides on the desktop-only wrapper so the card itself disappears with the table on phones. */}
+        <TableOnDesktop className="bento">
           <Table>
             <TableHeader>
               <TableRow>
@@ -83,7 +85,55 @@ export default async function CashPage() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </TableOnDesktop>
+
+        <MobileList>
+          {closes.map((c) => {
+            const flagged = Math.abs(c.overShortCents) > 2000;
+            const dateStr = c.businessDate.toISOString().slice(0, 10);
+            return (
+              <MobileRow
+                key={c.id}
+                href={`/cash/new?date=${dateStr}`}
+                title={fmtDate(c.businessDate)}
+                subtitle={c.closedBy.name}
+                meta={
+                  <span className={c.overShortCents < 0 ? "text-destructive" : c.overShortCents > 0 ? "text-warning" : "text-success"}>
+                    {formatMoney(c.overShortCents, { signed: true })}
+                  </span>
+                }
+                badges={
+                  <>
+                    {flagged ? <Badge variant="danger">Over $20</Badge> : <Badge variant="muted">OK</Badge>}
+                    {c.verifiedBy ? (
+                      <Badge variant="success"><CheckCircle2 className="h-3 w-3" /> {c.verifiedBy.name}</Badge>
+                    ) : (
+                      <Badge variant="outline">Unverified</Badge>
+                    )}
+                  </>
+                }
+              >
+                <MobileField label="Cash" value={formatMoney(c.cashCents)} />
+                <MobileField label="Credit" value={formatMoney(c.creditCents)} />
+                <MobileField label="Deposit" value={formatMoney(c.depositCents)} />
+                <MobileField label="Expected" value={formatMoney(c.expectedCents)} />
+                <MobileField
+                  label="Event"
+                  className="col-span-2"
+                  value={
+                    c.event ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: c.event.color ?? "hsl(var(--muted-foreground))" }} />
+                        {c.event.name}
+                      </span>
+                    ) : "—"
+                  }
+                />
+              </MobileRow>
+            );
+          })}
+          {closes.length === 0 && <MobileEmpty>No closes recorded yet.</MobileEmpty>}
+        </MobileList>
       </div>
     </div>
   );

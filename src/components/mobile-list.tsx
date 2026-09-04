@@ -1,0 +1,97 @@
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+/*
+  Wide data tables are unreadable on a phone — sideways scrolling hides the
+  columns that matter. These primitives let a screen show its table on desktop
+  and a stacked card list on mobile, from the same data.
+
+  Usage:
+    <TableOnDesktop>  ...existing <Table> ...  </TableOnDesktop>
+    <MobileList>
+      {rows.map(r => (
+        <MobileRow key={r.id} href={...} title={...} meta={...} badges={...}>
+          <MobileField label="Total" value={...} />
+        </MobileRow>
+      ))}
+    </MobileList>
+*/
+
+/** Hides the full table below `md`, where it would only scroll sideways. */
+export function TableOnDesktop({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("hidden md:block", className)}>{children}</div>;
+}
+
+/** The mobile counterpart — a stack of cards, hidden from `md` up. */
+export function MobileList({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn("flex flex-col gap-2.5 md:hidden", className)}>{children}</div>;
+}
+
+export function MobileRow({
+  href,
+  title,
+  subtitle,
+  meta,
+  badges,
+  children,
+  className,
+}: {
+  href?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  /** Right-aligned headline value, usually money. */
+  meta?: React.ReactNode;
+  badges?: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-[15px] font-semibold leading-tight">{title}</div>
+          {subtitle && <div className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</div>}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {meta && <div className="display-num text-[17px] font-medium">{meta}</div>}
+          {href && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </div>
+
+      {badges && <div className="mt-2 flex flex-wrap items-center gap-1.5">{badges}</div>}
+
+      {children && (
+        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3">{children}</dl>
+      )}
+    </>
+  );
+
+  const cls = cn("touch-target bento block p-4 text-left", href && "active:bg-accent/60", className);
+  return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
+}
+
+/** One label/value pair inside a MobileRow's detail grid. */
+export function MobileField({
+  label,
+  value,
+  className,
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <dt className="text-2xs uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 truncate text-[13px] font-medium num">{value}</dd>
+    </div>
+  );
+}
+
+/** Shared empty state so every converted screen reads the same. */
+export function MobileEmpty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bento p-8 text-center text-sm text-muted-foreground md:hidden">{children}</div>
+  );
+}

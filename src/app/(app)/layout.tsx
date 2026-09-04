@@ -5,12 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { isRecipesLocked } from "@/modules/recipes-lock/actions";
 import { getActiveEvent, listActiveEvents } from "@/modules/events/queries";
 import { BrandBar } from "@/components/shell/brand-bar";
-import { TopNav } from "@/components/shell/top-nav";
 import { LocationSwitcher } from "@/components/shell/location-switcher";
 import { EventSwitcher } from "@/components/shell/event-switcher";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { UserMenu } from "@/components/shell/user-menu";
 import { PageTransition } from "@/components/shell/page-transition";
+import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
+import { SideNav } from "@/components/shell/side-nav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -25,27 +26,44 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const activeLocation = scope.availableLocations.find((l) => l.id === scope.locationId)!;
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {/* Single-row header (design 1a): logo left, pill nav centre, utilities right. */}
-      <header className="sticky top-0 z-40 glass">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2.5 px-4 py-3 sm:px-6 lg:px-8">
-          <BrandBar businessName={business?.name ?? "Operations"} />
-          {/* Nav takes the middle; it scrolls horizontally before it wraps. */}
-          <div className="order-last flex w-full min-w-0 justify-start overflow-hidden 2xl:order-none 2xl:w-auto 2xl:flex-1 2xl:justify-center">
-            <TopNav role={scope.role} recipesLocked={recipesLocked} />
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
-            <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
-            <ThemeToggle />
-            <UserMenu name={session.user.name ?? "User"} email={session.user.email ?? ""} role={scope.role} />
-          </div>
-        </div>
-      </header>
+    <div className="flex min-h-screen">
+      {/* Web: 216px sidebar. Below lg it collapses and MobileTabBar takes over. */}
+      <SideNav
+        role={scope.role}
+        recipesLocked={recipesLocked}
+        events={events}
+        userName={session.user.name ?? "User"}
+      />
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-fluid">
-        <PageTransition>{children}</PageTransition>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Content top strip: scope on the left, switchers on the right. */}
+        <header className="sticky top-0 z-40 glass pt-safe">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+            {/* The logo lives in the sidebar on web, so show it here only on mobile. */}
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="lg:hidden">
+                <BrandBar businessName={business?.name ?? "Operations"} />
+              </div>
+              <span className="hidden truncate text-[13px] text-muted-foreground lg:inline">
+                {business?.name ?? "Operations"} · {activeLocation.name}
+                {activeEvent ? ` · ${activeEvent.name}` : " · All events"}
+              </span>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
+              <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
+              <ThemeToggle />
+              <UserMenu name={session.user.name ?? "User"} email={session.user.email ?? ""} role={scope.role} />
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 pb-tabbar lg:pb-0">
+          <PageTransition>{children}</PageTransition>
+        </main>
+      </div>
+
+      <MobileTabBar role={scope.role} />
     </div>
   );
 }

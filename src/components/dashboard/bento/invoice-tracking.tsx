@@ -19,7 +19,7 @@ export function InvoiceTracking({
   recentStatuses: string[];
 }) {
   return (
-    <div className="bento-dark relative overflow-hidden p-[22px]">
+    <div className="bento-dark relative overflow-hidden p-4 sm:p-[22px]">
       <div className="flex items-center justify-between">
         <span className="text-base font-semibold">Invoice tracking</span>
         <Link

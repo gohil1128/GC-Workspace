@@ -4,6 +4,7 @@ import { listVendors, getMonthlyFeePaymentStatus } from "@/modules/vendors/queri
 import { listActiveEvents } from "@/modules/events/queries";
 import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteButton } from "@/components/delete-button";
@@ -99,7 +100,8 @@ export default async function ExpensesPage({
         <div className="space-y-2">
           <h2 className="text-2xs uppercase tracking-wider font-semibold text-muted-foreground px-1">All expenses</h2>
           <div className="bento overflow-hidden">
-            <Table>
+            <TableOnDesktop>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -160,6 +162,45 @@ export default async function ExpensesPage({
                 )}
               </TableBody>
             </Table>
+            </TableOnDesktop>
+
+            <MobileList className="p-3">
+              {expenses.map((e) => (
+                <MobileRow
+                  key={e.id}
+                  title={CAT_LABEL[e.category]}
+                  subtitle={e.description ?? undefined}
+                  meta={formatMoney(e.amountCents)}
+                  badges={
+                    <>
+                      {e.vendor && <Badge variant="brand">{e.vendor.name}</Badge>}
+                      {e.event && (
+                        <Badge variant="muted">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: e.event.color ?? "hsl(var(--muted-foreground))" }} />
+                          {e.event.name}
+                        </Badge>
+                      )}
+                      {e.isIncentive && (
+                        <Badge variant="warning" className="gap-1"><Sparkles className="h-3 w-3" /> Incentive</Badge>
+                      )}
+                      <span className="ml-auto">
+                        <DeleteButton
+                          action={deleteExpenseAction.bind(null, e.id)}
+                          itemLabel="expense"
+                          itemName={`${CAT_LABEL[e.category]} · ${formatMoney(e.amountCents)}`}
+                        />
+                      </span>
+                    </>
+                  }
+                >
+                  <MobileField label="Date" value={fmtDate(e.businessDate)} />
+                  <MobileField label="Added by" value={e.createdBy.name} />
+                </MobileRow>
+              ))}
+              {expenses.length === 0 && (
+                <MobileEmpty>No expenses logged yet.</MobileEmpty>
+              )}
+            </MobileList>
           </div>
         </div>
       </div>

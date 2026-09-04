@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteInvoiceAction } from "@/modules/invoices/actions";
 import { ReopenInvoiceButton } from "../_components/reopen-invoice-button";
@@ -147,7 +148,7 @@ export default async function InvoicesPage({
           </div>
         )}
 
-        <div className="bento">
+        <TableOnDesktop className="bento">
           <Table>
             <TableHeader>
               <TableRow>
@@ -242,7 +243,74 @@ export default async function InvoicesPage({
               )}
             </TableBody>
           </Table>
-        </div>
+        </TableOnDesktop>
+
+        {/* Cards take no href: each row owns actions (photo, re-open, delete),
+            which cannot be nested inside a link — the supplier name is the link. */}
+        <MobileList>
+          {sorted.map((i) => (
+            <MobileRow
+              key={i.id}
+              title={
+                <Link href={`/purchasing/invoices/${i.id}`} className="hover:underline">
+                  {i.supplier.name}
+                </Link>
+              }
+              subtitle={fmtDate(i.invoiceDate)}
+              meta={formatMoney(i.totalCents)}
+              badges={
+                <>
+                  {i.closedAt ? <Badge variant="success">Closed</Badge> : <Badge variant="muted">Open</Badge>}
+                  {i.appliesToAllEvents ? (
+                    <Badge variant="brand">All events</Badge>
+                  ) : i.event ? (
+                    <Badge variant="muted">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: i.event.color ?? "hsl(var(--muted-foreground))" }} />
+                      {i.event.name}
+                    </Badge>
+                  ) : (
+                    <Badge variant="muted">No event</Badge>
+                  )}
+                  {i.category && <Badge variant="muted">{i.category}</Badge>}
+                  <span className="ml-auto flex items-center gap-1">
+                    {i.hasImage && (
+                      <a
+                        href={`/api/purchasing/invoices/${i.id}/photo`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open invoice photo"
+                        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-2xs font-semibold text-brand hover:bg-brand/10 transition-colors"
+                      >
+                        <Camera className="h-3.5 w-3.5" /> Photo
+                      </a>
+                    )}
+                    {i.closedAt && <ReopenInvoiceButton id={i.id} />}
+                    <DeleteButton
+                      action={deleteInvoiceAction.bind(null, i.id)}
+                      itemLabel="invoice"
+                      itemName={`${i.supplier.name} · ${fmtDate(i.invoiceDate)}`}
+                      confirmText={`This will delete the ${i.supplier.name} invoice from ${fmtDate(i.invoiceDate)} and REVERSE its inventory impact (subtract ${i._count.items} items' quantities from on-hand).`}
+                    />
+                  </span>
+                </>
+              }
+            >
+              <MobileField label="Received" value={fmtDate(i.dateReceived)} />
+              <MobileField label="Items" value={i._count.items} />
+              <MobileField label="Subtotal" value={formatMoney(i.subtotalCents)} />
+              <MobileField label="Created by" value={i.createdBy.name} />
+            </MobileRow>
+          ))}
+          {sorted.length === 0 && (
+            <MobileEmpty>
+              <FileText className="h-6 w-6 mx-auto mb-2 opacity-40" />
+              {activeFilterCount > 0
+                ? "No invoices match the current filters. Adjust filters above."
+                : <>No invoices yet. Use <Link href="/purchasing" className="underline">Purchasing → New invoice</Link> to create one.</>
+              }
+            </MobileEmpty>
+          )}
+        </MobileList>
       </div>
     </div>
   );
