@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { formatMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Trash2, AlertTriangle, Loader2, Tag, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ type Item = {
   dayCount: number;
 };
 
-const money = (n: number) => `$${n.toFixed(2)}`;
+// Shared formatter so thousands separators match the rest of the app.
+const money = (n: number) => formatMoney(Math.round(n * 100));
 
 export function ItemsManager({ items }: { items: Item[] }) {
   const router = useRouter();
@@ -89,7 +91,7 @@ export function ItemsManager({ items }: { items: Item[] }) {
         <Input className="pl-7 h-8" placeholder="Search items…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
-      <div className="rounded-xl border overflow-hidden md:max-h-[min(60vh,460px)] md:overflow-y-auto md:overscroll-contain">
+      <div className="rounded-xl border overflow-hidden lg:max-h-[min(60vh,460px)] lg:overflow-y-auto lg:overscroll-contain">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>

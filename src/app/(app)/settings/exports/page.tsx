@@ -37,12 +37,12 @@ export default function ExportsPage() {
                     key={e.key}
                     href={`/api/exports/${e.key}`}
                     download
-                    className="group flex items-start justify-between gap-3 rounded-xl border bg-card p-4 shadow-soft transition-colors duration-200 hover:border-foreground/15"
+                    className="group flex items-start justify-between gap-3 bento p-4 transition-colors duration-200 hover:border-foreground/15"
                   >
                     <div className="min-w-0 space-y-1">
                       <div className="text-sm font-medium leading-tight">{e.label}</div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{e.description}</p>
-                      <div className="text-2xs text-muted-foreground/70 num">{e.key}.csv</div>
+                      <div className="text-2xs text-muted-foreground num">{e.key}.csv</div>
                     </div>
                     <span className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors group-hover:bg-brand/10 group-hover:text-brand">
                       <Download className="h-4 w-4" />

@@ -38,6 +38,8 @@ const OWNER_MORE = [
 export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const sheetRef = React.useRef<HTMLDivElement | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   // Close the sheet on navigation.
   React.useEffect(() => { setMoreOpen(false); }, [pathname]);
@@ -59,6 +61,15 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
       body.style.width = prev.width;
       window.scrollTo(0, y);
     };
+  }, [moreOpen]);
+
+  // Move focus into the sheet on open and hand it back to the trigger on close.
+  React.useEffect(() => {
+    if (moreOpen) {
+      sheetRef.current?.querySelector<HTMLElement>("button, a")?.focus();
+    } else {
+      triggerRef.current?.focus({ preventScroll: true });
+    }
   }, [moreOpen]);
 
   // Escape closes the sheet.
@@ -86,10 +97,13 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
       {/* "More" sheet */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-bento-lg border-t border-border bg-card px-4 pt-5 transition-transform duration-200 lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto overscroll-contain rounded-t-bento-lg border-t border-border bg-card px-4 pt-5 transition-[transform,visibility] duration-200 lg:hidden",
           "pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]",
-          moreOpen ? "translate-y-0" : "pointer-events-none translate-y-full",
+          // invisible removes the 12 links from the tab order while still
+          // allowing the slide transition; aria-hidden alone left them focusable.
+          moreOpen ? "visible translate-y-0" : "invisible pointer-events-none translate-y-full",
         )}
+        ref={sheetRef}
         role="dialog"
         aria-modal={moreOpen}
         aria-hidden={!moreOpen}
@@ -143,7 +157,7 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
-                  active ? "text-brand" : "text-muted-foreground",
+                  active ? "text-brand-ink" : "text-muted-foreground",
                 )}
               >
                 <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", active && "bg-brand/12")}>
@@ -154,11 +168,12 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
             );
           })}
           <button
+            ref={triggerRef}
             onClick={() => setMoreOpen((v) => !v)}
             aria-expanded={moreOpen}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
-              moreActive || moreOpen ? "text-brand" : "text-muted-foreground",
+              moreActive || moreOpen ? "text-brand-ink" : "text-muted-foreground",
             )}
           >
             <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", (moreActive || moreOpen) && "bg-brand/12")}>

@@ -55,6 +55,8 @@ const config: Config = {
         brand: {
           DEFAULT: "hsl(var(--brand))",
           foreground: "hsl(var(--brand-foreground))",
+          ink: "hsl(var(--brand-ink))",
+          strong: "hsl(var(--brand-strong))",
         },
         espresso: {
           DEFAULT: "hsl(var(--espresso))",

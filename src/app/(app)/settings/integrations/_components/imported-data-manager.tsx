@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { formatMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Trash2, AlertTriangle, Database, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,8 @@ type Day = {
 
 type EventGroup = { id: string; name: string; color: string | null; days: number; netDollars: number };
 
-const money = (n: number) => `$${n.toFixed(2)}`;
+// Shared formatter so thousands separators match the rest of the app.
+const money = (n: number) => formatMoney(Math.round(n * 100));
 
 export function ImportedDataManager({
   days,
@@ -109,7 +111,7 @@ export function ImportedDataManager({
             </Button>
           </div>
 
-          <div className="rounded-xl border overflow-hidden md:max-h-[min(60vh,420px)] md:overflow-y-auto md:overscroll-contain">
+          <div className="rounded-xl border overflow-hidden lg:max-h-[min(60vh,420px)] lg:overflow-y-auto lg:overscroll-contain">
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>

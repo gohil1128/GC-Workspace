@@ -53,9 +53,9 @@ export default function LoginPage() {
         )}
 
         <div className="relative">
-          <h1 className="display-num text-[44px] font-medium leading-[1.05]">
+          <p className="display-num text-[44px] font-medium leading-[1.05]">
             Every cup,<br />accounted for.
-          </h1>
+          </p>
           <p className="mt-3.5 max-w-[360px] text-sm leading-relaxed opacity-70">
             Sales, invoices, cash and labor for every event — in one warm back-office.
           </p>
@@ -65,14 +65,14 @@ export default function LoginPage() {
       </div>
 
       {/* Form side */}
-      <div className="flex items-center justify-center p-6 sm:p-10">
+      <main className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-[380px]">
           {/* Logo shows here on small screens, where the brand panel is hidden. */}
           {!logoFailed && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/logo.png" alt="God's Chai" className="mb-6 h-14 w-auto lg:hidden" />
           )}
-          <h2 className="display-num text-[30px] font-medium">Welcome back</h2>
+          <h1 className="display-num text-[30px] font-medium">Welcome back</h1>
           <p className="mt-1.5 text-[13px] text-muted-foreground">Sign in to your back-office</p>
 
           <form action={formAction} className="mt-7 grid gap-3.5">
@@ -84,7 +84,7 @@ export default function LoginPage() {
             <div className="grid gap-1.5">
               <div className="flex items-baseline justify-between">
                 <Label htmlFor="password" className="text-xs text-muted-foreground">Password</Label>
-                <Link href="/forgot-password" className="text-xs text-brand hover:underline">Forgot?</Link>
+                <Link href="/forgot-password" className="text-xs text-brand-ink hover:underline">Forgot?</Link>
               </div>
               <Input id="password" name="password" type="password" autoComplete="current-password" required
                 className="h-12 rounded-2xl px-4 text-sm" defaultValue="demo1234" />
@@ -103,7 +103,7 @@ export default function LoginPage() {
             <p className="mt-2 text-2xs text-muted-foreground">Demo: owner@demo.test / demo1234</p>
           </form>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -96,7 +96,7 @@ export function SideNav({
             <div key={i.href} className="flex flex-col gap-1">
               <Link
                 href={i.href}
-                aria-current={active ? "page" : undefined}
+                aria-current={pathname === i.href ? "page" : undefined}
                 className={cn(
                   "rounded-[10px] px-3 py-2.5 text-[13px] transition-colors",
                   active
@@ -112,10 +112,11 @@ export function SideNav({
                     <Link
                       key={s.href}
                       href={s.href}
+                      aria-current={within(s.href) ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
                         within(s.href)
-                          ? "font-semibold text-brand"
+                          ? "font-semibold text-brand-ink"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
@@ -146,7 +147,7 @@ export function SideNav({
           ))}
         </div>
         {role === "OWNER" && (
-          <Link href="/settings" className="mt-3 flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+          <Link href="/settings" className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
             <Plus className="h-3 w-3" /> New event
           </Link>
         )}

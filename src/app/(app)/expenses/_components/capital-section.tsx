@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { formatMoney } from "@/lib/money";
 import { useRouter } from "next/navigation";
 import { Plus, Wrench, Pencil, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -38,7 +39,8 @@ type Asset = {
 
 type Event = { id: string; name: string; color: string | null };
 
-const money = (n: number) => `$${n.toFixed(2)}`;
+// Shared formatter so thousands separators match the rest of the app.
+const money = (n: number) => formatMoney(Math.round(n * 100));
 const STATUS_LABEL: Record<Asset["status"], string> = {
   IN_SERVICE: "In service",
   SOLD: "Sold",

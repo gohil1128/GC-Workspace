@@ -27,6 +27,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-espresso focus:px-4 focus:py-2 focus:text-sm focus:text-espresso-foreground"
+      >
+        Skip to main content
+      </a>
       {/* Web: 216px sidebar. Below lg it collapses and MobileTabBar takes over. */}
       <SideNav
         role={scope.role}
@@ -38,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Content top strip: scope on the left, switchers on the right. */}
         <header className="sticky top-0 z-40 border-b border-border/70 glass pt-safe">
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+          <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
             {/* The logo lives in the sidebar on web, so show it here only on mobile. */}
             <div className="flex min-w-0 items-center gap-3">
               <div className="lg:hidden">
@@ -58,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="flex-1 pb-tabbar lg:pb-0">
+        <main id="main" tabIndex={-1} className="flex-1 pb-tabbar outline-none lg:pb-0">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

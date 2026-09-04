@@ -41,7 +41,7 @@ export function InvoiceFilters({ suppliers }: { suppliers: Supplier[] }) {
     (to ? 1 : 0);
 
   return (
-    <form onSubmit={apply} className="rounded-lg border bg-muted/20 p-3 grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
+    <form onSubmit={apply} className="bento grid grid-cols-2 items-end gap-2 bg-muted/20 p-3 [&>div]:min-w-0 md:grid-cols-6">
       <div className="grid gap-1">
         <Label className="text-xs">Supplier</Label>
         <Select value={supplierId} onValueChange={setSupplierId}>
@@ -65,11 +65,13 @@ export function InvoiceFilters({ suppliers }: { suppliers: Supplier[] }) {
       </div>
       <div className="grid gap-1">
         <Label htmlFor="f-from" className="text-xs">From</Label>
-        <Input id="f-from" type="date" className="h-8" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <Input id="f-from" type="date"
+             className="w-full min-w-0 h-8" value={from} onChange={(e) => setFrom(e.target.value)} />
       </div>
       <div className="grid gap-1">
         <Label htmlFor="f-to" className="text-xs">To</Label>
-        <Input id="f-to" type="date" className="h-8" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Input id="f-to" type="date"
+             className="w-full min-w-0 h-8" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
       <div className="col-span-2 md:col-span-6 flex justify-end gap-2 pt-1">
         {activeCount > 0 && (

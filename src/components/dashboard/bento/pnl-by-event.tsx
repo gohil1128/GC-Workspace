@@ -5,7 +5,11 @@ import type { PnlColumn } from "@/modules/reports/queries";
 
 // P&L rolled up per event, with an Overall footer. Costs are everything that
 // isn't sales: COGS + labor + expenses + event fees.
-const GRID = "grid grid-cols-[1.5fr_1fr_1fr_1fr_90px] gap-2 items-center";
+// The template lives on ONE wrapper and rows use `display:contents`, so every
+// column resolves once. Per-row grids let a long event name steal track width
+// and knock the numeric columns out of alignment.
+const TABLE = "grid grid-cols-[minmax(0,1.5fr)_1fr_1fr_1fr_90px] items-center gap-x-2";
+const ROW = "contents";
 
 function marginVariant(pct: number, profitCents: number) {
   if (profitCents < 0) return "bg-destructive-muted text-destructive";
@@ -38,7 +42,8 @@ export function PnlByEvent({ columns }: { columns: PnlColumn[] }) {
       ) : (
         <div className="overflow-x-auto scroll-fluid">
           <div className="min-w-[520px]">
-            <div className={`${GRID} border-b border-border px-3 pb-2 pt-4 text-2xs text-muted-foreground`}>
+            <div className={TABLE}>
+            <div className={`${ROW} [&>*]:border-b [&>*]:border-border [&>*]:px-1 [&>*]:pb-2 [&>*]:pt-4 [&>*]:text-2xs [&>*]:text-muted-foreground`}>
               <span>Event</span>
               <span className="text-right">Net sales</span>
               <span className="text-right">Costs</span>
@@ -47,13 +52,13 @@ export function PnlByEvent({ columns }: { columns: PnlColumn[] }) {
             </div>
 
             {events.map((c) => (
-              <div key={c.key} className={`${GRID} border-b border-border/60 p-3 text-[13px]`}>
+              <div key={c.key} className={`${ROW} [&>*]:border-b [&>*]:border-border/60 [&>*]:py-3 [&>*]:text-[13px]`}>
                 <span className="flex items-center gap-2.5 font-medium">
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
                     style={{ background: c.color ?? "hsl(var(--muted-foreground))" }}
                   />
-                  <span className="truncate">{c.name}</span>
+                  <span className="min-w-0 truncate">{c.name}</span>
                 </span>
                 <span className="text-right num">{formatMoney(c.netSalesCents)}</span>
                 <span className="text-right num text-muted-foreground">
@@ -71,7 +76,7 @@ export function PnlByEvent({ columns }: { columns: PnlColumn[] }) {
             ))}
 
             {overall && (
-              <div className={`${GRID} mt-1 border-t border-espresso px-3 pb-1 pt-3.5 text-[13px]`}>
+              <div className={`${ROW} [&>*]:border-t [&>*]:border-espresso [&>*]:pb-1 [&>*]:pt-3.5 [&>*]:text-[13px]`}>
                 <span className="font-semibold">Overall</span>
                 <span className="text-right num font-semibold">{formatMoney(overall.netSalesCents)}</span>
                 <span className="text-right num text-muted-foreground">
@@ -85,6 +90,7 @@ export function PnlByEvent({ columns }: { columns: PnlColumn[] }) {
                 </span>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
