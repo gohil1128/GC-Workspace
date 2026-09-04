@@ -45,7 +45,7 @@ export function CountEntryGrid({ ingredients }: { ingredients: Item[] }) {
   return (
     <div className="space-y-3">
       <div className="text-xs text-muted-foreground">{filledCount} of {ingredients.length} counted</div>
-      <div className="rounded-md border max-h-[500px] overflow-y-auto">
+      <div className="rounded-md border md:max-h-[min(65vh,500px)] md:overflow-y-auto md:overscroll-contain">
         <Table>
           <TableHeader>
             <TableRow>

@@ -19,7 +19,17 @@ type Ev = {
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-const PALETTE = ["#f97316", "#16a34a", "#0ea5e9", "#a855f7", "#dc2626", "#facc15"];
+// Warm palette drawn from the design system — an event's colour shows up all
+// over the app, so these have to sit inside the cream/espresso world rather
+// than the generic Tailwind wheel.
+const PALETTE = [
+  "#3A2415", // espresso
+  "#C4623A", // chai rust
+  "#E8A33D", // amber
+  "#B8A896", // taupe
+  "#2F8F5B", // deep green
+  "#9A6A12", // ochre
+];
 
 export function EventsManager({ events }: { events: Ev[] }) {
   return (

@@ -83,7 +83,7 @@ export function SideNav({
   const initial = userName.trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <aside className="hidden w-[216px] shrink-0 flex-col gap-1.5 border-r border-input px-[18px] py-[26px] lg:flex">
+    <aside className="sticky top-0 hidden h-[100dvh] w-[216px] shrink-0 flex-col gap-1.5 overflow-y-auto overscroll-contain border-r border-input px-[18px] py-[26px] lg:flex">
       <Link href="/dashboard" className="mb-[22px] ml-1.5 self-start">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="God's Chai" className="h-[52px] w-auto" />

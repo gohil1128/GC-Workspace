@@ -109,7 +109,7 @@ export function ImportedDataManager({
             </Button>
           </div>
 
-          <div className="rounded-xl border overflow-hidden max-h-[420px] overflow-y-auto">
+          <div className="rounded-xl border overflow-hidden md:max-h-[min(60vh,420px)] md:overflow-y-auto md:overscroll-contain">
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>

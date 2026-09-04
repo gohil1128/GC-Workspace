@@ -72,7 +72,7 @@ export function PoActions({ poId, status }: { poId: string; status: string }) {
           <DialogTrigger asChild><Button size="sm" variant="success">Receive</Button></DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Receive items</DialogTitle></DialogHeader>
-            <div className="rounded-md border max-h-[400px] overflow-y-auto">
+            <div className="rounded-md border md:max-h-[min(60vh,400px)] md:overflow-y-auto md:overscroll-contain">
               <Table>
                 <TableHeader>
                   <TableRow>

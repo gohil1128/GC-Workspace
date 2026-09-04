@@ -26,7 +26,7 @@ export function KpiCard({
     bad: "bg-destructive",
   }[tone];
   return (
-    <div className="group relative overflow-hidden rounded-xl border bg-card p-5 flex flex-col gap-2 shadow-soft transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5">
+    <div className="group relative flex flex-col gap-2 overflow-hidden rounded-bento border border-border bg-card p-5 transition-colors duration-200 hover:border-foreground/15">
       <div className="flex items-center gap-2">
         <span className={cn("h-1.5 w-1.5 rounded-full", dotClasses)} />
         <span className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>

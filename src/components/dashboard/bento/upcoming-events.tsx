@@ -16,7 +16,7 @@ export type UpcomingEvent = {
 
 export function UpcomingEvents({ events }: { events: UpcomingEvent[] }) {
   return (
-    <div className="bento p-4 sm:p-[22px]">
+    <div className="bento min-w-0 p-4 sm:p-[22px]">
       <div className="flex items-center justify-between">
         <span className="text-base font-semibold">Upcoming events</span>
         <Link

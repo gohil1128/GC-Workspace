@@ -89,7 +89,7 @@ export function ItemsManager({ items }: { items: Item[] }) {
         <Input className="pl-7 h-8" placeholder="Search items…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
-      <div className="rounded-xl border overflow-hidden max-h-[460px] overflow-y-auto">
+      <div className="rounded-xl border overflow-hidden md:max-h-[min(60vh,460px)] md:overflow-y-auto md:overscroll-contain">
         <Table>
           <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
