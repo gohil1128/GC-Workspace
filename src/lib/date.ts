@@ -26,3 +26,11 @@ export function fmtDateTime(d: Date | string): string {
 }
 
 export { startOfDay, endOfDay, subDays, addDays, differenceInMinutes };
+
+/** A YYYY-MM-DD filter param, or undefined when absent/malformed. Prevents an
+ *  unparseable query string from reaching Prisma and 500-ing the route. */
+export function safeDateParam(v?: string | null): string | undefined {
+  if (!v) return undefined;
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? undefined : v;
+}

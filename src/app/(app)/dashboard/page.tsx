@@ -155,7 +155,9 @@ export default async function DashboardPage() {
             <ItemMixDonut slices={topItems.byCategory} totalQty={topItems.totalQty} />
           ) : (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No item-level sales yet. Upload the Square per-item CSV to see the mix.
+              {topItems.count === 0
+                ? "No item-level sales yet. Upload the Square per-item CSV to see the mix."
+                : `No item sales between ${fmtDate(data.period.from)} and ${fmtDate(data.period.to)}.`}
             </p>
           )}
         </div>

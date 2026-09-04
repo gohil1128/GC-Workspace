@@ -95,3 +95,38 @@ export function MobileEmpty({ children }: { children: React.ReactNode }) {
     <div className="bento p-8 text-center text-sm text-muted-foreground lg:hidden">{children}</div>
   );
 }
+
+/**
+ * One empty state for the whole app. The audit found five different treatments
+ * (radius, padding, icon, container all drifting), so this is the single shape.
+ * Pass `filtered` when the emptiness is caused by a filter rather than by there
+ * being no data at all — the copy and the action differ.
+ */
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("bento p-10 text-center", className)}>
+      {icon && (
+        <span className="mx-auto mb-4 grid h-11 w-11 place-items-center rounded-full bg-accent text-muted-foreground">
+          {icon}
+        </span>
+      )}
+      <div className="text-sm font-semibold">{title}</div>
+      {description && (
+        <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-muted-foreground">{description}</p>
+      )}
+      {action && <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div>}
+    </div>
+  );
+}

@@ -1,26 +1,40 @@
-// God's Chai Operations — minimal service worker for PWA installability.
+// God's Chai Operations — service worker.
+//
+// SECURITY: authenticated HTML is NEVER cached. A previous build cached every
+// navigation response, so a signed-out visitor (or the next user on a shared
+// device) could be served the last user's rendered dashboard straight from
+// cache. Only a static, data-free offline page and versioned static assets are
+// stored now.
+//
 // Strategy:
-//   - HTML/page requests: network-first, fall back to a cached "offline" copy.
-//   - Static assets (_next, images, fonts): cache-first, refresh in background.
-//   - API/data requests: always network (no stale data shown).
+//   - HTML navigations: network-only, falling back to the dedicated /offline
+//     page. Never cached, never impersonating another route.
+//   - Static assets (_next/static, images, fonts): cache-first.
+//   - API/data: always network.
 
-const CACHE = "gco-shell-v1";
-const SHELL = ["/", "/dashboard", "/login", "/logo.png", "/manifest.webmanifest"];
+const CACHE = "gco-shell-v2";
+// Data-free assets only. No authenticated route is precached.
+const SHELL = ["/offline", "/logo.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL).catch(() => undefined))
-  );
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => undefined)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
+});
+
+// The app posts this on sign-out so nothing survives a session change.
+self.addEventListener("message", (event) => {
+  if (event.data === "clear-cache") {
+    event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
+  }
 });
 
 self.addEventListener("fetch", (event) => {
@@ -29,19 +43,16 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache API calls or auth — always go to network
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/data/")) {
-    return;
-  }
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/data/")) return;
 
-  // Static assets: cache-first
+  // Static assets: cache-first. These are content-hashed or public files.
   if (
     url.pathname.startsWith("/_next/static/") ||
     /\.(png|jpg|jpeg|svg|webp|ico|woff2?|ttf|css|js)$/.test(url.pathname)
   ) {
     event.respondWith(
       caches.match(req).then((cached) => {
-        const fetchAndCache = fetch(req)
+        const fresh = fetch(req)
           .then((res) => {
             if (res && res.ok) {
               const clone = res.clone();
@@ -50,24 +61,26 @@ self.addEventListener("fetch", (event) => {
             return res;
           })
           .catch(() => cached);
-        return cached || fetchAndCache;
+        return cached || fresh;
       })
     );
     return;
   }
 
-  // Pages (HTML navigations): network-first with cache fallback
+  // HTML navigations: network-only. On failure show the neutral offline page
+  // rather than another route's cached HTML.
   if (req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html")) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, clone));
-          }
-          return res;
-        })
-        .catch(() => caches.match(req).then((c) => c || caches.match("/dashboard") || caches.match("/")))
+      fetch(req).catch(async () => {
+        const offline = await caches.match("/offline");
+        return (
+          offline ||
+          new Response("<h1>Offline</h1><p>Reconnect to continue.</p>", {
+            status: 503,
+            headers: { "content-type": "text/html; charset=utf-8" },
+          })
+        );
+      })
     );
   }
 });

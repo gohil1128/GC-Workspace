@@ -24,14 +24,17 @@ const MORE = [
   { href: "/inventory/variance", label: "Variance", icon: BarChart3 },
   { href: "/recipes", label: "Recipes", icon: ChefHat },
   { href: "/labor", label: "Schedule", icon: Users },
+  { href: "/labor/report", label: "Labor report", icon: BarChart3 },
   { href: "/labor/employees", label: "Employees", icon: Users },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/purchasing", label: "Purchase orders", icon: FileText },
+  { href: "/purchasing/new", label: "New purchase order", icon: FileText },
 ] as const;
 
 const OWNER_MORE = [
   { href: "/settings", label: "Business & events", icon: SettingsIcon },
   { href: "/settings/users", label: "Team", icon: Users },
+  { href: "/settings/integrations", label: "Integrations", icon: SettingsIcon },
   { href: "/settings/exports", label: "Data export", icon: FileText },
 ] as const;
 
@@ -63,13 +66,38 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
     };
   }, [moreOpen]);
 
-  // Move focus into the sheet on open and hand it back to the trigger on close.
+  // Move focus into the sheet on open and hand it back on close — but only on a
+  // real open->close transition. Running the restore branch on mount stole focus
+  // to the More button on every page load.
+  const wasOpen = React.useRef(false);
   React.useEffect(() => {
     if (moreOpen) {
-      sheetRef.current?.querySelector<HTMLElement>("button, a")?.focus();
-    } else {
+      // after the open transition commits, so the target is focusable
+      requestAnimationFrame(() =>
+        sheetRef.current?.querySelector<HTMLElement>("a, button")?.focus(),
+      );
+    } else if (wasOpen.current) {
       triggerRef.current?.focus({ preventScroll: true });
     }
+    wasOpen.current = moreOpen;
+  }, [moreOpen]);
+
+  // Trap Tab inside the sheet while it is open.
+  React.useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !sheetRef.current) return;
+      const f = Array.from(
+        sheetRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
+      ).filter((el) => el.offsetParent !== null);
+      if (f.length === 0) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [moreOpen]);
 
   // Escape closes the sheet.
@@ -81,6 +109,13 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
   }, [moreOpen]);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  // Pick a single winner: the longest matching href. Otherwise /inventory and
+  // /inventory/counts both render as the current page.
+  const bestMatch = [...TABS, ...MORE, ...OWNER_MORE]
+    .map((x) => x.href)
+    .filter((h) => isActive(h))
+    .sort((a, b) => b.length - a.length)[0];
+  const isCurrent = (href: string) => href === bestMatch;
   const moreItems = role === "OWNER" ? [...MORE, ...OWNER_MORE] : MORE;
   const moreActive = moreItems.some((m) => isActive(m.href)) && !TABS.some((t) => isActive(t.href));
 
@@ -126,9 +161,10 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
               <Link
                 key={m.href}
                 href={m.href}
+                aria-current={isCurrent(m.href) ? "page" : undefined}
                 className={cn(
                   "touch-target flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-[13px] font-medium",
-                  isActive(m.href)
+                  isCurrent(m.href)
                     ? "border-espresso bg-espresso text-espresso-foreground"
                     : "border-border bg-card",
                 )}
@@ -154,7 +190,7 @@ export function MobileTabBar({ role }: { role: "OWNER" | "MANAGER" }) {
               <Link
                 key={t.href}
                 href={t.href}
-                aria-current={active ? "page" : undefined}
+                aria-current={isCurrent(t.href) ? "page" : undefined}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors",
                   active ? "text-brand-ink" : "text-muted-foreground",

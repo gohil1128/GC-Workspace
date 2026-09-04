@@ -33,6 +33,9 @@
     --primary-foreground: 37 56% 94%;  /* #F8F1E6 */
     --espresso: 24 47% 16%;
     --espresso-foreground: 37 56% 94%;
+    /* Chart ink: the data series must stay the strongest mark on the card in
+       BOTH themes. --espresso is correct on cream but disappears on dark. */
+    --chart-ink: 24 47% 16%;
 
     --secondary: 40 47% 96%;           /* #FAF7F1 */
     --secondary-foreground: 26 21% 30%;
@@ -82,27 +85,28 @@
     --popover-foreground: 37 56% 94%;
     --primary: 37 56% 94%;
     --primary-foreground: 24 47% 14%;
-    --espresso: 24 40% 18%;
+    --espresso: 24 26% 27%;            /* lifted: was only 6 L-points above --card, so .bento-dark had no contrast */
     --espresso-foreground: 37 56% 94%;
+    --chart-ink: 37 56% 94%;
     --secondary: 24 26% 18%;
     --secondary-foreground: 37 56% 94%;
     --muted: 24 26% 17%;
     --muted-foreground: 33 20% 72%;
     --accent: 24 26% 20%;
     --accent-foreground: 37 56% 94%;
-    --destructive: 0 62% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-muted: 0 40% 22%;
-    --success: 148 45% 48%;
+    --destructive: 0 72% 72%;
+    --destructive-foreground: 24 47% 14%;
+    --destructive-muted: 0 45% 16%;
+    --success: 148 52% 58%;
     --success-foreground: 0 0% 100%;
     --success-muted: 148 34% 20%;
-    --warning: 39 74% 52%;
+    --warning: 39 82% 62%;
     --warning-foreground: 24 47% 14%;
     --warning-muted: 39 44% 22%;
     --brand: 17 62% 58%;
     --brand-foreground: 0 0% 100%;
     --brand-ink: 17 70% 68%;
-    --brand-strong: 17 62% 52%;
+    --brand-strong: 17 62% 38%;   /* white label was 3.8:1 at 52% */
     --amber: 36 79% 60%;
     --amber-foreground: 24 47% 14%;
     --border: 26 22% 22%;
@@ -160,6 +164,11 @@
   }
   .dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline-color: hsl(var(--brand));
+  }
+  /* Inside the espresso card the espresso outline was invisible against its
+     own background. */
+  .bento-dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: hsl(var(--espresso-foreground));
   }
 
   h1, h2, h3, h4 {

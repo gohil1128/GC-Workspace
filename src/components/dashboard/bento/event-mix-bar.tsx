@@ -11,9 +11,11 @@ const FILLS = [
   "text-foreground",
   "border-[1.5px] border-espresso text-foreground",
 ];
+// Tokenised so the segment inverts with the theme — hardcoded cream stripes
+// left the label at 1.14:1 in dark mode.
 const HATCH = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, hsl(33 36% 84%) 0 3px, hsl(40 47% 94%) 3px 7px)",
+    "repeating-linear-gradient(135deg, hsl(var(--border)) 0 3px, hsl(var(--muted)) 3px 7px)",
 };
 
 export function EventMixBar({ segments }: { segments: MixSegment[] }) {

@@ -25,6 +25,7 @@ const ITEMS: Item[] = [
     subs: [
       { href: "/purchasing/invoices/new", label: "New invoice" },
       { href: "/purchasing", label: "Purchase orders" },
+      { href: "/purchasing/new", label: "New purchase order" },
     ],
   },
   { href: "/cash", label: "Cash closes", subs: [{ href: "/cash/new", label: "New cash close" }] },
@@ -112,7 +113,7 @@ export function SideNav({
                     <Link
                       key={s.href}
                       href={s.href}
-                      aria-current={within(s.href) ? "page" : undefined}
+                      aria-current={pathname === s.href ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
                         within(s.href)

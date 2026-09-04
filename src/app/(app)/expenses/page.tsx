@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DeleteButton } from "@/components/delete-button";
 import { deleteExpenseAction } from "@/modules/expenses/actions";
 import { formatMoney } from "@/lib/money";
-import { fmtDate } from "@/lib/date";
+import { fmtDate, safeDateParam } from "@/lib/date";
 import { Sparkles } from "lucide-react";
 import { NewExpenseButton } from "./_components/new-expense-button";
 import { VendorsSection } from "./_components/vendor-card";
@@ -31,7 +31,7 @@ export default async function ExpensesPage({
   const sp = await searchParams;
   const scope = await getScope();
   const [expenses, vendors, events, capitalAssets] = await Promise.all([
-    listExpenses(scope.locationId, { category: sp.category, from: sp.from, to: sp.to }),
+    listExpenses(scope.locationId, { category: sp.category, from: safeDateParam(sp.from), to: safeDateParam(sp.to) }),
     listVendors(scope.businessId),
     listActiveEvents(scope.businessId),
     listCapitalAssets(scope.locationId),

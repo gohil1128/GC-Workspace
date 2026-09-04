@@ -6,7 +6,7 @@ type Slice = { category: string; sharePct: number };
 
 const R = 60;
 const C = 2 * Math.PI * R; // ≈377, matching the mockup's dash arithmetic
-const STROKES = ["hsl(var(--espresso))", "hsl(var(--amber))", "hsl(var(--brand))", "hsl(var(--muted-foreground))"];
+const STROKES = ["hsl(var(--chart-ink))", "hsl(var(--amber))", "hsl(var(--brand))", "hsl(var(--muted-foreground))"];
 
 export function ItemMixDonut({ slices, totalQty }: { slices: Slice[]; totalQty: number }) {
   const top = slices.slice(0, 4);
