@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { lastNDays, startOfDay } from "@/lib/date";
 
-export async function listCashCloses(locationId: string, days = 30) {
+export async function listCashCloses(locationId: string, days = 30, eventId?: string | null) {
   const { from, to } = lastNDays(days);
   return prisma.cashClose.findMany({
-    where: { locationId, businessDate: { gte: from, lte: to } },
+    where: {
+      locationId,
+      businessDate: { gte: from, lte: to },
+      ...(eventId ? { eventId } : {}),
+    },
     include: {
       closedBy: { select: { name: true } },
       verifiedBy: { select: { name: true } },

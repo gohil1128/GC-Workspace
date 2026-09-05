@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getScope } from "@/lib/scope";
 import { getVarianceReport } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,6 +43,7 @@ export default async function VariancePage() {
               <Tile label="Positive lines" value={String(report.lines.filter((l) => l.variance > 0).length)} tone="warn" />
             </div>
             <div className="bento">
+              <TableOnDesktop>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -73,6 +75,38 @@ export default async function VariancePage() {
                   })}
                 </TableBody>
               </Table>
+            </TableOnDesktop>
+
+            <MobileList>
+              {report.lines.map((l) => {
+                const severity = Math.abs(l.pct) > 5 ? "high" : Math.abs(l.pct) > 2 ? "med" : "low";
+                return (
+                  <MobileRow
+                    key={l.id}
+                    title={l.ingredient}
+                    meta={
+                      <span className={l.varianceCostCents < 0 ? "text-destructive" : undefined}>
+                        {formatMoney(l.varianceCostCents, { signed: true })}
+                      </span>
+                    }
+                    badges={
+                      severity === "high" ? <Badge variant="danger">High</Badge>
+                        : severity === "med" ? <Badge variant="warning">Med</Badge>
+                        : <Badge variant="muted">Low</Badge>
+                    }
+                  >
+                    <MobileField label={`Theoretical (${l.unit})`} value={l.theoretical.toFixed(2)} />
+                    <MobileField label="Actual" value={l.actual.toFixed(2)} />
+                    <MobileField
+                      label="Variance"
+                      value={`${l.variance > 0 ? "+" : ""}${l.variance.toFixed(2)}`}
+                    />
+                    <MobileField label="Variance %" value={formatPercent(l.pct)} />
+                  </MobileRow>
+                );
+              })}
+              {report.lines.length === 0 && <MobileEmpty>No variance lines.</MobileEmpty>}
+            </MobileList>
             </div>
           </>
         )}

@@ -25,15 +25,19 @@ export const metadata: Metadata = {
   title: "God's Chai Operations",
   description: "Restaurant operations platform — inventory, labor, cash, reporting.",
   applicationName: "God's Chai Operations",
+  // `capable: true` emits both apple-mobile-web-app-capable and the modern
+  // mobile-web-app-capable, so older iOS web clips launch without Safari chrome.
   appleWebApp: {
     capable: true,
     title: "God's Chai",
     statusBarStyle: "default",
   },
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-    shortcut: "/logo.png",
+    icon: "/icon-192.png",
+    // Opaque and square: iOS renders alpha as black and does not scale
+    // non-square art gracefully.
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/icon-192.png",
   },
 };
 

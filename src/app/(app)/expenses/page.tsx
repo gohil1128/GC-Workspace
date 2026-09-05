@@ -1,7 +1,7 @@
 import { getScope } from "@/lib/scope";
 import { listExpenses, EXPENSE_CATEGORIES } from "@/modules/expenses/queries";
 import { listVendors, getMonthlyFeePaymentStatus } from "@/modules/vendors/queries";
-import { listActiveEvents } from "@/modules/events/queries";
+import { listActiveEvents, getActiveEvent } from "@/modules/events/queries";
 import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/queries";
 import { PageHeader } from "@/components/page-header";
 import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
@@ -30,8 +30,9 @@ export default async function ExpensesPage({
 }) {
   const sp = await searchParams;
   const scope = await getScope();
+  const activeEvent = await getActiveEvent(scope.businessId);
   const [expenses, vendors, events, capitalAssets] = await Promise.all([
-    listExpenses(scope.locationId, { category: sp.category, from: safeDateParam(sp.from), to: safeDateParam(sp.to) }),
+    listExpenses(scope.locationId, { category: sp.category, eventId: activeEvent?.id, from: safeDateParam(sp.from), to: safeDateParam(sp.to) }),
     listVendors(scope.businessId),
     listActiveEvents(scope.businessId),
     listCapitalAssets(scope.locationId),

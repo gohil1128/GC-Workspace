@@ -13,10 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#F8F4EC",
     theme_color: "#F8F4EC",
     categories: ["business", "productivity", "finance"],
+    // Real square assets on the cream plate. Previously all three entries
+    // pointed at one 300x290 transparent PNG, so the declared sizes were false
+    // and the maskable variant overflowed Android's safe zone.
     icons: [
-      { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
     shortcuts: [
       { name: "New invoice", short_name: "Invoice", url: "/purchasing/invoices/new" },

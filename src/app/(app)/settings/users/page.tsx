@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,8 @@ export default async function UsersPage() {
       />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+              <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -72,6 +74,36 @@ export default async function UsersPage() {
               ))}
             </TableBody>
           </Table>
+            </TableOnDesktop>
+
+            <MobileList>
+              {users.map((u) => (
+                <MobileRow
+                  key={u.id}
+                  title={u.name}
+                  subtitle={u.email}
+                  badges={
+                    <>
+                      <Badge variant={u.role === "OWNER" ? "default" : "secondary"}>{u.role}</Badge>
+                      {u.id === scope.userId && <Badge variant="muted">You</Badge>}
+                      <span className="ml-auto">
+                        <UserRowActions
+                          userId={u.id}
+                          userName={u.name}
+                          userEmail={u.email}
+                          currentRole={u.role}
+                          isSelf={u.id === scope.userId}
+                        />
+                      </span>
+                    </>
+                  }
+                >
+                  <MobileField label="Locations" value={u.locations.map((l) => l.location.name).join(", ") || "—"} />
+                  <MobileField label="Added" value={fmtDate(u.createdAt)} />
+                </MobileRow>
+              ))}
+              {users.length === 0 && <MobileEmpty>No team members yet.</MobileEmpty>}
+            </MobileList>
         </div>
       </div>
     </div>

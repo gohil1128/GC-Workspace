@@ -3,6 +3,8 @@ import { startOfDay, endOfDay } from "@/lib/date";
 
 export type InvoiceFilters = {
   supplierId?: string;
+  /** Scope to one event. "All events"-tagged shared costs are included too. */
+  eventId?: string | null;
   invoiceNumber?: string;
   status?: "open" | "closed" | "all";
   from?: string; // YYYY-MM-DD on invoiceDate
@@ -14,6 +16,9 @@ export type InvoiceFilters = {
 function buildInvoiceWhere(locationId: string, filters: InvoiceFilters) {
   const where: any = { locationId };
   if (filters.supplierId) where.supplierId = filters.supplierId;
+  if (filters.eventId) {
+    where.OR = [{ eventId: filters.eventId }, { appliesToAllEvents: true }];
+  }
   if (filters.invoiceNumber) where.invoiceNumber = { contains: filters.invoiceNumber.trim(), mode: "insensitive" };
   if (filters.status === "open") where.closedAt = null;
   if (filters.status === "closed") where.closedAt = { not: null };

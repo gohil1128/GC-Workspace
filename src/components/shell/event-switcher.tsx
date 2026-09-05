@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Calendar, Check, ChevronsUpDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -10,6 +10,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+
+// Routes whose data is genuinely event-scoped. Everywhere else (inventory,
+// labor, recipes, settings) has no event dimension, and /reports is a
+// cross-event matrix by design — showing a per-event filter there would imply
+// a narrowing that never happens.
+const EVENT_SCOPED = ["/dashboard", "/expenses", "/cash", "/purchasing/invoices"];
 import { Button } from "@/components/ui/button";
 import { setActiveEventAction } from "@/modules/events/actions";
 
@@ -23,8 +29,12 @@ type Ev = {
 
 export function EventSwitcher({ events, activeEventId }: { events: Ev[]; activeEventId: string | null }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, start] = React.useTransition();
   const active = events.find((e) => e.id === activeEventId);
+
+  const scoped = EVENT_SCOPED.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  if (!scoped) return null;
 
   const change = (id: string | null) => {
     start(async () => {

@@ -1,6 +1,7 @@
 import { getScope } from "@/lib/scope";
 import { getLaborReport } from "@/modules/labor/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { KpiCard } from "@/components/charts/kpi-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,8 @@ export default async function LaborReportPage() {
         </div>
 
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+              <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
@@ -66,6 +68,35 @@ export default async function LaborReportPage() {
               )}
             </TableBody>
           </Table>
+            </TableOnDesktop>
+
+            <MobileList>
+              {r.byEmployee.map((e, i) => {
+                const variance = e.actualMin - e.scheduledMin;
+                const big = Math.abs(variance) > 60;
+                return (
+                  <MobileRow
+                    key={i}
+                    title={e.name}
+                    subtitle={e.position}
+                    meta={formatMoney(e.costCents)}
+                  >
+                    <MobileField label="Scheduled" value={`${(e.scheduledMin / 60).toFixed(1)} h`} />
+                    <MobileField label="Actual" value={`${(e.actualMin / 60).toFixed(1)} h`} />
+                    <MobileField
+                      label="Variance"
+                      value={
+                        <span className={big ? "text-warning" : undefined}>
+                          {variance > 0 ? "+" : ""}{(variance / 60).toFixed(1)} h
+                        </span>
+                      }
+                    />
+                    <MobileField label="Wage" value={`${formatMoney(e.rate)}/hr`} />
+                  </MobileRow>
+                );
+              })}
+              {r.byEmployee.length === 0 && <MobileEmpty>No labor recorded in this period.</MobileEmpty>}
+            </MobileList>
         </div>
       </div>
     </div>
