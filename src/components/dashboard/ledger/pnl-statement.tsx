@@ -19,7 +19,7 @@ import type { PnlColumn } from "@/modules/reports/queries";
     moves; it is a total, not a competitor.
   - Hover anywhere to cross-highlight that row and column, so the eye does not
     lose the line across a dozen events.
-  - Click an event heading to scope the whole page to that event.
+  - Click an event heading to open that event in full.
 
   Below `lg` the grid can't hold the columns, so the statement is replaced by
   one card per event — the same treatment the rest of the app's wide tables
@@ -157,10 +157,10 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
               </span>
               {events.map((c, i) => (
                 <span key={c.key} role="columnheader" {...cellProps(c.key)} className="truncate">
-                  {/* Scopes the whole page to this event. */}
+                  {/* Opens everything recorded against this event. */}
                   <Link
-                    href={`/dashboard?event=${encodeURIComponent(c.key)}`}
-                    title={`Scope the page to ${c.name}`}
+                    href={`/events/${encodeURIComponent(c.key)}`}
+                    title={`Open ${c.name} — sales, items, invoices, labor and cash`}
                     className="flex items-center justify-end gap-1.5 rounded transition-colors hover:text-foreground"
                   >
                     <span
@@ -302,10 +302,7 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
               {c.key === "overall" ? (
                 <span className="truncate text-sm font-semibold">{c.name}</span>
               ) : (
-                <Link
-                  href={`/dashboard?event=${encodeURIComponent(c.key)}`}
-                  className="flex min-w-0 items-center gap-2"
-                >
+                <Link href={`/events/${encodeURIComponent(c.key)}`} className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden
                     className="h-2 w-2 shrink-0 rounded-[2px]"

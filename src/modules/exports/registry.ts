@@ -8,6 +8,7 @@ import { listInvoicesForExport, type InvoiceFilters } from "@/modules/invoices/q
 import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/queries";
 import { listExpenses, EXPENSE_CATEGORIES } from "@/modules/expenses/queries";
 import { listVendors } from "@/modules/vendors/queries";
+import { getEventDetail } from "@/modules/events/detail";
 import {
   listDailySalesForExport,
   listSalesItemsForExport,
@@ -563,6 +564,100 @@ export const EXPORTS: ExportDef[] = [
           active: e.isActive ? "yes" : "no",
           addedOn: iso(e.createdAt),
         })),
+      };
+    },
+  },
+
+  {
+    key: "event-summary",
+    label: "One event, end to end",
+    description:
+      "Everything tagged to a single event as one ledger — sales, items, invoices, expenses, labor, cash and equipment. Needs ?event=<id>.",
+    group: "Sales",
+    build: async ({ scope, sp }) => {
+      const columns = ["section", "date", "description", "reference", "quantity", "amount"];
+      const eventId = sp.get("event");
+      if (!eventId) return { columns, rows: [] };
+      const d = await getEventDetail(scope.businessId, scope.locationId, eventId);
+      if (!d) return { columns, rows: [] };
+
+      // One flat ledger rather than seven files: a single CSV pivots.
+      const row = (
+        section: string,
+        date: Date | null,
+        description: string,
+        reference = "",
+        quantity: number | string = "",
+        amountCents: number | null = null,
+      ) => ({
+        section,
+        date: iso(date),
+        description,
+        reference,
+        quantity,
+        amount: amountCents === null ? "" : money(amountCents),
+      });
+
+      return {
+        columns,
+        rows: [
+          row("Event", d.event.startDate, d.event.name, d.event.feeNote ?? "", "", d.event.feeCents),
+          ...d.sales.map((s2) =>
+            row("Daily sales", s2.businessDate, "Net sales", s2.source, s2.guestCount, s2.netSalesCents),
+          ),
+          ...d.sales
+            .filter((s2) => s2.tipsCents !== 0)
+            .map((s2) => row("Tips", s2.businessDate, "Tips", s2.source, "", s2.tipsCents)),
+          ...d.items.map((i) =>
+            row("Items sold", null, i.itemName, i.category ?? "", i.qty, i.netSalesCents),
+          ),
+          ...d.invoices.map((inv) =>
+            row(
+              "Invoices",
+              inv.invoiceDate,
+              inv.supplier.name,
+              inv.invoiceNumber ?? "",
+              inv._count.items,
+              inv.totalCents,
+            ),
+          ),
+          ...d.shared.invoices.map((inv) =>
+            row(
+              "Shared invoices (this event's share)",
+              inv.invoiceDate,
+              inv.supplier.name,
+              `${inv.invoiceNumber ?? ""} · 1/${d.shared.shareDiv}`,
+              "",
+              Math.round(inv.totalCents / d.shared.shareDiv),
+            ),
+          ),
+          ...d.expenses.map((e) =>
+            row(
+              "Operating expenses",
+              e.businessDate,
+              EXPENSE_LABEL.get(e.category) ?? e.category,
+              e.vendor?.name ?? "",
+              "",
+              e.amountCents,
+            ),
+          ),
+          ...d.labor.map((l) =>
+            row(
+              "Labor (worked inside the event's dates)",
+              l.start,
+              l.employee,
+              l.actual ? "clocked" : "scheduled",
+              (l.minutes / 60).toFixed(2),
+              l.costCents,
+            ),
+          ),
+          ...d.cashCloses.map((c) =>
+            row("Cash closes", c.businessDate, "Over / short", "", "", c.overShortCents),
+          ),
+          ...d.assets.map((a) =>
+            row("Equipment (capital, not in P&L)", a.purchaseDate, a.name, a.vendor ?? "", "", a.purchasePriceCents),
+          ),
+        ],
       };
     },
   },

@@ -170,13 +170,14 @@ export function UpcomingEventsCard({ events }: { events: UpcomingEvent[] }) {
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {events.map((e, i) => (
-            <li
-              key={e.id}
-              className={cn(
-                "rounded-lg px-3 py-2.5",
-                i === 0 ? "bg-espresso text-espresso-foreground" : "bg-beige",
-              )}
-            >
+            <li key={e.id}>
+              <Link
+                href={`/events/${e.id}`}
+                className={cn(
+                  "block rounded-lg px-3 py-2.5 transition-opacity hover:opacity-90",
+                  i === 0 ? "bg-espresso text-espresso-foreground" : "bg-beige",
+                )}
+              >
               <div className="flex items-center gap-2 text-xs font-semibold">
                 {i !== 0 && (
                   <span
@@ -193,7 +194,8 @@ export function UpcomingEventsCard({ events }: { events: UpcomingEvent[] }) {
                 {fmtDate(e.startDate, "MMM d")}
                 {e.endDate.getTime() !== e.startDate.getTime() && <> – {fmtDate(e.endDate, "MMM d")}</>}
                 {e.feeCents > 0 && <> · fee {formatMoney(e.feeCents)}</>}
-              </div>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

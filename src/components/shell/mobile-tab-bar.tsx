@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BarChart3, Wallet, FileText, Menu,
-  Boxes, Users, Receipt, Settings as SettingsIcon, ChefHat, X,
+  Boxes, Users, Receipt, Settings as SettingsIcon, ChefHat, X, CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,7 @@ const TABS = [
 ] as const;
 
 const MORE = [
+  { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/inventory", label: "Ingredients", icon: Boxes },
   { href: "/inventory/counts", label: "Counts", icon: Boxes },
   { href: "/inventory/variance", label: "Variance", icon: BarChart3 },

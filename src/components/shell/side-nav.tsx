@@ -19,6 +19,7 @@ type Item = { href: string; label: string; ownerOnly?: boolean; subs?: Sub[] };
 const ITEMS: Item[] = [
   { href: "/dashboard", label: "Overview" },
   { href: "/reports", label: "Profit & loss" },
+  { href: "/events", label: "Events" },
   {
     href: "/purchasing/invoices",
     label: "Invoices",
@@ -154,7 +155,11 @@ export function SideNav({
         <div className="mt-2.5 flex flex-col gap-2 text-[13px]">
           {events.length === 0 && <span className="text-xs text-muted-foreground">None yet</span>}
           {events.slice(0, 5).map((e) => (
-            <span key={e.id} className="flex items-center gap-2">
+            <Link
+              key={e.id}
+              href={`/events/${e.id}`}
+              className="flex items-center gap-2 rounded transition-colors hover:text-foreground"
+            >
               <span
                 className="h-2 w-2 shrink-0 rounded-[2px]"
                 style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }}
@@ -162,7 +167,7 @@ export function SideNav({
               <span className="truncate" title={e.name}>
                 {e.name}
               </span>
-            </span>
+            </Link>
           ))}
         </div>
         {role === "OWNER" && (
