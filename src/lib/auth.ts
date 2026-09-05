@@ -4,6 +4,19 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
+import {
+  checkLoginAllowed,
+  clearLoginFailures,
+  clientIpFrom,
+  LoginLockedError,
+  loginKeys,
+  recordLoginFailure,
+} from "@/modules/auth/rate-limit";
+
+// A bcrypt hash of a value nobody can supply. Compared against when the address
+// is unknown so an unknown address costs the same time as a wrong password —
+// otherwise the response time reveals which addresses are registered.
+const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 declare module "next-auth" {
   interface Session {
@@ -25,13 +38,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
-      async authorize(raw) {
+      async authorize(raw, request) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-        if (!user) return null;
-        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+
+        const email = parsed.data.email.trim().toLowerCase();
+        const ip = request ? clientIpFrom(new Headers(request.headers)) : null;
+        const keys = loginKeys(email, ip);
+
+        // Refuse before touching the password, and identically whether or not
+        // the address exists.
+        const state = await checkLoginAllowed(keys);
+        if (state.locked) throw new LoginLockedError(state.retryAfterSec);
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        // Always run a comparison so an unknown address is not measurably faster.
+        const ok = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
+
+        if (!user || !ok) {
+          await recordLoginFailure(keys, email);
+          return null;
+        }
+
+        await clearLoginFailures(keys);
         return {
           id: user.id,
           email: user.email,
