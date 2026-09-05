@@ -1,132 +1,184 @@
 import Link from "next/link";
-import { CalendarDays, Coffee, FileText, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Download } from "lucide-react";
 import { getScope } from "@/lib/scope";
-import { auth } from "@/lib/auth";
-import { getDashboard } from "@/modules/dashboard/queries";
+import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
-import { getActiveEvent, getAllEventsRange, listAllEvents, listUpcomingEvents } from "@/modules/events/queries";
-import { getInvoiceTracking } from "@/modules/invoices/queries";
+import { resolveRange } from "@/modules/dashboard/range";
+import { getActiveEvent, listUpcomingEvents } from "@/modules/events/queries";
+import { getInvoiceTracking, listOpenInvoicesDue } from "@/modules/invoices/queries";
 import { pnlByEvent } from "@/modules/reports/queries";
 import { fmtDate } from "@/lib/date";
-import { formatMoney } from "@/lib/money";
-import { EventMixBar } from "@/components/dashboard/bento/event-mix-bar";
-import { UpcomingEvents } from "@/components/dashboard/bento/upcoming-events";
-import { PnlByEvent } from "@/components/dashboard/bento/pnl-by-event";
-import { InvoiceTracking } from "@/components/dashboard/bento/invoice-tracking";
+import { formatMoney, formatMoneyHeadline, formatPercent, safeDivide } from "@/lib/money";
+import { KpiStrip, type Kpi } from "@/components/dashboard/ledger/kpi-strip";
+import { PeriodControl } from "@/components/dashboard/ledger/period-control";
+import { PnlStatement } from "@/components/dashboard/ledger/pnl-statement";
+import {
+  TopItemsCard,
+  InvoicesDueCard,
+  UpcomingEventsCard,
+} from "@/components/dashboard/ledger/rail-cards";
 import { RevenueChart } from "@/components/dashboard/bento/revenue-chart";
 import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
 
 export const dynamic = "force-dynamic";
 
-function greeting(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+/*
+  Overview — the "ledger" layout.
 
-export default async function DashboardPage() {
-  const [session, scope] = await Promise.all([auth(), getScope()]);
+  Statement first: one ruled KPI band, then the per-event P&L as the hero, with
+  a narrow rail for what sold and what's owed. Everything on the page reads
+  from a single resolved date range so the period control moves all of it at
+  once.
+
+  The revenue chart and item mix sit below the fold. They aren't in the ledger
+  handoff, which covers roughly one screen, but they are the only day-by-day
+  and category views in the app and dropping them would lose real function.
+*/
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [params, scope] = await Promise.all([searchParams, getScope()]);
   const activeEvent = await getActiveEvent(scope.businessId);
-  const allEventsRange = activeEvent ? null : await getAllEventsRange(scope.businessId);
-  const dashboardRange = activeEvent
-    ? { start: activeEvent.startDate, end: activeEvent.endDate }
-    : allEventsRange;
-
+  const range = await resolveRange(scope.businessId, params, activeEvent);
   const now = new Date();
-  const [data, pnl, invoiceTracking, allEvents, upcoming] = await Promise.all([
+
+  const [data, pnl, invoiceTracking, dueInvoices, priorNetSales, upcoming] = await Promise.all([
     getDashboard({
       businessId: scope.businessId,
       locationId: scope.locationId,
-      days: 14,
-      eventId: activeEvent?.id ?? null,
-      eventRange: dashboardRange,
+      eventId: range.eventId,
+      eventRange: { start: range.start, end: range.end },
     }),
-    pnlByEvent(scope.businessId, scope.locationId),
+    pnlByEvent(scope.businessId, scope.locationId, { start: range.start, end: range.end }),
     getInvoiceTracking(scope.locationId),
-    listAllEvents(scope.businessId),
+    listOpenInvoicesDue(scope.locationId, 3),
+    getPriorNetSales(scope.locationId, { start: range.start, end: range.end }),
     listUpcomingEvents(scope.businessId, now, 3),
   ]);
 
   const topItems = await getTopItems({
     locationId: scope.locationId,
-    from: data.period.from,
-    to: data.period.to,
-    eventId: activeEvent?.id ?? null,
+    from: range.start,
+    to: range.end,
+    eventId: range.eventId,
     limit: 12,
   });
 
-  const firstName = (session?.user?.name ?? "there").split(" ")[0];
+  const overall = pnl.find((c) => c.key === "overall");
+  const netSalesCents = overall?.netSalesCents ?? 0;
+  const profitCents = overall?.profitCents ?? 0;
+  const txns = overall?.txns ?? 0;
 
-  // Event-mix bar: real share of net sales per event, biggest first.
-  const eventCols = pnl.filter((c) => c.key !== "overall" && c.netSalesCents > 0);
-  const mixTotal = eventCols.reduce((a, c) => a + c.netSalesCents, 0);
-  const mixSegments = eventCols
-    .map((c) => ({
-      name: c.name,
-      netSalesCents: c.netSalesCents,
-      sharePct: mixTotal > 0 ? (c.netSalesCents / mixTotal) * 100 : 0,
-    }))
-    .sort((a, b) => b.netSalesCents - a.netSalesCents)
-    .slice(0, 4);
+  const deltaPct = priorNetSales ? ((netSalesCents - priorNetSales) / priorNetSales) * 100 : null;
+  const avgTicketCents = txns > 0 ? Math.round(safeDivide(netSalesCents, txns)) : 0;
 
-  // Cost line for the chart: labor is the only real per-day cost series the
-  // dashboard query returns, so that's what the dashed line shows.
-  // trends.*.x is already a formatted "MMM d" label — re-parsing it would
-  // lose the year (new Date("Aug 21") lands in 2001).
+  const kpis: Kpi[] = [
+    {
+      label: "Net sales",
+      value: formatMoneyHeadline(netSalesCents),
+      tone: deltaPct === null ? "muted" : deltaPct >= 0 ? "success" : "danger",
+      // "vs last season" isn't derivable — there is no season concept — so the
+      // comparison is the preceding window of equal length, and says so.
+      sub:
+        deltaPct === null
+          ? "No earlier period to compare"
+          : `${deltaPct >= 0 ? "▲" : "▼"} ${formatPercent(Math.abs(deltaPct))} vs previous period`,
+    },
+    {
+      label: "Profit",
+      value: formatMoneyHeadline(profitCents, { signed: true }),
+      sub: netSalesCents > 0 ? `${formatPercent(overall?.marginPct ?? 0)} margin` : "No sales in range",
+    },
+    {
+      label: "Open invoices",
+      value: formatMoneyHeadline(invoiceTracking.openBalanceCents),
+      tone: invoiceTracking.openCount > 0 ? "brand" : "muted",
+      sub:
+        invoiceTracking.openCount === 0
+          ? "Every bill closed"
+          : `${invoiceTracking.openCount} open · oldest ${
+              invoiceTracking.oldestOpen ? fmtDate(invoiceTracking.oldestOpen.date, "MMM d") : "—"
+            }`,
+    },
+    {
+      label: "Avg. ticket",
+      value: avgTicketCents > 0 ? formatMoney(avgTicketCents) : "—",
+      sub: `${topItems.totalQty.toLocaleString()} items · ${txns.toLocaleString()} tickets`,
+    },
+  ];
+
+  // trends.*.x is already a formatted "MMM d" label — re-parsing it would lose
+  // the year (new Date("Aug 21") lands in 2001).
   const salesPoints = data.trends.sales.map((s) => ({ x: s.x, y: s.y }));
   const costPoints = data.trends.labor.map((s) => ({ x: s.x, y: s.y }));
 
-  const periodLabel = activeEvent
-    ? `${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
-    : `All events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`;
+  const asDay = (d: Date) => d.toISOString().slice(0, 10);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      {/* Greeting + the three headline counts */}
-      <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="display-num text-[30px] font-medium sm:text-[40px]">
-            {greeting(now.getHours())}, {firstName}
-          </h1>
-          <div className="mt-2.5 text-[13px] text-muted-foreground">
-            {scope.locationName} · {periodLabel}
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-10">
-          <StatCluster icon={<CalendarDays className="h-3.5 w-3.5" />} value={allEvents.length} label="Events" />
-          <StatCluster icon={<Coffee className="h-3.5 w-3.5" />} value={topItems.totalQty} label="Items sold" />
-          <StatCluster icon={<FileText className="h-3.5 w-3.5" />} value={invoiceTracking.totalCount} label="Invoices" />
+    <div className="mx-auto max-w-[1400px] px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+      {/* Breadcrumb + period control */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-[13px] font-normal tracking-normal text-muted-foreground">
+          <span className="sr-only">Overview — </span>
+          {range.scopeLabel} · <span className="text-foreground">{range.subjectLabel}</span> ·{" "}
+          {range.dateLabel}
+        </h1>
+        <div className="-mx-4 overflow-x-auto px-4 scroll-contain sm:mx-0 sm:overflow-visible sm:px-0">
+          <PeriodControl
+            active={range.key}
+            eventLabel={activeEvent?.name ?? null}
+            from={asDay(range.start)}
+            to={asDay(range.end)}
+          />
         </div>
       </div>
 
-      {/* Event revenue mix */}
-      {mixSegments.length > 0 && (
-        <div className="mt-7">
-          <EventMixBar segments={mixSegments} />
-        </div>
-      )}
+      <KpiStrip items={kpis} />
 
-      {/* Bento grid — 320px | 1fr | 300px on desktop, stacking down */}
-      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
-        <UpcomingEvents events={upcoming} />
-        <PnlByEvent columns={pnl} />
-        <div className="min-w-0 lg:col-span-2 2xl:col-span-1">
-          <InvoiceTracking
-            paidCount={invoiceTracking.paidCount}
-            openCount={invoiceTracking.openCount}
-            openBalanceCents={invoiceTracking.openBalanceCents}
-            oldestOpen={invoiceTracking.oldestOpen}
-            recentStatuses={invoiceTracking.recentStatuses}
-          />
-        </div>
+      {/* Statement + rail */}
+      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="min-w-0">
+          <header className="flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-xl font-semibold">Profit &amp; loss statement</h2>
+            <a
+              href="/api/exports/pnl"
+              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+            >
+              Export CSV
+              <Download className="h-3 w-3" aria-hidden />
+            </a>
+          </header>
+          <div className="mt-3.5">
+            {pnl.length > 1 ? (
+              <PnlStatement columns={pnl} />
+            ) : (
+              <p className="panel p-6 text-sm text-muted-foreground">
+                No events fall inside {range.dateLabel}. Pick a wider range, or add an event to start
+                splitting sales and costs by where they happened.
+              </p>
+            )}
+          </div>
+        </section>
 
-        <div className="bento min-w-0 p-4 sm:p-[22px] lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-5">
+          <TopItemsCard items={topItems.items} />
+          <InvoicesDueCard invoices={dueInvoices} now={now} />
+          <UpcomingEventsCard events={upcoming} />
+        </div>
+      </div>
+
+      {/* Day-by-day and category views, below the statement. */}
+      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
-              <span className="text-base font-semibold">Revenue · day by day</span>
+              <h2 className="text-base font-semibold">Revenue · day by day</h2>
               <span className="flex gap-3.5 text-xs text-muted-foreground">
                 <span>● Net sales</span>
-                <span className="text-brand">● Labor cost</span>
+                <span className="text-brand-ink">● Labor cost</span>
               </span>
             </div>
             <Link
@@ -142,7 +194,7 @@ export default async function DashboardPage() {
 
         <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex items-center justify-between">
-            <span className="text-base font-semibold">Item mix</span>
+            <h2 className="text-base font-semibold">Item mix</h2>
             <Link
               href="/reports"
               className="grid h-7 w-7 place-items-center rounded-full border border-border transition-colors hover:bg-accent"
@@ -157,24 +209,10 @@ export default async function DashboardPage() {
             <p className="py-10 text-center text-sm text-muted-foreground">
               {topItems.count === 0
                 ? "No item-level sales yet. Upload the Square per-item CSV to see the mix."
-                : `No item sales between ${fmtDate(data.period.from)} and ${fmtDate(data.period.to)}.`}
+                : `No item sales between ${fmtDate(range.start)} and ${fmtDate(range.end)}.`}
             </p>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCluster({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className="hidden h-[26px] w-[26px] place-items-center rounded-lg border border-border bg-card text-muted-foreground sm:grid">
-        {icon}
-      </span>
-      <div>
-        <div className="display-num text-[26px] font-medium sm:text-[38px]">{value.toLocaleString()}</div>
-        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
       </div>
     </div>
   );

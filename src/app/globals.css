@@ -8,7 +8,14 @@
   Warm cream canvas, rounded bento cards on hairline borders, espresso ink,
   a single chai-rust accent, and one dark card per screen for contrast.
   Display numerals use Bricolage Grotesque; UI text uses DM Sans.
-  Shadows are deliberately absent — depth comes from borders and gradients.
+
+  Colour: every brown and orange is a shade of one of the two colours actually
+  in public/logo.png (#3C2216 and #B85D3C), held at a fixed hue. Beige is the
+  one non-logo family, kept because it is what gives a highlighted row or a
+  bar track separation from the card without adding a third accent.
+
+  Depth: the handoff specifies no shadows; a warm elevation scale was added on
+  request. It is tinted with the logo brown, never black.
 */
 @layer base {
   :root {
@@ -17,32 +24,62 @@
     --font-display: var(--font-display-src), ui-sans-serif, system-ui, sans-serif;
     --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system, sans-serif;
 
+    /* ── Logo ramps ────────────────────────────────────────────────────────
+       Sampled from public/logo.png: the mark uses exactly two colours, a dark
+       roast brown #3C2216 (64% of opaque pixels) and a chai rust #B85D3C
+       (16%). Every brown and orange below is one of those two hues held fixed
+       while lightness/saturation move, so the whole app reads as shades of
+       the logo rather than a palette that merely sits near it. */
+    --ink-950: 19 48% 9%;              /* #22130C */
+    --ink-900: 19 47% 12%;             /* #2D1910 */
+    --ink-800: 19 46% 16%;             /* #3C2216 ← logo brown, exact */
+    --ink-700: 19 42% 22%;             /* #502F21 */
+    --ink-600: 20 34% 30%;             /* #674432 */
+    --ink-500: 21 24% 40%;             /* #7E5F4E */
+    --ink-400: 24 18% 52%;             /* #9B806F */
+    --ink-300: 28 18% 66%;             /* #B8A799 taupe */
+
+    --rust-800: 16 58% 30%;            /* #793820 */
+    --rust-700: 16 56% 36%;            /* #8F4428 */
+    --rust-600: 16 54% 42%;            /* #A55031 */
+    --rust-500: 16 51% 48%;            /* #B95D3C ← logo rust, exact */
+    --rust-400: 16 56% 60%;            /* #D27E60 */
+    --rust-300: 17 62% 74%;            /* #E6AB94 */
+    --rust-200: 20 55% 87%;            /* #F0D8CC */
+    --rust-100: 24 52% 94%;            /* #F8EEE8 */
+
+    /* Beige — the contrast band. Deliberately kept alongside the logo hues:
+       it is what separates a highlighted row or a bar track from the card
+       without introducing a colour the mark doesn't have. */
+    --beige: 37 30% 90%;               /* #EDE7DE highlight row, bar tracks */
+    --beige-deep: 35 26% 85%;          /* #E3DACF pressed / nested beige */
+
     /* Canvas + surfaces */
-    --background: 39 25% 89%;          /* #EAE5DC flat canvas */
-    --canvas-from: 40 46% 95%;         /* #F8F4EC ─┐ page gradient */
-    --canvas-via:  38 38% 92%;         /* #F2ECE2  │ */
-    --canvas-to:   33 64% 91%;         /* #F7EADA ─┘ */
-    --foreground: 23 45% 11%;          /* #2A1A10 espresso ink */
-    --card: 40 50% 98%;                /* #FCFAF6 bento card */
-    --card-foreground: 23 45% 11%;
+    --background: 34 24% 90%;          /* flat canvas fallback */
+    --canvas-from: 38 44% 96%;         /* ─┐ page gradient, warming toward */
+    --canvas-via:  34 34% 93%;         /*  │ the logo rust at the far corner */
+    --canvas-to:   24 40% 91%;         /* ─┘ */
+    --foreground: var(--ink-950);      /* 17.4:1 on card */
+    --card: 40 50% 98%;                /* #FCFBF7 */
+    --card-foreground: var(--ink-950);
     --popover: 40 50% 98%;
-    --popover-foreground: 23 45% 11%;
+    --popover-foreground: var(--ink-950);
 
     /* Espresso — dark cards, active nav pill, primary buttons */
-    --primary: 24 47% 16%;             /* #3A2415 */
-    --primary-foreground: 37 56% 94%;  /* #F8F1E6 */
-    --espresso: 24 47% 16%;
+    --primary: var(--ink-800);
+    --primary-foreground: 37 56% 94%;  /* #F8F2E7 — 13.2:1 on the logo brown */
+    --espresso: var(--ink-800);
     --espresso-foreground: 37 56% 94%;
     /* Chart ink: the data series must stay the strongest mark on the card in
        BOTH themes. --espresso is correct on cream but disappears on dark. */
-    --chart-ink: 24 47% 16%;
+    --chart-ink: var(--ink-800);
 
-    --secondary: 40 47% 96%;           /* #FAF7F1 */
-    --secondary-foreground: 26 21% 30%;
-    --muted: 40 47% 96%;
-    --muted-foreground: 29 14% 38%;    /* darkened from #8B7B6C for 4.5:1 on card + canvas */
-    --accent: 33 36% 92%;
-    --accent-foreground: 26 21% 30%;
+    --secondary: 38 44% 96%;
+    --secondary-foreground: var(--ink-600);
+    --muted: 38 40% 95%;
+    --muted-foreground: var(--ink-500);  /* 5.6:1 on card, 4.8:1 on canvas */
+    --accent: 32 32% 92%;
+    --accent-foreground: var(--ink-600);
 
     /* Status — foreground on its own tinted background */
     --destructive: 0 60% 42%;          /* darkened for 4.5:1 as text on its tint and white on fill */
@@ -56,62 +93,107 @@
     --warning-muted: 41 81% 92%;       /* #FBF0D9 */
 
     /* Single accent + data highlight */
-    --brand: 17 54% 50%;               /* #C4623A chai rust — fills, dots, borders */
+    --brand: var(--rust-500);          /* logo rust — fills, dots, borders */
     --brand-foreground: 0 0% 100%;
-    /* Text-only rust: #C4623A is 3.4:1 on cream and fails as body text, so
-       links/labels use this darker shade while fills keep the design colour. */
-    --brand-ink: 17 60% 36%;
+    /* Text-only rust: the logo rust is 4.3:1 on cream and marginal as body
+       text, so links and labels use the darker step (6.7:1). */
+    --brand-ink: var(--rust-700);
     /* Filled brand buttons need a darker ground for white text to pass. */
-    --brand-strong: 17 56% 42%;
-    --amber: 36 79% 58%;               /* #E8A33D data highlight */
-    --amber-foreground: 24 47% 16%;
+    --brand-strong: var(--rust-600);   /* white on it: 5.5:1 */
+    --brand-muted: var(--rust-100);
+    --amber: 34 76% 58%;               /* #E59F43 — rust hue rotated to gold */
+    --amber-foreground: var(--ink-950);/* 8.0:1 on the amber fill */
+    --amber-deep: 34 62% 46%;          /* #BE7F2D legend / second event colour */
 
-    --border: 33 36% 87%;              /* #EADFD2 hairline */
-    --input: 34 32% 86%;               /* #E6DCCF */
-    --ring: 17 54% 50%;
+    --border: 30 30% 88%;              /* hairline */
+    --input: 30 28% 86%;
+    --ring: var(--rust-500);
     --radius: 1.5rem;                  /* 24px bento card */
+
+    /* Warm elevation. The handoff specifies no shadows; these were added on
+       request. Every layer is tinted with the logo brown rather than black,
+       so depth reads as the paper warming rather than a grey haze. */
+    --shadow-color: 19 46% 16%;
+    --shadow-xs: 0 1px 1px hsl(var(--shadow-color) / 0.04);
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 2px 6px -2px hsl(var(--shadow-color) / 0.07);
+    --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.04), 0 8px 20px -8px hsl(var(--shadow-color) / 0.13);
+    --shadow-lg: 0 2px 4px hsl(var(--shadow-color) / 0.04), 0 18px 44px -14px hsl(var(--shadow-color) / 0.20);
+    --shadow-pop: 0 4px 10px -2px hsl(var(--shadow-color) / 0.10), 0 24px 56px -18px hsl(var(--shadow-color) / 0.26);
   }
 
-  /* Espresso dark mode — same system inverted onto the dark card colour. */
+  /* Espresso dark mode — same ramps inverted onto the dark card colour. */
   .dark {
-    --background: 23 45% 8%;
-    --canvas-from: 23 45% 9%;
-    --canvas-via:  24 40% 8%;
-    --canvas-to:   20 42% 10%;
+    --ink-950: 37 56% 96%;
+    --ink-900: 37 56% 94%;
+    --ink-800: 24 26% 27%;
+    --ink-700: 24 26% 22%;
+    --ink-600: 30 18% 62%;
+    --ink-500: 33 20% 72%;
+    --ink-400: 30 16% 58%;
+    --ink-300: 26 14% 44%;
+
+    --rust-800: 16 62% 38%;
+    --rust-700: 17 70% 68%;
+    --rust-600: 16 62% 38%;
+    --rust-500: 17 62% 58%;
+    --rust-400: 17 62% 66%;
+    --rust-300: 17 50% 40%;
+    --rust-200: 17 40% 26%;
+    --rust-100: 18 32% 18%;
+
+    --beige: 24 22% 20%;
+    --beige-deep: 24 24% 24%;
+
+    --background: 19 45% 7%;
+    --canvas-from: 19 44% 8%;
+    --canvas-via:  20 38% 8%;
+    --canvas-to:   17 40% 10%;
     --foreground: 37 56% 94%;
-    --card: 24 42% 12%;
+    --card: 21 36% 12%;
     --card-foreground: 37 56% 94%;
-    --popover: 24 42% 13%;
+    --popover: 21 34% 14%;
     --popover-foreground: 37 56% 94%;
     --primary: 37 56% 94%;
-    --primary-foreground: 24 47% 14%;
+    --primary-foreground: 19 46% 13%;
     --espresso: 24 26% 27%;            /* lifted: was only 6 L-points above --card, so .bento-dark had no contrast */
     --espresso-foreground: 37 56% 94%;
     --chart-ink: 37 56% 94%;
-    --secondary: 24 26% 18%;
+    --secondary: 22 24% 18%;
     --secondary-foreground: 37 56% 94%;
-    --muted: 24 26% 17%;
+    --muted: 22 24% 17%;
     --muted-foreground: 33 20% 72%;
-    --accent: 24 26% 20%;
+    --accent: 22 24% 21%;
     --accent-foreground: 37 56% 94%;
     --destructive: 0 72% 72%;
-    --destructive-foreground: 24 47% 14%;
+    --destructive-foreground: 19 46% 13%;
     --destructive-muted: 0 45% 16%;
     --success: 148 52% 58%;
     --success-foreground: 0 0% 100%;
     --success-muted: 148 34% 20%;
     --warning: 39 82% 62%;
-    --warning-foreground: 24 47% 14%;
+    --warning-foreground: 19 46% 13%;
     --warning-muted: 39 44% 22%;
     --brand: 17 62% 58%;
     --brand-foreground: 0 0% 100%;
     --brand-ink: 17 70% 68%;
-    --brand-strong: 17 62% 38%;   /* white label was 3.8:1 at 52% */
+    --brand-strong: 16 62% 38%;        /* white label was 3.8:1 at 52% */
+    --brand-muted: 18 32% 18%;
     --amber: 36 79% 60%;
-    --amber-foreground: 24 47% 14%;
-    --border: 26 22% 22%;
-    --input: 26 22% 24%;
+    --amber-foreground: 19 46% 13%;
+    --amber-deep: 36 60% 50%;
+    --border: 24 20% 22%;
+    --input: 24 20% 25%;
     --ring: 17 62% 58%;
+
+    /* On a dark ground a warm-brown shadow is invisible; the elevation cue
+       has to come from something darker than the card, so these deepen to
+       near-black while keeping the brown hue. */
+    --shadow-color: 19 60% 3%;
+    --shadow-xs: 0 1px 1px hsl(var(--shadow-color) / 0.30);
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.34), 0 2px 6px -2px hsl(var(--shadow-color) / 0.40);
+    --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.34), 0 8px 20px -8px hsl(var(--shadow-color) / 0.55);
+    --shadow-lg: 0 2px 4px hsl(var(--shadow-color) / 0.34), 0 18px 44px -14px hsl(var(--shadow-color) / 0.62);
+    --shadow-pop: 0 4px 10px -2px hsl(var(--shadow-color) / 0.45), 0 24px 56px -18px hsl(var(--shadow-color) / 0.70);
   }
 }
 
@@ -238,11 +320,13 @@
     overscroll-behavior-y: auto;
   }
 
-  /* Bento card — the system's primary surface. */
+  /* Bento card — the system's primary surface. The hairline border does the
+     structural work; the shadow only lifts it off the canvas. */
   .bento {
     background-color: hsl(var(--card));
     border: 1px solid hsl(var(--border));
     border-radius: 1.5rem;
+    box-shadow: var(--shadow-sm);
   }
   /* The one dark card per screen that carries contrast. */
   .bento-dark {
@@ -250,6 +334,37 @@
     color: hsl(var(--espresso-foreground));
     border: 1px solid hsl(var(--espresso));
     border-radius: 1.5rem;
+    box-shadow: var(--shadow-md);
+  }
+  /* Panel — the ledger layout's smaller 14px-radius card (right rail). */
+  .panel {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--input));
+    border-radius: 0.875rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* A heavy top rule in the logo brown opens the KPI strip and the P&L
+     statement; hairlines separate the rows inside them. */
+  .rule-strong { border-color: hsl(var(--espresso)); }
+
+  /* The P&L statement is a grid, not a table: the label column takes the
+     slack, each event gets an equal money column, Overall is wider. Below the
+     lg breakpoint the statement is replaced by a card list, so this only ever
+     applies at widths where the columns fit. */
+  .ledger-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(var(--ledger-cols, 4), minmax(0, 96px)) 112px;
+    gap: 8px;
+    align-items: baseline;
+  }
+  /* The highlighted profit row bleeds past the statement's own padding so the
+     beige band reads as a full-width rule rather than an inset chip. */
+  .ledger-highlight {
+    background-color: hsl(var(--beige));
+    margin-inline: -12px;
+    padding-inline: 12px;
+    border-radius: 0.5rem;
   }
 
   @keyframes fade-in-up {
