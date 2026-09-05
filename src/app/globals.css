@@ -363,22 +363,38 @@
   .rule-strong { border-color: hsl(var(--espresso)); }
 
   /* The P&L statement is a grid, not a table: the label column takes the
-     slack, each event gets an equal money column, Overall is wider. Below the
-     lg breakpoint the statement is replaced by a card list, so this only ever
-     applies at widths where the columns fit. */
+     slack, each event gets an equal money column, Overall is wider.
+
+     Every track has a floor. minmax(0, …) on the label and the money columns
+     let them collapse to nothing once the event count outgrew the viewport —
+     at 11 events the label track computed to 0px and the row headers painted
+     on top of the figures. The statement scrolls sideways instead, with the
+     label column pinned, the same treatment .report-matrix gives the wide
+     tables on /reports. */
   .ledger-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(var(--ledger-cols, 4), minmax(0, 96px)) 112px;
+    grid-template-columns: minmax(200px, 1fr) repeat(var(--ledger-cols, 4), 96px) 116px;
     gap: 8px;
     align-items: baseline;
   }
-  /* The highlighted profit row bleeds past the statement's own padding so the
-     beige band reads as a full-width rule rather than an inset chip. */
+  /* Row headers stay readable while the event columns scroll past. The
+     background has to be opaque or the figures show through underneath, which
+     is why the statement sits on a panel rather than straight on the canvas
+     gradient — a sticky cell cannot reproduce a gradient behind itself. */
+  .ledger-row > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: hsl(var(--card));
+    padding-left: 1rem;
+  }
+  .ledger-highlight > :first-child,
   .ledger-highlight {
     background-color: hsl(var(--beige));
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border-radius: 0.5rem;
+  }
+  /* A hairline marks the pinned edge, same as .report-matrix. */
+  .ledger-row > :first-child {
+    box-shadow: 1px 0 0 hsl(var(--border));
   }
 
   @keyframes fade-in-up {

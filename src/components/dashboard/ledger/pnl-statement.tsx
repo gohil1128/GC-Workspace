@@ -60,8 +60,26 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
   return (
     <>
       {/* ── Desktop: the statement proper ─────────────────────────────── */}
-      <div className="hidden lg:block" role="table" aria-label="Profit and loss by event">
-        <div style={gridVars} className="text-[13px] num">
+      {/* The panel is what makes the pinned label column possible: a sticky
+          cell needs an opaque background, and it cannot reproduce the canvas
+          gradient behind itself. */}
+      <div className="panel hidden overflow-hidden lg:block">
+        {/* The scrollport is its own focusable region so the statement can be
+            scrolled from the keyboard. role="table" stays on the element that
+            actually holds the rows — a role-less div between a table and its
+            rows breaks the accessibility tree. */}
+        <div
+          className="overflow-x-auto scroll-contain"
+          role="region"
+          aria-label="Profit and loss statement, scrollable"
+          tabIndex={0}
+        >
+          <div
+            style={gridVars}
+            className="num min-w-max pr-4 text-[13px]"
+            role="table"
+            aria-label="Profit and loss by event"
+          >
           {/* Column heads, doubling as the event colour legend. */}
           <div
             role="row"
@@ -92,7 +110,10 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
             <div key={line.label} role="row" className="ledger-row border-b border-input py-[11px]">
               <span
                 role="rowheader"
-                className={cn("truncate", line.indent ? "pl-3.5 text-muted-foreground" : "font-semibold")}
+                className={cn(
+                  "truncate whitespace-nowrap",
+                  line.indent ? "pl-3.5 text-muted-foreground" : "font-semibold",
+                )}
               >
                 {line.label}
               </span>
@@ -139,7 +160,9 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
           </div>
 
           <div role="row" className="ledger-row py-[11px] text-xs text-muted-foreground">
-            <span role="rowheader">Tips (staff, not in profit)</span>
+            <span role="rowheader" className="whitespace-nowrap">
+              Tips (staff, not in profit)
+            </span>
             {events.map((c) => (
               <span key={c.key} role="cell" className="text-right">
                 {money(c.tipsCents)}
@@ -148,6 +171,7 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
             <span role="cell" className="text-right">
               {money(overall.tipsCents)}
             </span>
+          </div>
           </div>
         </div>
       </div>

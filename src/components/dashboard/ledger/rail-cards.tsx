@@ -9,6 +9,14 @@ import { fmtDate } from "@/lib/date";
   "what do I owe" without leaving the page.
 */
 
+// SalesItem.qty is a Float — items can be sold by weight — and summing floats
+// leaves artefacts like 412.30000000000007. Whole counts stay whole; anything
+// genuinely fractional keeps one decimal.
+const qtyFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+function formatQty(qty: number) {
+  return qtyFormatter.format(qty);
+}
+
 export function TopItemsCard({
   items,
 }: {
@@ -40,11 +48,18 @@ export function TopItemsCard({
                 </span>
                 <b className="num shrink-0">{formatMoney(it.netSalesCents)}</b>
               </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-beige">
-                <div
-                  className={cn("h-full rounded-full", tone[i % tone.length])}
-                  style={{ width: `${max > 0 ? Math.max(4, (it.netSalesCents / max) * 100) : 0}%` }}
-                />
+              {/* Quantity rides on the bar's own line, so the card carries the
+                  extra figure without growing a row taller. */}
+              <div className="mt-1.5 flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-beige">
+                  <div
+                    className={cn("h-full rounded-full", tone[i % tone.length])}
+                    style={{ width: `${max > 0 ? Math.max(4, (it.netSalesCents / max) * 100) : 0}%` }}
+                  />
+                </div>
+                <span className="num shrink-0 text-2xs text-muted-foreground">
+                  {formatQty(it.qty)} sold
+                </span>
               </div>
             </li>
           ))}
