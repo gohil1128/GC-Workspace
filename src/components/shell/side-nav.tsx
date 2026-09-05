@@ -88,7 +88,7 @@ export function SideNav({
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[216px] shrink-0 flex-col gap-1.5 overflow-y-auto overscroll-contain border-r border-input px-[18px] py-[26px] lg:flex">
-      <Link href="/dashboard" className="mb-[22px] ml-1.5 self-start">
+      <Link href="/dashboard" className="logo-plate mb-[22px] ml-1.5 self-start">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="God's Chai" className="h-[52px] w-auto" />
       </Link>

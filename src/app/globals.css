@@ -336,6 +336,20 @@
     border-radius: 1.5rem;
     box-shadow: var(--shadow-md);
   }
+  /* The logo is a two-colour mark and 64% of it is the roast brown, which
+     falls to 1.26:1 on the dark canvas — the CHAI wordmark simply vanishes,
+     leaving only the rust half legible. Filtering the image would distort the
+     very colours this palette is derived from, so dark mode gives the mark the
+     cream paper it was drawn for instead. No-op in light mode.
+     (The login page's brand panel is dark in both themes and keeps its own
+     treatment.) */
+  .dark .logo-plate {
+    background-color: hsl(var(--espresso-foreground));
+    border-radius: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+
   /* Panel — the ledger layout's smaller 14px-radius card (right rail). */
   .panel {
     background-color: hsl(var(--card));
