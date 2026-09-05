@@ -5,6 +5,21 @@ import { addDays, subDays, startOfDay, setHours, setMinutes, format } from "date
 
 const prisma = new PrismaClient();
 
+// This seed creates demo accounts with a published password. It ran on every
+// production build, which put owner@demo.test / demo1234 (OWNER role) into the
+// live database. Refuse to run anywhere that looks like production unless
+// someone opts in explicitly and knowingly.
+const IS_PROD =
+  process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+if (IS_PROD && process.env.ALLOW_DEMO_SEED !== "yes-i-really-mean-it") {
+  console.error(
+    "Refusing to seed demo data in production. This seed creates accounts with a " +
+      "publicly known password. Set ALLOW_DEMO_SEED=yes-i-really-mean-it only if " +
+      "you genuinely want demo accounts in this database.",
+  );
+  process.exit(0);
+}
+
 const SHOULD_RESET = process.env.SEED_RESET === "1";
 
 async function reset() {
