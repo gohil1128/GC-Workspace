@@ -1,6 +1,7 @@
 import { getScope } from "@/lib/scope";
 import { listEmployees } from "@/modules/labor/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
@@ -18,7 +19,8 @@ export default async function EmployeesPage() {
       <PageHeader eyebrow="Labor · Employees" title="Employees" description={`${employees.length} employees · ${employees.filter((e) => e.isActive).length} active`} actions={<NewEmployeeButton />} />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -52,6 +54,34 @@ export default async function EmployeesPage() {
               )}
             </TableBody>
           </Table>
+          </TableOnDesktop>
+
+          <MobileList>
+            {employees.map((e) => (
+              <MobileRow
+                key={e.id}
+                title={e.name}
+                subtitle={e.position}
+                meta={`${formatMoney(e.hourlyRateCents)}/hr`}
+                badges={
+                  <>
+                    {e.isActive ? <Badge variant="success">Active</Badge> : <Badge variant="muted">Inactive</Badge>}
+                    <span className="ml-auto">
+                      <DeleteButton
+                        action={deleteEmployeeAction.bind(null, e.id)}
+                        itemLabel="employee"
+                        itemName={e.name}
+                        confirmText={`This will permanently remove ${e.name} and any shifts assigned to them.`}
+                      />
+                    </span>
+                  </>
+                }
+              >
+                <MobileField label="Email" value={e.email ?? "—"} />
+              </MobileRow>
+            ))}
+            {employees.length === 0 && <MobileEmpty>No employees yet.</MobileEmpty>}
+          </MobileList>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Plus, FileText } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { listPurchaseOrders } from "@/modules/purchasing/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,7 +33,8 @@ export default async function PurchasingPage() {
       />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>PO</TableHead>
@@ -65,6 +67,26 @@ export default async function PurchasingPage() {
               )}
             </TableBody>
           </Table>
+          </TableOnDesktop>
+
+          <MobileList>
+            {pos.map((p) => (
+              <MobileRow
+                key={p.id}
+                href={`/purchasing/${p.id}`}
+                title={`#${p.id.slice(-6).toUpperCase()}`}
+                subtitle={p.supplier.name}
+                meta={formatMoney(p.totalCents)}
+                badges={<Badge variant={statusVariant(p.status) as any}>{p.status}</Badge>}
+              >
+                <MobileField label="Ordered" value={fmtDate(p.orderedAt)} />
+                <MobileField label="Expected" value={p.expectedAt ? fmtDate(p.expectedAt) : "—"} />
+                <MobileField label="Items" value={p.items.length} />
+                <MobileField label="Created by" value={p.createdBy.name} />
+              </MobileRow>
+            ))}
+            {pos.length === 0 && <MobileEmpty>No purchase orders yet.</MobileEmpty>}
+          </MobileList>
         </div>
       </div>
     </div>

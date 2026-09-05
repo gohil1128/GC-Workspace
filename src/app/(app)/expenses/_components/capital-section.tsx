@@ -20,6 +20,7 @@ import {
   deleteCapitalAssetAction,
 } from "@/modules/capital/actions";
 import { CAPITAL_CATEGORIES } from "@/modules/capital/schemas";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 
 type Asset = {
   id: string;
@@ -84,7 +85,8 @@ export function CapitalSection({ assets, events }: { assets: Asset[]; events: Ev
           </div>
         ) : (
           <div className="rounded-xl border overflow-hidden">
-            <Table>
+            <TableOnDesktop>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Item</TableHead>
@@ -140,6 +142,39 @@ export function CapitalSection({ assets, events }: { assets: Asset[]; events: Ev
                 ))}
               </TableBody>
             </Table>
+            </TableOnDesktop>
+
+            <MobileList className="p-3">
+              {assets.map((a) => (
+                <MobileRow
+                  key={a.id}
+                  title={a.name}
+                  subtitle={[a.category, a.vendor].filter(Boolean).join(" · ") || undefined}
+                  meta={money(a.purchasePriceDollars)}
+                  badges={
+                    <>
+                      <Badge variant={a.status === "IN_SERVICE" ? "success" : a.status === "SOLD" ? "muted" : "destructive"}>
+                        {STATUS_LABEL[a.status]}
+                      </Badge>
+                      {a.event && (
+                        <Badge variant="muted">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: a.event.color ?? "hsl(var(--muted-foreground))" }} />
+                          {a.event.name}
+                        </Badge>
+                      )}
+                      <span className="ml-auto flex items-center gap-1">
+                        <EditAssetButton asset={a} events={events} />
+                      </span>
+                    </>
+                  }
+                >
+                  <MobileField label="Net book" value={money(a.netBookValueDollars)} />
+                  <MobileField label="Life" value={a.usefulLifeMonths ? `${a.usefulLifeMonths} mo` : "—"} />
+                  <MobileField label="Bought" value={a.purchaseDate} />
+                </MobileRow>
+              ))}
+              {assets.length === 0 && <MobileEmpty>No capital equipment yet.</MobileEmpty>}
+            </MobileList>
           </div>
         )}
       </CardContent>

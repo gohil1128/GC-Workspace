@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getScope } from "@/lib/scope";
 import { listRecipes } from "@/modules/recipes/queries";
 import { PageHeader } from "@/components/page-header";
+import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney, formatPercent, safeDivide } from "@/lib/money";
@@ -19,7 +20,8 @@ export default async function RecipesPage() {
       <PageHeader eyebrow="Inventory · Recipes" title="Recipes" description={`${recipes.length} menu items`} actions={<NewRecipeButton />} />
       <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <div className="bento">
-          <Table>
+          <TableOnDesktop>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Item</TableHead>
@@ -58,6 +60,35 @@ export default async function RecipesPage() {
               )}
             </TableBody>
           </Table>
+          </TableOnDesktop>
+
+          <MobileList>
+            {recipes.map((r) => {
+              const pct = safeDivide(r.plateCostCents, r.menuPriceCents) * 100;
+              const tone = pct > 35 ? "danger" : pct > 30 ? "warning" : "success";
+              return (
+                <MobileRow
+                  key={r.id}
+                  title={<Link href={`/recipes/${r.id}`} className="hover:underline">{r.name}</Link>}
+                  subtitle={r.category ?? undefined}
+                  meta={formatMoney(r.menuPriceCents)}
+                  badges={
+                    <>
+                      <Badge variant={tone as any}>{formatPercent(pct)} food cost</Badge>
+                      {r.isActive ? <Badge variant="success">Active</Badge> : <Badge variant="muted">Inactive</Badge>}
+                      <span className="ml-auto">
+                        <DeleteButton action={deleteRecipeAction.bind(null, r.id)} itemLabel="recipe" itemName={r.name} />
+                      </span>
+                    </>
+                  }
+                >
+                  <MobileField label="Plate cost" value={formatMoney(r.plateCostCents)} />
+                  <MobileField label="Menu price" value={formatMoney(r.menuPriceCents)} />
+                </MobileRow>
+              );
+            })}
+            {recipes.length === 0 && <MobileEmpty>No recipes yet.</MobileEmpty>}
+          </MobileList>
         </div>
       </div>
     </div>

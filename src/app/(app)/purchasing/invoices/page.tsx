@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { getScope } from "@/lib/scope";
+import { getActiveEvent } from "@/modules/events/queries";
 import { listInvoices, listSuppliersForInvoice } from "@/modules/invoices/queries";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,16 +29,21 @@ export default async function InvoicesPage({
 }) {
   const sp = await searchParams;
   const scope = await getScope();
+  const activeEvent = await getActiveEvent(scope.businessId);
+
+  const onlyUntagged = sp.untagged === "1";
 
   const filters = {
     supplierId: sp.supplier,
+    // Untagged means "belongs to no event", so an event scope would make the
+    // view empty by construction.
+    eventId: onlyUntagged ? null : activeEvent?.id ?? null,
     status: (sp.status as "open" | "closed" | "all" | undefined) ?? "all",
     invoiceNumber: sp.number,
     from: safeDateParam(sp.from),
     to: safeDateParam(sp.to),
   };
 
-  const onlyUntagged = sp.untagged === "1";
 
   const [allInvoices, suppliers] = await Promise.all([
     listInvoices(scope.locationId, filters),
