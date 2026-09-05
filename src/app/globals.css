@@ -53,6 +53,8 @@
        without introducing a colour the mark doesn't have. */
     --beige: 37 30% 90%;               /* #EDE7DE highlight row, bar tracks */
     --beige-deep: 35 26% 85%;          /* #E3DACF pressed / nested beige */
+    /* Cross-highlight tint for the P&L statement's hovered row and column. */
+    --cell-hot: 32 34% 92%;
 
     /* Canvas + surfaces */
     --background: 34 24% 90%;          /* flat canvas fallback */
@@ -143,6 +145,7 @@
 
     --beige: 24 22% 20%;
     --beige-deep: 24 24% 24%;
+    --cell-hot: 24 24% 22%;
 
     --background: 19 45% 7%;
     --canvas-from: 19 44% 8%;
@@ -381,20 +384,50 @@
      background has to be opaque or the figures show through underneath, which
      is why the statement sits on a panel rather than straight on the canvas
      gradient — a sticky cell cannot reproduce a gradient behind itself. */
-  .ledger-row > :first-child {
+  .ledger-row > :first-child,
+  .ledger-row > :last-child {
     position: sticky;
-    left: 0;
     z-index: 1;
     background-color: hsl(var(--card));
-    padding-left: 1rem;
   }
+  /* Row labels on the left, Overall on the right: the two things you need to
+     keep in view while the event columns scroll between them. Hairlines mark
+     both pinned edges, same as .report-matrix. */
+  .ledger-row > :first-child {
+    left: 0;
+    padding-left: 1rem;
+    box-shadow: 1px 0 0 hsl(var(--border));
+  }
+  .ledger-row > :last-child {
+    right: 0;
+    padding-right: 1rem;
+    box-shadow: -1px 0 0 hsl(var(--border));
+  }
+  .ledger-highlight,
   .ledger-highlight > :first-child,
-  .ledger-highlight {
+  .ledger-highlight > :last-child {
     background-color: hsl(var(--beige));
   }
-  /* A hairline marks the pinned edge, same as .report-matrix. */
-  .ledger-row > :first-child {
-    box-shadow: 1px 0 0 hsl(var(--border));
+
+  /* Cross-highlight. The tint goes on the row element so it covers the column
+     gaps too, and is repeated on the pinned cells because their own opaque
+     background would otherwise punch a hole through it. These rules come last
+     deliberately: they tie on specificity with the surface colours above and
+     win on source order. */
+  .ledger-row[data-hot="1"],
+  .ledger-row[data-hot="1"] > :first-child,
+  .ledger-row[data-hot="1"] > :last-child,
+  .ledger-row > [data-hot="1"] {
+    background-color: hsl(var(--cell-hot));
+  }
+  .ledger-highlight[data-hot="1"],
+  .ledger-highlight[data-hot="1"] > :first-child,
+  .ledger-highlight[data-hot="1"] > :last-child,
+  .ledger-highlight > [data-hot="1"] {
+    background-color: hsl(var(--beige-deep));
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ledger-row > *, .ledger-row { transition: background-color 90ms linear; }
   }
 
   @keyframes fade-in-up {

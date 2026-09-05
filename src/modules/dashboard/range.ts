@@ -55,33 +55,46 @@ export async function resolveRange(
   businessId: string,
   params: Record<string, string | string[] | undefined>,
   /* The header's event switcher writes a cookie that scopes several screens.
-     It still wins here when the URL says nothing, so arriving at the Overview
-     with an event selected doesn't silently widen back to the whole season —
-     but an explicit segment click always overrides it. */
+     It focuses the page the same way ?event= does, and ?event= overrides it. */
   activeEvent?: { id: string; name: string; startDate: Date; endDate: Date } | null,
 ): Promise<ResolvedRange> {
   const explicit = parseKey(params.range);
   const now = new Date();
 
-  if (!explicit && activeEvent) {
-    return {
-      key: "event",
-      start: startOfDay(activeEvent.startDate),
-      end: endOfDay(activeEvent.endDate),
-      scopeLabel: "Event",
-      subjectLabel: activeEvent.name,
-      dateLabel: spanLabel(activeEvent.startDate, activeEvent.endDate),
-      eventId: activeEvent.id,
-      empty: false,
-    };
-  }
+  /*
+    Focusing one event, either from ?event= (the statement's column heading) or
+    from the header's event switcher.
+
+    The focus is applied by TAG, not by narrowing the window to the event's own
+    calendar dates. An event's sales, invoices and expenses are attributed by
+    eventId, and that attribution routinely falls outside the event's dates — a
+    catering invoice arrives a week later, a Square export lands the next
+    morning. Squeezing the window to the event's dates therefore discards most
+    of what belongs to it: in the seeded data it took Garba Night from $24,564
+    of tagged net sales to nothing at all.
+
+    So the period control still decides the window; the event only decides
+    whose numbers are shown inside it.
+  */
+  const drillId = Array.isArray(params.event) ? params.event[0] : params.event;
+  // Scoped to businessId so a guessed id from another business resolves to
+  // nothing rather than leaking its name and dates.
+  const focusEvent = drillId
+    ? await prisma.event.findFirst({ where: { id: drillId, businessId } })
+    : (activeEvent ?? null);
 
   const key = explicit ?? "season";
+
+  /** Layers the event focus over whatever window the period control resolved. */
+  const withFocus = (r: ResolvedRange): ResolvedRange =>
+    focusEvent
+      ? { ...r, key: "event", subjectLabel: focusEvent.name, eventId: focusEvent.id }
+      : r;
 
   if (key === "month") {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
-    return {
+    return withFocus({
       key,
       start,
       end,
@@ -90,7 +103,7 @@ export async function resolveRange(
       dateLabel: spanLabel(start, end),
       eventId: null,
       empty: false,
-    };
+    });
   }
 
   if (key === "last-event") {
@@ -104,16 +117,21 @@ export async function resolveRange(
       })) ??
       (await prisma.event.findFirst({ where: { businessId }, orderBy: { startDate: "desc" } }));
     if (event) {
-      return {
+      return withFocus({
         key,
         start: startOfDay(event.startDate),
         end: endOfDay(event.endDate),
         scopeLabel: "Last event",
         subjectLabel: event.name,
         dateLabel: spanLabel(event.startDate, event.endDate),
-        eventId: event.id,
+        // A period, not a focus: this is "what happened on those dates",
+        // everything included. Setting eventId here would re-create the
+        // tag/date mismatch described above — the window would be the event's
+        // three days while the filter demanded its tag, and most of the
+        // event's own rows sit outside its dates.
+        eventId: null,
         empty: false,
-      };
+      });
     }
   }
 
@@ -123,7 +141,7 @@ export async function resolveRange(
     if (from && to && from <= to) {
       const start = startOfDay(from);
       const end = endOfDay(to);
-      return {
+      return withFocus({
         key,
         start,
         end,
@@ -132,14 +150,14 @@ export async function resolveRange(
         dateLabel: spanLabel(start, end),
         eventId: null,
         empty: false,
-      };
+      });
     }
     // Fall through to the season window so the page still renders while the
     // custom dates are being picked, but keep the segment selected.
     const season = await getAllEventsRange(businessId);
     const start = season ? startOfDay(season.start) : startOfDay(new Date(now.getFullYear(), 0, 1));
     const end = season ? endOfDay(season.end) : endOfDay(now);
-    return {
+    return withFocus({
       key,
       start,
       end,
@@ -148,13 +166,13 @@ export async function resolveRange(
       dateLabel: "pick two dates",
       eventId: null,
       empty: false,
-    };
+    });
   }
 
   const season = await getAllEventsRange(businessId);
   const start = season ? startOfDay(season.start) : startOfDay(new Date(now.getFullYear(), 0, 1));
   const end = season ? endOfDay(season.end) : endOfDay(now);
-  return {
+  return withFocus({
     key: "season",
     start,
     end,
@@ -163,5 +181,5 @@ export async function resolveRange(
     dateLabel: spanLabel(start, end),
     eventId: null,
     empty: !season,
-  };
+  });
 }

@@ -25,18 +25,19 @@ type Seg = { key: RangeKey; label: string; href: string };
 
 export function PeriodControl({
   active,
-  eventLabel,
+  eventSegment,
   from,
   to,
 }: {
   active: RangeKey;
-  /** Present when the header's event switcher is scoping the page. */
-  eventLabel?: string | null;
+  /** Present when one event scopes the page — from the header's event
+      switcher, or from drilling into a column of the statement. */
+  eventSegment?: { label: string; href: string } | null;
   from?: string;
   to?: string;
 }) {
   const segs: Seg[] = [
-    ...(eventLabel ? [{ key: "event" as RangeKey, label: eventLabel, href: "/dashboard" }] : []),
+    ...(eventSegment ? [{ key: "event" as RangeKey, ...eventSegment }] : []),
     { key: "season", label: "Season", href: "/dashboard?range=season" },
     { key: "month", label: "This month", href: "/dashboard?range=month" },
     { key: "last-event", label: "Last event", href: "/dashboard?range=last-event" },

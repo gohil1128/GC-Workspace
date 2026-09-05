@@ -68,9 +68,17 @@ export default async function DashboardPage({
   });
 
   const overall = pnl.find((c) => c.key === "overall");
-  const netSalesCents = overall?.netSalesCents ?? 0;
-  const profitCents = overall?.profitCents ?? 0;
-  const txns = overall?.txns ?? 0;
+  // When one event scopes the page, the headline figures have to come from
+  // that event's column, not from Overall. Overall covers everything inside
+  // the window — including other events running the same days — while the
+  // top-items list is filtered to the event, so reading both from Overall
+  // would put a net-sales figure next to an item list that doesn't add up
+  // to it. The statement keeps showing the whole window: comparing against
+  // what else ran those days is the point of it.
+  const focus = (range.eventId ? pnl.find((c) => c.key === range.eventId) : null) ?? overall;
+  const netSalesCents = focus?.netSalesCents ?? 0;
+  const profitCents = focus?.profitCents ?? 0;
+  const txns = focus?.txns ?? 0;
 
   const deltaPct = priorNetSales ? ((netSalesCents - priorNetSales) / priorNetSales) * 100 : null;
   const avgTicketCents = txns > 0 ? Math.round(safeDivide(netSalesCents, txns)) : 0;
@@ -90,7 +98,7 @@ export default async function DashboardPage({
     {
       label: "Profit",
       value: formatMoneyHeadline(profitCents, { signed: true }),
-      sub: netSalesCents > 0 ? `${formatPercent(overall?.marginPct ?? 0)} margin` : "No sales in range",
+      sub: netSalesCents > 0 ? `${formatPercent(focus?.marginPct ?? 0)} margin` : "No sales in range",
     },
     {
       label: "Open invoices",
@@ -129,7 +137,13 @@ export default async function DashboardPage({
         <div className="-mx-4 overflow-x-auto px-4 scroll-contain sm:mx-0 sm:overflow-visible sm:px-0">
           <PeriodControl
             active={range.key}
-            eventLabel={activeEvent?.name ?? null}
+            eventSegment={
+              range.key === "event" && range.eventId
+                ? { label: range.subjectLabel, href: `/dashboard?event=${range.eventId}` }
+                : activeEvent
+                  ? { label: activeEvent.name, href: "/dashboard" }
+                  : null
+            }
             from={asDay(range.start)}
             to={asDay(range.end)}
           />
