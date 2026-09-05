@@ -70,7 +70,10 @@ export default function LoginPage() {
           {/* Logo shows here on small screens, where the brand panel is hidden. */}
           {!logoFailed && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/logo.png" alt="God's Chai" className="mb-6 h-14 w-auto lg:hidden" />
+            <span className="logo-plate mb-6 inline-block lg:hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="God's Chai" className="h-14 w-auto" />
+            </span>
           )}
           <h1 className="display-num text-[30px] font-medium">Welcome back</h1>
           <p className="mt-1.5 text-[13px] text-muted-foreground">Sign in to your back-office</p>

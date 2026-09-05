@@ -171,3 +171,27 @@ function bucketLaborByDay(
   }
   return Object.entries(out).map(([x, y]) => ({ x, y: Math.round(y * 100) / 100 }));
 }
+
+/**
+ * Net sales for the window of equal length immediately before `range`.
+ *
+ * The Overview's headline shows a change figure. "vs last season" isn't
+ * derivable — the app has no season concept — so the comparison is against the
+ * preceding stretch of the same length, and the label says exactly that.
+ * Returns null when that earlier window has no sales at all, since a change
+ * from zero is a meaningless percentage.
+ */
+export async function getPriorNetSales(
+  locationId: string,
+  range: { start: Date; end: Date },
+): Promise<number | null> {
+  const span = range.end.getTime() - range.start.getTime();
+  const priorEnd = new Date(range.start.getTime() - 1);
+  const priorStart = new Date(priorEnd.getTime() - span);
+  const agg = await prisma.dailySales.aggregate({
+    where: { locationId, businessDate: { gte: priorStart, lte: priorEnd } },
+    _sum: { netSalesCents: true },
+  });
+  const cents = agg._sum.netSalesCents ?? 0;
+  return cents > 0 ? cents : null;
+}

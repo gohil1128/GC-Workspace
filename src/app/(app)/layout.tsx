@@ -4,6 +4,7 @@ import { getScope } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { isRecipesLocked } from "@/modules/recipes-lock/actions";
 import { getActiveEvent, listActiveEvents } from "@/modules/events/queries";
+import { countOpenInvoices } from "@/modules/invoices/queries";
 import { BrandBar } from "@/components/shell/brand-bar";
 import { LocationSwitcher } from "@/components/shell/location-switcher";
 import { EventSwitcher } from "@/components/shell/event-switcher";
@@ -17,11 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await auth();
   if (!session?.user) redirect("/login");
   const scope = await getScope();
-  const [business, recipesLocked, events, activeEvent] = await Promise.all([
+  const [business, recipesLocked, events, activeEvent, openInvoices] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId }, select: { name: true } }),
     isRecipesLocked(scope.businessId),
     listActiveEvents(scope.businessId),
     getActiveEvent(scope.businessId),
+    countOpenInvoices(scope.locationId),
   ]);
   const activeLocation = scope.availableLocations.find((l) => l.id === scope.locationId)!;
 
@@ -39,6 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         recipesLocked={recipesLocked}
         events={events}
         userName={session.user.name ?? "User"}
+        openInvoices={openInvoices}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

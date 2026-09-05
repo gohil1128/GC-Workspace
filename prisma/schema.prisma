@@ -754,3 +754,17 @@ model CapitalAsset {
   @@index([locationId])
   @@index([eventId])
 }
+
+// Login throttling. Serverless means per-instance counters are unreliable, so
+// attempts are tracked in the database. One row per key, where a key is either
+// "email:<address>" or "ip:<addr>" — email catches an attack on one account,
+// IP catches spraying across many.
+model LoginAttempt {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  failures    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([updatedAt])
+}

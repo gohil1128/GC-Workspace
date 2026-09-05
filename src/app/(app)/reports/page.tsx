@@ -269,7 +269,7 @@ export default async function ReportsPage() {
                     {supplierMatrix.hasUntagged && (
                       <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandUntagged)}</TableCell>
                     )}
-                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
+                    <TableCell className="text-right num font-semibold text-brand-ink">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -342,7 +342,7 @@ export default async function ReportsPage() {
                     {categoryMatrix.hasUntagged && (
                       <TableCell className="text-right num font-semibold">{formatMoney(categoryMatrix.grandUntagged)}</TableCell>
                     )}
-                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(categoryMatrix.grandTotal)}</TableCell>
+                    <TableCell className="text-right num font-semibold text-brand-ink">{formatMoney(categoryMatrix.grandTotal)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

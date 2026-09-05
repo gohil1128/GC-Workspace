@@ -66,11 +66,14 @@ export function SideNav({
   recipesLocked,
   events,
   userName,
+  openInvoices,
 }: {
   role: "OWNER" | "MANAGER";
   recipesLocked: boolean;
   events: SideNavEvent[];
   userName: string;
+  /** Drives the count badge on Invoices; hidden at zero. */
+  openInvoices: number;
 }) {
   const pathname = usePathname();
   const items = ITEMS.filter((i) => !i.ownerOnly || role === "OWNER");
@@ -85,7 +88,7 @@ export function SideNav({
 
   return (
     <aside className="sticky top-0 hidden h-[100dvh] w-[216px] shrink-0 flex-col gap-1.5 overflow-y-auto overscroll-contain border-r border-input px-[18px] py-[26px] lg:flex">
-      <Link href="/dashboard" className="mb-[22px] ml-1.5 self-start">
+      <Link href="/dashboard" className="logo-plate mb-[22px] ml-1.5 self-start">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="God's Chai" className="h-[52px] w-auto" />
       </Link>
@@ -105,7 +108,20 @@ export function SideNav({
                     : "text-secondary-foreground hover:bg-accent",
                 )}
               >
-                {i.label}
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate">{i.label}</span>
+                  {i.href === "/purchasing/invoices" && openInvoices > 0 && (
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-[7px] py-px text-[10px] font-semibold leading-[1.4]",
+                        active ? "bg-espresso-foreground text-espresso" : "bg-brand text-brand-foreground",
+                      )}
+                    >
+                      {openInvoices > 99 ? "99+" : openInvoices}
+                      <span className="sr-only"> open invoices</span>
+                    </span>
+                  )}
+                </span>
               </Link>
               {active && i.subs && (
                 <div className="ml-3 flex flex-col gap-0.5 border-l border-border pl-2.5">
@@ -143,7 +159,9 @@ export function SideNav({
                 className="h-2 w-2 shrink-0 rounded-[2px]"
                 style={{ backgroundColor: e.color ?? "hsl(var(--muted-foreground))" }}
               />
-              <span className="truncate">{e.name}</span>
+              <span className="truncate" title={e.name}>
+                {e.name}
+              </span>
             </span>
           ))}
         </div>
