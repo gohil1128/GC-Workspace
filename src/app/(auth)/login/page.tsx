@@ -78,8 +78,8 @@ export default function LoginPage() {
           <form action={formAction} className="mt-7 grid gap-3.5">
             <div className="grid gap-1.5">
               <Label htmlFor="email" className="text-xs text-muted-foreground">Email</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required
-                className="h-12 rounded-2xl px-4 text-sm" defaultValue="owner@demo.test" />
+              <Input id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com"
+                className="h-12 rounded-2xl px-4 text-sm" />
             </div>
             <div className="grid gap-1.5">
               <div className="flex items-baseline justify-between">
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 <Link href="/forgot-password" className="text-xs text-brand-ink hover:underline">Forgot?</Link>
               </div>
               <Input id="password" name="password" type="password" autoComplete="current-password" required
-                className="h-12 rounded-2xl px-4 text-sm" defaultValue="demo1234" />
+                className="h-12 rounded-2xl px-4 text-sm" />
             </div>
 
             {state?.error && (
@@ -100,7 +100,6 @@ export default function LoginPage() {
               <input type="checkbox" name="keepSignedIn" className="h-3.5 w-3.5 accent-[hsl(var(--brand))]" />
               Keep me signed in on this device
             </label>
-            <p className="mt-2 text-2xs text-muted-foreground">Demo: owner@demo.test / demo1234</p>
           </form>
         </div>
       </main>
