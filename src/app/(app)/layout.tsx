@@ -52,8 +52,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <div className="lg:hidden">
                 <BrandBar businessName={business?.name ?? "Operations"} />
               </div>
+              {/* Scope line. The location is only worth naming when there is
+                  more than one to be in: for a business that travels to its
+                  events, the event is the venue and a fixed "location" is just
+                  a container the data model needs. It stays in the user menu
+                  either way. */}
               <span className="hidden truncate text-[13px] text-muted-foreground lg:inline">
-                {business?.name ?? "Operations"} · {activeLocation.name}
+                {business?.name ?? "Operations"}
+                {scope.availableLocations.length > 1 ? ` · ${activeLocation.name}` : ""}
                 {activeEvent ? ` · ${activeEvent.name}` : " · All events"}
               </span>
             </div>
