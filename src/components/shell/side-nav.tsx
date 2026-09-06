@@ -18,8 +18,8 @@ type Item = { href: string; label: string; ownerOnly?: boolean; subs?: Sub[] };
 
 const ITEMS: Item[] = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/reports", label: "Profit & loss" },
   { href: "/events", label: "Events" },
+  { href: "/reports", label: "Profit & loss" },
   {
     href: "/purchasing/invoices",
     label: "Invoices",

@@ -38,16 +38,19 @@ export default async function EventsPage() {
             }
           />
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          // [&>*]:min-w-0 — grid children default to min-width:auto, which let
+          // these cards hold a ~420px intrinsic width and overflow the page on
+          // a phone, taking the fixed tab bar off-screen with it.
+          <ul className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map(({ event, column }) => {
               const upcoming = event.endDate >= now;
               return (
-                <li key={event.id}>
+                <li key={event.id} className="min-w-0">
                   <Link
                     href={`/events/${event.id}`}
                     className="bento block h-full p-4 transition-colors hover:bg-accent/40 sm:p-5"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2">
                         <span
                           aria-hidden
@@ -101,7 +104,7 @@ export default async function EventsPage() {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-2xs uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dt className="truncate text-2xs uppercase tracking-wider text-muted-foreground">{label}</dt>
       <dd className={`num mt-0.5 truncate text-[13px] font-semibold ${tone ?? ""}`}>{value}</dd>
     </div>
   );

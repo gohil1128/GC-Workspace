@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Download } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Download } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
@@ -155,15 +155,26 @@ export default async function DashboardPage({
       {/* Statement + rail */}
       <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
-          <header className="flex items-baseline justify-between gap-3">
+          <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="font-display text-xl font-semibold">Profit &amp; loss statement</h2>
-            <a
-              href="/api/exports/pnl"
-              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
-            >
-              Export CSV
-              <Download className="h-3 w-3" aria-hidden />
-            </a>
+            <div className="flex shrink-0 items-center gap-3">
+              {/* The statement's column headings already open an event, but
+                  that isn't discoverable — this names the destination. */}
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+              >
+                Browse events
+                <ArrowRight className="h-3 w-3" aria-hidden />
+              </Link>
+              <a
+                href="/api/exports/pnl"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+              >
+                Export CSV
+                <Download className="h-3 w-3" aria-hidden />
+              </a>
+            </div>
           </header>
           <div className="mt-3.5">
             {pnl.length > 1 ? (

@@ -13,13 +13,17 @@ import { cn } from "@/lib/utils";
 // get too narrow to hit reliably.
 const TABS = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  // Events sits in the bar rather than behind "More": it is the thing this
+  // business is organised around, and every other screen is scoped by it.
+  // Reports gives up the slot — the Overview already carries the P&L
+  // statement on a phone, so /reports is the more duplicative of the two.
+  { href: "/events", label: "Events", icon: CalendarDays },
   { href: "/cash", label: "Cash", icon: Wallet },
   { href: "/purchasing/invoices", label: "Invoices", icon: FileText },
 ] as const;
 
 const MORE = [
-  { href: "/events", label: "Events", icon: CalendarDays },
+  { href: "/reports", label: "Profit & loss", icon: BarChart3 },
   { href: "/inventory", label: "Ingredients", icon: Boxes },
   { href: "/inventory/counts", label: "Counts", icon: Boxes },
   { href: "/inventory/variance", label: "Variance", icon: BarChart3 },
