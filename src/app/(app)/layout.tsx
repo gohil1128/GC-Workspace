@@ -8,7 +8,6 @@ import { countOpenInvoices } from "@/modules/invoices/queries";
 import { BrandBar } from "@/components/shell/brand-bar";
 import { LocationSwitcher } from "@/components/shell/location-switcher";
 import { EventSwitcher } from "@/components/shell/event-switcher";
-import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { UserMenu } from "@/components/shell/user-menu";
 import { PageTransition } from "@/components/shell/page-transition";
 import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
@@ -61,8 +60,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <LocationSwitcher active={activeLocation} options={scope.availableLocations} />
               <EventSwitcher events={events} activeEventId={activeEvent?.id ?? null} />
-              <ThemeToggle />
-              <UserMenu name={session.user.name ?? "User"} email={session.user.email ?? ""} role={scope.role} />
+              <UserMenu
+                name={session.user.name ?? "User"}
+                email={session.user.email ?? ""}
+                role={scope.role}
+                locationName={activeLocation.name}
+              />
             </div>
           </div>
         </header>
