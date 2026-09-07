@@ -5,15 +5,15 @@ import { SectionPinGate } from "@/components/section-pin-gate";
 
 export const dynamic = "force-dynamic";
 
-export default async function RecipesLayout({ children }: { children: React.ReactNode }) {
+export default async function EventsLayout({ children }: { children: React.ReactNode }) {
   const scope = await getScope();
-  if (await isSectionLocked(scope.businessId, "RECIPES")) {
+  if (await isSectionLocked(scope.businessId, "EVENTS")) {
     return (
       <div>
-        <PageHeader title="Recipes" description="Section protected by PIN" />
+        <PageHeader title="Events" description="Section protected by PIN" />
         <SectionPinGate
-          title="Recipes are locked"
-          blurb="Enter the 4-digit PIN to view recipes and BOM costs."
+          title="Events are locked"
+          blurb="Enter the 4-digit PIN to view each event's sales, costs and P&L."
         />
       </div>
     );

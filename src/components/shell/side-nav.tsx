@@ -60,17 +60,25 @@ const ITEMS: Item[] = [
   },
 ];
 
+/** Which nav destinations can sit behind the PIN. */
+const LOCKABLE: Record<string, string | undefined> = {
+  "/reports": "REPORTS",
+  "/events": "EVENTS",
+  "/recipes": "RECIPES",
+};
+
 export type SideNavEvent = { id: string; name: string; color: string | null };
 
 export function SideNav({
   role,
-  recipesLocked,
+  lockedSections,
   events,
   userName,
   openInvoices,
 }: {
   role: "OWNER" | "MANAGER";
-  recipesLocked: boolean;
+  /** Sections currently behind the PIN — badged so the lock isn't a surprise. */
+  lockedSections: readonly string[];
   events: SideNavEvent[];
   userName: string;
   /** Drives the count badge on Invoices; hidden at zero. */
@@ -110,7 +118,12 @@ export function SideNav({
                 )}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className="truncate">{i.label}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate">{i.label}</span>
+                    {i.href in LOCKABLE && lockedSections.includes(LOCKABLE[i.href]!) && (
+                      <Lock className="h-3 w-3 shrink-0 text-warning" aria-label="Locked" />
+                    )}
+                  </span>
                   {i.href === "/purchasing/invoices" && openInvoices > 0 && (
                     <span
                       className={cn(
@@ -139,7 +152,9 @@ export function SideNav({
                       )}
                     >
                       {s.label}
-                      {s.href === "/recipes" && recipesLocked && <Lock className="h-3 w-3 text-warning" />}
+                      {s.href === "/recipes" && lockedSections.includes("RECIPES") && (
+                        <Lock className="h-3 w-3 text-warning" aria-label="Locked" />
+                      )}
                     </Link>
                   ))}
                 </div>

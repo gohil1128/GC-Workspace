@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getScope } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
-import { isRecipesLocked } from "@/modules/recipes-lock/actions";
+import { lockedSectionsNow } from "@/modules/section-lock/actions";
 import { getActiveEvent, listActiveEvents } from "@/modules/events/queries";
 import { countOpenInvoices } from "@/modules/invoices/queries";
 import { BrandBar } from "@/components/shell/brand-bar";
@@ -17,9 +17,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await auth();
   if (!session?.user) redirect("/login");
   const scope = await getScope();
-  const [business, recipesLocked, events, activeEvent, openInvoices] = await Promise.all([
+  const [business, lockedSections, events, activeEvent, openInvoices] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId }, select: { name: true } }),
-    isRecipesLocked(scope.businessId),
+    lockedSectionsNow(scope.businessId),
     listActiveEvents(scope.businessId),
     getActiveEvent(scope.businessId),
     countOpenInvoices(scope.locationId),
@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Web: 216px sidebar. Below lg it collapses and MobileTabBar takes over. */}
       <SideNav
         role={scope.role}
-        recipesLocked={recipesLocked}
+        lockedSections={lockedSections}
         events={events}
         userName={session.user.name ?? "User"}
         openInvoices={openInvoices}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Download } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Download, Lock } from "lucide-react";
 import { getScope } from "@/lib/scope";
 import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
@@ -7,6 +7,7 @@ import { resolveRange } from "@/modules/dashboard/range";
 import { getActiveEvent, listUpcomingEvents } from "@/modules/events/queries";
 import { getInvoiceTracking, listOpenInvoicesDue } from "@/modules/invoices/queries";
 import { pnlByEvent } from "@/modules/reports/queries";
+import { isSectionLocked } from "@/modules/section-lock/actions";
 import { fmtDate } from "@/lib/date";
 import { formatMoney, formatMoneyHeadline, formatPercent, safeDivide } from "@/lib/money";
 import { KpiStrip, type Kpi } from "@/components/dashboard/ledger/kpi-strip";
@@ -44,6 +45,10 @@ export default async function DashboardPage({
   const activeEvent = await getActiveEvent(scope.businessId);
   const range = await resolveRange(scope.businessId, params, activeEvent);
   const now = new Date();
+  // Locking "Profit & loss" has to cover the Overview too. The statement and
+  // the profit figures live here as well, so gating only /reports would hide
+  // the page while leaving the same margins on the landing screen.
+  const pnlLocked = await isSectionLocked(scope.businessId, "REPORTS");
 
   const [data, pnl, invoiceTracking, dueInvoices, priorNetSales, upcoming] = await Promise.all([
     getDashboard({
@@ -97,8 +102,12 @@ export default async function DashboardPage({
     },
     {
       label: "Profit",
-      value: formatMoneyHeadline(profitCents, { signed: true }),
-      sub: netSalesCents > 0 ? `${formatPercent(focus?.marginPct ?? 0)} margin` : "No sales in range",
+      value: pnlLocked ? "•••" : formatMoneyHeadline(profitCents, { signed: true }),
+      sub: pnlLocked
+        ? "Locked"
+        : netSalesCents > 0
+          ? `${formatPercent(focus?.marginPct ?? 0)} margin`
+          : "No sales in range",
     },
     {
       label: "Open invoices",
@@ -157,6 +166,9 @@ export default async function DashboardPage({
         <section className="min-w-0">
           <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="font-display text-xl font-semibold">Profit &amp; loss statement</h2>
+            {/* Not rendered rather than CSS-hidden: a locked page should not
+                carry a live link to its own export, even an invisible one. */}
+            {!pnlLocked && (
             <div className="flex shrink-0 items-center gap-3">
               {/* The statement's column headings already open an event, but
                   that isn't discoverable — this names the destination. */}
@@ -175,9 +187,25 @@ export default async function DashboardPage({
                 <Download className="h-3 w-3" aria-hidden />
               </a>
             </div>
+            )}
           </header>
           <div className="mt-3.5">
-            {pnl.length > 1 ? (
+            {pnlLocked ? (
+              <div className="panel flex flex-col items-center gap-3 p-8 text-center">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-muted">
+                  <Lock className="h-4 w-4 text-muted-foreground" aria-hidden />
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  Profit &amp; loss is locked. Enter the PIN to see the statement.
+                </p>
+                <Link
+                  href="/reports"
+                  className="rounded-full bg-espresso px-4 py-2 text-[13px] font-medium text-espresso-foreground"
+                >
+                  Unlock
+                </Link>
+              </div>
+            ) : pnl.length > 1 ? (
               <PnlStatement columns={pnl} />
             ) : (
               <p className="panel p-6 text-sm text-muted-foreground">
