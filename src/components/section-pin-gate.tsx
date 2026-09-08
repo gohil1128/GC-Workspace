@@ -4,7 +4,6 @@ import { Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { unlockSectionsAction } from "@/modules/section-lock/actions";
 import { toast } from "@/components/ui/use-toast";
 
@@ -89,17 +88,22 @@ export function SectionPinGate({ title, blurb }: { title: string; blurb: string 
                 ref={inputRef}
                 value={pin}
                 onChange={onChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    attempt(pin);
+                  }
+                }}
                 className="num text-center text-2xl tracking-[0.5em]"
                 required
               />
             </div>
-            {/* Unlocking happens on the fourth digit; this stays for keyboard
-                and assistive-tech users who expect an explicit submit. */}
-            <Button type="submit" disabled={pending || pin.length !== 4}>
-              {pending ? "Unlocking…" : "Unlock"}
-            </Button>
-            <p className="text-center text-2xs text-muted-foreground">
-              Opens every locked section for 60 minutes.
+            {/* No submit button: the fourth digit unlocks. Enter is wired on the
+                input itself rather than relying on implicit form submission,
+                which browsers only guarantee for a single-input form — this one
+                qualifies today, but that is a fragile thing to depend on. */}
+            <p className="text-center text-2xs text-muted-foreground" aria-live="polite">
+              {pending ? "Checking…" : "Opens every locked section for 60 minutes."}
             </p>
           </form>
         </CardContent>
