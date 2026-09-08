@@ -144,6 +144,26 @@ export async function lockedSectionsNow(businessId: string): Promise<SectionKey[
   );
 }
 
+/**
+ * Is this section open right now *only* because someone entered the PIN?
+ *
+ * Distinct from "not locked": a section nobody chose to lock is open for good
+ * and has nothing to re-lock. This is what decides whether the section shows a
+ * "Lock" control.
+ */
+export async function isSectionUnlockedByPin(
+  businessId: string,
+  section: SectionKey,
+): Promise<boolean> {
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { sectionPinHash: true, lockedSections: true },
+  });
+  if (!business?.sectionPinHash) return false;
+  if (!business.lockedSections.includes(section)) return false;
+  return await unlockIsFresh();
+}
+
 /** What the settings card needs: the PIN's existence and the chosen sections. */
 export async function sectionLockSettings(businessId: string) {
   const business = await prisma.business.findUnique({

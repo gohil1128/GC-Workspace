@@ -1,6 +1,5 @@
 "use client";
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,9 +14,48 @@ import { toast } from "@/components/ui/use-toast";
  * implying this PIN only opens the page you happen to be on.
  */
 export function SectionPinGate({ title, blurb }: { title: string; blurb: string }) {
-  const router = useRouter();
   const [pin, setPin] = React.useState("");
   const [pending, start] = React.useTransition();
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Guarded so the fourth keystroke and a stray Enter can't fire two attempts
+  // at once — each failure is a rate-limit-free but still pointless round trip,
+  // and a double submit would clear the field twice.
+  const attempt = React.useCallback(
+    (value: string) => {
+      if (pending || !/^\d{4}$/.test(value)) return;
+      const fd = new FormData();
+      fd.set("pin", value);
+      start(async () => {
+        try {
+          const res = await unlockSectionsAction(fd);
+          if (res && "error" in res && res.error) {
+            toast({ title: res.error, variant: "destructive" });
+            setPin("");
+            inputRef.current?.focus();
+            return;
+          }
+          // Full reload rather than a client refresh: the unlock lives in a
+          // cookie the server action just set, and a refresh races it.
+          // Measured — one run in three stayed locked for 4s and only opened
+          // on a hard navigation. This is a gate; it must be deterministic,
+          // and a reload is imperceptible for a once-an-hour action.
+          window.location.reload();
+        } catch (err: any) {
+          toast({ title: "Unlock failed", description: String(err?.message ?? err), variant: "destructive" });
+        }
+      });
+    },
+    [pending],
+  );
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value.replace(/\D/g, "").slice(0, 4);
+    setPin(next);
+    // Four digits is the whole PIN — there is nothing left to confirm, so
+    // don't make anyone reach for a button to say so.
+    if (next.length === 4) attempt(next);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,21 +63,7 @@ export function SectionPinGate({ title, blurb }: { title: string; blurb: string 
       toast({ title: "Enter the 4-digit PIN", variant: "destructive" });
       return;
     }
-    const fd = new FormData();
-    fd.set("pin", pin);
-    start(async () => {
-      try {
-        const res = await unlockSectionsAction(fd);
-        if (res && "error" in res && res.error) {
-          toast({ title: res.error, variant: "destructive" });
-          setPin("");
-          return;
-        }
-        router.refresh();
-      } catch (err: any) {
-        toast({ title: "Unlock failed", description: String(err?.message ?? err), variant: "destructive" });
-      }
-    });
+    attempt(pin);
   };
 
   return (
@@ -62,12 +86,15 @@ export function SectionPinGate({ title, blurb }: { title: string; blurb: string 
                 pattern="\d{4}"
                 maxLength={4}
                 autoFocus
+                ref={inputRef}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={onChange}
                 className="num text-center text-2xl tracking-[0.5em]"
                 required
               />
             </div>
+            {/* Unlocking happens on the fourth digit; this stays for keyboard
+                and assistive-tech users who expect an explicit submit. */}
             <Button type="submit" disabled={pending || pin.length !== 4}>
               {pending ? "Unlocking…" : "Unlock"}
             </Button>
