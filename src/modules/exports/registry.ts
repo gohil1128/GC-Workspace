@@ -9,6 +9,7 @@ import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/quer
 import { listExpenses, EXPENSE_CATEGORIES } from "@/modules/expenses/queries";
 import { listVendors } from "@/modules/vendors/queries";
 import { getEventDetail } from "@/modules/events/detail";
+import { getActiveEvent } from "@/modules/events/queries";
 import {
   listDailySalesForExport,
   listSalesItemsForExport,
@@ -39,12 +40,27 @@ const money = (cents: number) => fromCents(cents).toFixed(2);
 
 const EXPENSE_LABEL = new Map(EXPENSE_CATEGORIES.map((c) => [c.value, c.label]));
 
+// Mirrors the invoice list page's own resolution: an explicit ?event= (a real
+// id, or the "all" sentinel for "ignore the header's active event") wins;
+// absent, the page defers to whatever event the header switcher's cookie has
+// active. Without this fallback the CSV silently exported more rows than the
+// screen showed whenever a cookie-scoped event was active and the list's own
+// filter bar was left untouched — the export claims to match what's on
+// screen, so it has to resolve the cookie the same way the page does.
+function resolveEventFilter(sp: URLSearchParams, activeEventId: string | null): string | null {
+  const raw = sp.get("event");
+  if (raw === "all") return null;
+  if (raw) return raw;
+  return activeEventId;
+}
+
 // Mirrors the invoice list page's query params so a filtered view downloads
 // exactly the rows on screen.
-function invoiceFiltersFrom(sp: URLSearchParams): InvoiceFilters {
+function invoiceFiltersFrom(sp: URLSearchParams, activeEventId: string | null): InvoiceFilters {
   const status = sp.get("status");
   return {
     supplierId: sp.get("supplier") ?? undefined,
+    eventId: resolveEventFilter(sp, activeEventId),
     invoiceNumber: sp.get("number") ?? undefined,
     status: status === "open" || status === "closed" ? status : "all",
     from: sp.get("from") ?? undefined,
@@ -185,8 +201,9 @@ export const EXPORTS: ExportDef[] = [
     description: "One row per supplier bill, with the full tax and adjustment breakdown.",
     group: "Purchasing",
     build: async ({ scope, sp }) => {
+      const activeEvent = await getActiveEvent(scope.businessId);
       const data = applyUntagged(
-        await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp)),
+        await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp, activeEvent?.id ?? null)),
         sp,
       );
       return {
@@ -223,8 +240,9 @@ export const EXPORTS: ExportDef[] = [
     description: "One row per invoice item, carrying its invoice's columns for pivoting.",
     group: "Purchasing",
     build: async ({ scope, sp }) => {
+      const activeEvent = await getActiveEvent(scope.businessId);
       const data = applyUntagged(
-        await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp)),
+        await listInvoicesForExport(scope.locationId, invoiceFiltersFrom(sp, activeEvent?.id ?? null)),
         sp,
       );
       return {

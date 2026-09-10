@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { getScope } from "@/lib/scope";
-import { getActiveEvent } from "@/modules/events/queries";
+import { getActiveEvent, listAllEvents } from "@/modules/events/queries";
 import { listInvoices, listSuppliersForInvoice } from "@/modules/invoices/queries";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ type SortDir = "asc" | "desc";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ supplier?: string; status?: string; number?: string; from?: string; to?: string; untagged?: string; sort?: SortKey; dir?: SortDir }>;
+  searchParams: Promise<{ supplier?: string; event?: string; status?: string; number?: string; from?: string; to?: string; untagged?: string; sort?: SortKey; dir?: SortDir }>;
 }) {
   const sp = await searchParams;
   const scope = await getScope();
@@ -33,11 +33,23 @@ export default async function InvoicesPage({
 
   const onlyUntagged = sp.untagged === "1";
 
+  // The header's event switcher scopes this page too (it's in EVENT_SCOPED),
+  // via a cookie rather than the URL. This page's own filter bar overrides it
+  // explicitly: a real event id narrows further, and "all" is a sentinel for
+  // "show every event even though the header has one active" — without a
+  // distinguishable value for that, there would be no way to widen back out
+  // from this filter bar alone; you'd have to go find the header dropdown.
+  // No `?event=` at all means "defer to the cookie", same as before this
+  // filter existed.
+  const explicitEvent = sp.event;
+  const eventIdFilter =
+    explicitEvent === "all" ? null : explicitEvent ? explicitEvent : (activeEvent?.id ?? null);
+
   const filters = {
     supplierId: sp.supplier,
     // Untagged means "belongs to no event", so an event scope would make the
     // view empty by construction.
-    eventId: onlyUntagged ? null : activeEvent?.id ?? null,
+    eventId: onlyUntagged ? null : eventIdFilter,
     status: (sp.status as "open" | "closed" | "all" | undefined) ?? "all",
     invoiceNumber: sp.number,
     from: safeDateParam(sp.from),
@@ -45,9 +57,10 @@ export default async function InvoicesPage({
   };
 
 
-  const [allInvoices, suppliers] = await Promise.all([
+  const [allInvoices, suppliers, events] = await Promise.all([
     listInvoices(scope.locationId, filters),
     listSuppliersForInvoice(scope.businessId),
+    listAllEvents(scope.businessId),
   ]);
   const invoices = onlyUntagged ? allInvoices.filter((i) => !i.event && !i.appliesToAllEvents) : allInvoices;
 
@@ -82,7 +95,11 @@ export default async function InvoicesPage({
     (filters.status && filters.status !== "all" ? 1 : 0) +
     (filters.invoiceNumber ? 1 : 0) +
     (filters.from ? 1 : 0) +
-    (filters.to ? 1 : 0);
+    (filters.to ? 1 : 0) +
+    // Only counts an explicit choice made on this page — not an event that's
+    // merely inherited from the header's cookie, which isn't "filtered" in a
+    // sense this page's own Clear button could undo.
+    (explicitEvent ? 1 : 0);
 
   const buildSortHref = (key: SortKey) => {
     const params = new URLSearchParams();
@@ -91,6 +108,10 @@ export default async function InvoicesPage({
     if (filters.invoiceNumber) params.set("number", filters.invoiceNumber);
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
+    // Preserves the "all" sentinel as well as a real id — sorting shouldn't
+    // silently widen the view back to the header's active event.
+    if (explicitEvent) params.set("event", explicitEvent);
+    if (onlyUntagged) params.set("untagged", "1");
     params.set("sort", key);
     params.set("dir", sortKey === key && sortDir === "desc" ? "asc" : "desc");
     return `/purchasing/invoices?${params.toString()}`;
@@ -146,7 +167,17 @@ export default async function InvoicesPage({
           />
         </StatTileRow>
 
-        <InvoiceFilters suppliers={suppliers} />
+        {/* Keyed to the resolved event: if the header's cookie changes (its
+            own switcher does a router.refresh(), not a URL change), this
+            form's mounted state wouldn't otherwise pick up the new default —
+            the key forces a remount so "All events" never shows stale next to
+            an actually-narrower list. */}
+        <InvoiceFilters
+          key={`ev:${eventIdFilter ?? "all"}`}
+          suppliers={suppliers}
+          events={events}
+          initialEventId={eventIdFilter ?? "all"}
+        />
         {onlyUntagged && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning-muted px-3 py-2 text-xs">
             <span>
