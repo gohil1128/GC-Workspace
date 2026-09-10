@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
@@ -87,40 +88,143 @@ export async function resetPasswordAction(userId: string): Promise<{ ok: true; e
   return { ok: true, email: user.email, password };
 }
 
-export async function deleteUserAction(userId: string) {
+export async function deleteUserAction(userId: string): Promise<{ ok: true } | { error: string }> {
   await requireOwner();
   const scope = await getScope();
-  if (userId === scope.userId) throw new Error("You can't delete your own account.");
+  if (userId === scope.userId) return { error: "You can't delete your own account." };
   const user = await prisma.user.findFirst({ where: { id: userId, businessId: scope.businessId } });
-  if (!user) throw new Error("User not found");
+  if (!user) return { error: "User not found" };
 
   // Block deleting the last owner (we always need at least one OWNER)
   if (user.role === "OWNER") {
     const ownerCount = await prisma.user.count({ where: { businessId: scope.businessId, role: "OWNER" } });
-    if (ownerCount <= 1) throw new Error("Can't delete the last owner. Promote someone else first.");
+    if (ownerCount <= 1) return { error: "Can't delete the last owner. Promote someone else first." };
   }
 
-  await prisma.user.delete({ where: { id: userId } });
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+  } catch (err) {
+    // Every invoice, expense, purchase order, cash close and inventory count
+    // they created still points at them on purpose — that's what reporting
+    // reads "who did this" from, so it's never silently reassigned or
+    // nulled out. The delete is correctly refused by the database until
+    // those are moved to someone else; this just turns the raw constraint
+    // error into the actual next step, since the permission check above
+    // already passed and this is the real reason the delete failed, not an
+    // access problem.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      return {
+        error: `${user.name} still has invoices, expenses, purchase orders, cash closes, or inventory counts on their account. Open their profile and reassign those to someone else first, then delete.`,
+      };
+    }
+    throw err;
+  }
+
   await writeAudit({
     businessId: scope.businessId, userId: scope.userId,
     action: "user.delete", entityType: "User", entityId: userId,
     diff: { name: user.name, email: user.email },
   });
   revalidatePath("/settings/users");
+  return { ok: true };
 }
 
-export async function updateUserRoleAction(userId: string, role: "OWNER" | "MANAGER") {
+/** Everything a reassignment below would move — shown before it runs. */
+export async function getReassignableCounts(userId: string) {
+  const [purchaseOrders, invoices, expenses, capitalAssets, cashClosesClosed, cashClosesVerified, inventoryCounts] =
+    await Promise.all([
+      prisma.purchaseOrder.count({ where: { createdById: userId } }),
+      prisma.invoice.count({ where: { createdById: userId } }),
+      prisma.expense.count({ where: { createdById: userId } }),
+      prisma.capitalAsset.count({ where: { createdById: userId } }),
+      prisma.cashClose.count({ where: { closedById: userId } }),
+      prisma.cashClose.count({ where: { verifiedById: userId } }),
+      prisma.inventoryCount.count({ where: { countedById: userId } }),
+    ]);
+  return { purchaseOrders, invoices, expenses, capitalAssets, cashClosesClosed, cashClosesVerified, inventoryCounts };
+}
+
+/**
+ * Moves every record attributed to `fromUserId` onto `toUserId` — the seven
+ * places a user is recorded as having done something (see the schema's User
+ * relations). This is what actually clears the path to deleting an old
+ * account: the FK on each of these is deliberately required, not nullable,
+ * because reporting depends on "who created this" pointing at a real person,
+ * so departing staff have to be handed off rather than erased.
+ */
+export type ReassignCounts = {
+  purchaseOrders: number;
+  invoices: number;
+  expenses: number;
+  capitalAssets: number;
+  cashClosesClosed: number;
+  cashClosesVerified: number;
+  inventoryCounts: number;
+};
+
+export async function reassignUserRecordsAction(
+  fromUserId: string,
+  toUserId: string,
+): Promise<{ ok: true; counts: ReassignCounts } | { error: string }> {
+  await requireOwner();
+  const scope = await getScope();
+  if (fromUserId === toUserId) return { error: "Pick someone else to reassign to." };
+
+  const [from, to] = await Promise.all([
+    prisma.user.findFirst({ where: { id: fromUserId, businessId: scope.businessId } }),
+    prisma.user.findFirst({ where: { id: toUserId, businessId: scope.businessId } }),
+  ]);
+  if (!from) return { error: "Source user not found" };
+  if (!to) return { error: "Target user not found" };
+
+  const counts = await prisma.$transaction(async (tx) => {
+    const [purchaseOrders, invoices, expenses, capitalAssets, cashClosesClosed, cashClosesVerified, inventoryCounts] =
+      await Promise.all([
+        tx.purchaseOrder.updateMany({ where: { createdById: fromUserId }, data: { createdById: toUserId } }),
+        tx.invoice.updateMany({ where: { createdById: fromUserId }, data: { createdById: toUserId } }),
+        tx.expense.updateMany({ where: { createdById: fromUserId }, data: { createdById: toUserId } }),
+        tx.capitalAsset.updateMany({ where: { createdById: fromUserId }, data: { createdById: toUserId } }),
+        tx.cashClose.updateMany({ where: { closedById: fromUserId }, data: { closedById: toUserId } }),
+        tx.cashClose.updateMany({ where: { verifiedById: fromUserId }, data: { verifiedById: toUserId } }),
+        tx.inventoryCount.updateMany({ where: { countedById: fromUserId }, data: { countedById: toUserId } }),
+      ]);
+    return {
+      purchaseOrders: purchaseOrders.count,
+      invoices: invoices.count,
+      expenses: expenses.count,
+      capitalAssets: capitalAssets.count,
+      cashClosesClosed: cashClosesClosed.count,
+      cashClosesVerified: cashClosesVerified.count,
+      inventoryCounts: inventoryCounts.count,
+    };
+  });
+
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "user.reassign_records", entityType: "User", entityId: fromUserId,
+    diff: { from: { id: from.id, name: from.name }, to: { id: to.id, name: to.name }, counts },
+  });
+
+  revalidatePath("/settings/users");
+  revalidatePath(`/settings/users/${fromUserId}`);
+  return { ok: true, counts };
+}
+
+export async function updateUserRoleAction(
+  userId: string,
+  role: "OWNER" | "MANAGER",
+): Promise<{ ok: true } | { error: string }> {
   await requireOwner();
   const scope = await getScope();
   if (userId === scope.userId && role !== "OWNER") {
-    throw new Error("You can't demote yourself.");
+    return { error: "You can't demote yourself." };
   }
   const user = await prisma.user.findFirst({ where: { id: userId, businessId: scope.businessId } });
-  if (!user) throw new Error("User not found");
+  if (!user) return { error: "User not found" };
 
   if (user.role === "OWNER" && role === "MANAGER") {
     const ownerCount = await prisma.user.count({ where: { businessId: scope.businessId, role: "OWNER" } });
-    if (ownerCount <= 1) throw new Error("Can't demote the last owner.");
+    if (ownerCount <= 1) return { error: "Can't demote the last owner." };
   }
 
   await prisma.user.update({ where: { id: userId }, data: { role } });
@@ -130,4 +234,5 @@ export async function updateUserRoleAction(userId: string, role: "OWNER" | "MANA
     diff: { from: user.role, to: role },
   });
   revalidatePath("/settings/users");
+  return { ok: true };
 }

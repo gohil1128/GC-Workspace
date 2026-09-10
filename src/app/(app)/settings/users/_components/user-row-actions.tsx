@@ -40,26 +40,26 @@ export function UserRowActions({ userId, userName, userEmail, currentRole, isSel
   const remove = () => {
     if (!confirm(`Delete ${userName} (${userEmail})? This can't be undone.`)) return;
     start(async () => {
-      try {
-        await deleteUserAction(userId);
-        toast({ title: "User deleted" });
-        router.refresh();
-      } catch (err: any) {
-        toast({ title: "Delete failed", description: String(err?.message ?? err), variant: "destructive" });
+      const res = await deleteUserAction(userId);
+      if ("error" in res) {
+        toast({ title: "Delete failed", description: res.error, variant: "destructive" });
+        return;
       }
+      toast({ title: "User deleted" });
+      router.refresh();
     });
   };
 
   const changeRole = (next: "OWNER" | "MANAGER") => {
     if (next === currentRole) return;
     start(async () => {
-      try {
-        await updateUserRoleAction(userId, next);
-        toast({ title: `Role changed to ${next.toLowerCase()}` });
-        router.refresh();
-      } catch (err: any) {
-        toast({ title: "Failed", description: String(err?.message ?? err), variant: "destructive" });
+      const res = await updateUserRoleAction(userId, next);
+      if ("error" in res) {
+        toast({ title: "Failed", description: res.error, variant: "destructive" });
+        return;
       }
+      toast({ title: `Role changed to ${next.toLowerCase()}` });
+      router.refresh();
     });
   };
 

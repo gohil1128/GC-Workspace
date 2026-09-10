@@ -583,7 +583,13 @@ model ReportSnapshot {
 model AuditLog {
   id         String   @id @default(cuid())
   businessId String
-  userId     String
+  // Nullable, unlike every other actor: this is a pure historical trail with
+  // no viewer UI reading it, so the row is worth keeping after the actor is
+  // gone, but the FK must not be what blocks deleting them. Every OTHER
+  // user-created record (invoices, expenses, purchase orders...) stays
+  // required and gets reassigned to a successor instead — those matter for
+  // real reporting and should never point at nobody.
+  userId     String?
   action     String
   entityType String
   entityId   String?
@@ -591,7 +597,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id])
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([businessId, createdAt])
   @@index([entityType, entityId])

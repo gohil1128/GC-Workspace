@@ -54,7 +54,9 @@ export default async function UsersPage() {
               {users.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">
-                    {u.name}
+                    <Link href={`/settings/users/${u.id}`} className="hover:underline">
+                      {u.name}
+                    </Link>
                     {u.id === scope.userId && <Badge variant="muted" className="ml-2 text-2xs">You</Badge>}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
@@ -80,7 +82,11 @@ export default async function UsersPage() {
               {users.map((u) => (
                 <MobileRow
                   key={u.id}
-                  title={u.name}
+                  title={
+                    <Link href={`/settings/users/${u.id}`} className="hover:underline">
+                      {u.name}
+                    </Link>
+                  }
                   subtitle={u.email}
                   badges={
                     <>
