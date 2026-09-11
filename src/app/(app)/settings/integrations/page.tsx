@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { listActiveEvents } from "@/modules/events/queries";
 import { listImportedDays } from "@/modules/imports/queries";
 import { listItemCatalog } from "@/modules/items/queries";
@@ -16,8 +16,7 @@ import { ItemsManager } from "./_components/items-manager";
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const scope = await getScope();
-  if (scope.role !== "OWNER") redirect("/dashboard");
+  const scope = await requireCapability("settings");
   const events = await listActiveEvents(scope.businessId);
   const eventProps = events.map((e) => ({ id: e.id, name: e.name, color: e.color }));
   const broadway = events.find((e) => /broadway/i.test(e.name));

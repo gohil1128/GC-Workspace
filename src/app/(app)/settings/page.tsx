@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Users, Plug } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,8 +17,7 @@ import { Lock, Calendar } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const scope = await getScope();
-  if (scope.role !== "OWNER") redirect("/dashboard");
+  const scope = await requireCapability("settings");
 
   const [business, locations, events, counts, lockSettings] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId } }),

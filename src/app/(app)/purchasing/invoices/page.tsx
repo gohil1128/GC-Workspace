@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { getActiveEvent, listAllEvents } from "@/modules/events/queries";
 import { listInvoices, listSuppliersForInvoice } from "@/modules/invoices/queries";
 import { PageHeader } from "@/components/page-header";
@@ -28,7 +28,7 @@ export default async function InvoicesPage({
   searchParams: Promise<{ supplier?: string; event?: string; status?: string; number?: string; from?: string; to?: string; untagged?: string; sort?: SortKey; dir?: SortDir }>;
 }) {
   const sp = await searchParams;
-  const scope = await getScope();
+  const scope = await requireCapability("purchasing");
   const activeEvent = await getActiveEvent(scope.businessId);
 
   const onlyUntagged = sp.untagged === "1";

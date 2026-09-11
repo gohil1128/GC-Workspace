@@ -1,7 +1,10 @@
 "use client";
 import * as React from "react";
-import { LogOut, Moon, Sun, User as UserIcon } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, LogOut, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import type { Role } from "@prisma/client";
+import { ROLE_LABELS } from "@/lib/permissions";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,7 +24,7 @@ export function UserMenu({
 }: {
   name: string;
   email: string;
-  role: string;
+  role: Role;
   /** Shown here because the header no longer prints it when there is only one. */
   locationName?: string;
 }) {
@@ -48,14 +51,16 @@ export function UserMenu({
             <span className="text-sm font-medium text-foreground">{name}</span>
             <span className="text-2xs text-muted-foreground">{email}</span>
             <span className="mt-1 text-2xs uppercase text-muted-foreground">
-              {role}
+              {ROLE_LABELS[role]}
               {locationName ? ` · ${locationName}` : ""}
             </span>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
-          <UserIcon className="h-3.5 w-3.5" /> Account
+        <DropdownMenuItem asChild>
+          <Link href="/change-password">
+            <KeyRound className="h-3.5 w-3.5" /> Change password
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={(e) => {

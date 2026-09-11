@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { auth, currentUser } from "@/lib/auth";
 import { getScope } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { lockedSectionsNow } from "@/modules/section-lock/actions";
@@ -16,6 +16,18 @@ import { SideNav } from "@/components/shell/side-nav";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  /*
+    One chokepoint for the temporary-password rule: every page in the app is
+    inside this layout, so a password somebody else chose gets you exactly as
+    far as choosing your own. Enforced here rather than in middleware because
+    the flag is read from the row — it is cleared the instant they set a
+    password, and a token would still be carrying the old value.
+  */
+  const me = await currentUser();
+  if (!me) redirect("/login");
+  if (me.mustChangePassword) redirect("/change-password");
+
   const scope = await getScope();
   const [business, lockedSections, events, activeEvent, openInvoices] = await Promise.all([
     prisma.business.findUnique({ where: { id: scope.businessId }, select: { name: true } }),

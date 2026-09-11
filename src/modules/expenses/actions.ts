@@ -6,8 +6,10 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { startOfDay } from "@/lib/date";
 import { expenseSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createExpenseAction(formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = expenseSchema.parse({
     category: formData.get("category"),
@@ -38,6 +40,7 @@ export async function createExpenseAction(formData: FormData) {
 }
 
 export async function updateExpenseAction(id: string, formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = expenseSchema.parse({
     category: formData.get("category"),
@@ -69,6 +72,7 @@ export async function updateExpenseAction(id: string, formData: FormData) {
 }
 
 export async function deleteExpenseAction(id: string) {
+  await requireCan("expenses");
   const scope = await getScope();
   const e = await prisma.expense.findFirst({ where: { id, businessId: scope.businessId } });
   if (!e) throw new Error("Not found");

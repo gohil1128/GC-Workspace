@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getScope } from "@/lib/scope";
+import { scopeFor } from "@/lib/scope";
 import { toCsv } from "@/lib/csv";
 import { findExport } from "@/modules/exports/registry";
 import { isSectionLocked } from "@/modules/section-lock/actions";
@@ -21,7 +21,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ report: 
     return NextResponse.json({ error: "unknown report" }, { status: 404 });
   }
 
-  const scope = await getScope();
+  const scope = await scopeFor("exports");
+  if (!scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const section = GATED[report];
   if (section && (await isSectionLocked(scope.businessId, section))) {

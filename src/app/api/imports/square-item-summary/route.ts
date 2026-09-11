@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getScope } from "@/lib/scope";
+import { scopeFor } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { parseCsv } from "@/lib/csv";
 import { startOfDay } from "@/lib/date";
@@ -46,7 +46,8 @@ function parseQty(raw: string | undefined): number {
 }
 
 export async function POST(req: Request) {
-  const scope = await getScope();
+  const scope = await scopeFor("settings");
+  if (!scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {

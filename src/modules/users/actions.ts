@@ -1,28 +1,19 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import { createResetToken, generatePassword, hashPassword } from "@/modules/auth/password";
 
 const inviteSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email required"),
-  role: z.enum(["OWNER", "MANAGER"]),
+  role: z.enum(["OWNER", "MANAGER", "STAFF"]),
 });
-
-// Generates a friendly 12-char password (no ambiguous chars like 0/O/l/1)
-function generatePassword(): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 12; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return out;
-}
 
 export async function inviteUserAction(formData: FormData): Promise<{ ok: true; email: string; password: string } | { error: string }> {
   await requireOwner();
@@ -38,7 +29,7 @@ export async function inviteUserAction(formData: FormData): Promise<{ ok: true; 
   if (existing) return { error: "A user with that email already exists." };
 
   const password = generatePassword();
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await hashPassword(password);
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -48,6 +39,9 @@ export async function inviteUserAction(formData: FormData): Promise<{ ok: true; 
         email: parsed.data.email,
         role: parsed.data.role,
         passwordHash,
+        // Handed over by somebody else, so it gets them in exactly once: the
+        // app refuses to load anything until they have chosen their own.
+        mustChangePassword: true,
       },
     });
     // Give the new user access to every location in the business
@@ -76,8 +70,12 @@ export async function resetPasswordAction(userId: string): Promise<{ ok: true; e
   if (!user) return { error: "User not found" };
 
   const password = generatePassword();
-  const passwordHash = await bcrypt.hash(password, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  const passwordHash = await hashPassword(password);
+  await prisma.user.update({
+    where: { id: userId },
+    // Same as an invite: an owner picked this one, so it is good for one sign-in.
+    data: { passwordHash, mustChangePassword: true },
+  });
 
   await writeAudit({
     businessId: scope.businessId, userId: scope.userId,
@@ -86,6 +84,38 @@ export async function resetPasswordAction(userId: string): Promise<{ ok: true; e
 
   revalidatePath("/settings/users");
   return { ok: true, email: user.email, password };
+}
+
+/*
+  A reset link an owner can hand over directly — the way this works with no
+  email service configured at all, and the better option when one is: the
+  person picks their own password instead of being read a temporary one over
+  the phone, so it is never spoken aloud or written down.
+*/
+export async function createResetLinkAction(
+  userId: string,
+): Promise<{ ok: true; url: string; expiresAt: string; name: string } | { error: string }> {
+  await requireOwner();
+  const scope = await getScope();
+  const user = await prisma.user.findFirst({ where: { id: userId, businessId: scope.businessId } });
+  if (!user) return { error: "User not found" };
+
+  const { token, expiresAt } = await createResetToken(user.id);
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("host");
+
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "user.reset_link", entityType: "User", entityId: userId,
+  });
+
+  return {
+    ok: true,
+    url: `${proto}://${host}/reset-password?token=${token}`,
+    expiresAt: expiresAt.toISOString(),
+    name: user.name,
+  };
 }
 
 export async function deleteUserAction(userId: string): Promise<{ ok: true } | { error: string }> {
@@ -131,6 +161,10 @@ export async function deleteUserAction(userId: string): Promise<{ ok: true } | {
 
 /** Everything a reassignment below would move — shown before it runs. */
 export async function getReassignableCounts(userId: string) {
+  // Exported from a "use server" file, so this is a callable endpoint like any
+  // other action, not just a helper the page imports — without this it hands
+  // anyone signed in a read of how much work any colleague has on their name.
+  await requireOwner();
   const [purchaseOrders, invoices, expenses, capitalAssets, cashClosesClosed, cashClosesVerified, inventoryCounts] =
     await Promise.all([
       prisma.purchaseOrder.count({ where: { createdById: userId } }),
@@ -212,7 +246,7 @@ export async function reassignUserRecordsAction(
 
 export async function updateUserRoleAction(
   userId: string,
-  role: "OWNER" | "MANAGER",
+  role: Role,
 ): Promise<{ ok: true } | { error: string }> {
   await requireOwner();
   const scope = await getScope();
@@ -222,9 +256,12 @@ export async function updateUserRoleAction(
   const user = await prisma.user.findFirst({ where: { id: userId, businessId: scope.businessId } });
   if (!user) return { error: "User not found" };
 
-  if (user.role === "OWNER" && role === "MANAGER") {
+  // Any move off OWNER, not just the one to MANAGER: checking for the single
+  // named target let the last owner be demoted to STAFF, which locks the
+  // business out of its own settings with nobody able to undo it.
+  if (user.role === "OWNER" && role !== "OWNER") {
     const ownerCount = await prisma.user.count({ where: { businessId: scope.businessId, role: "OWNER" } });
-    if (ownerCount <= 1) return { error: "Can't demote the last owner." };
+    if (ownerCount <= 1) return { error: "Can't demote the last owner. Promote someone else first." };
   }
 
   await prisma.user.update({ where: { id: userId }, data: { role } });

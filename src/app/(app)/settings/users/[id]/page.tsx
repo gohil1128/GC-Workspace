@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { getUserProfile, listOtherUsers } from "@/modules/users/queries";
 import { getReassignableCounts } from "@/modules/users/actions";
 import { PageHeader } from "@/components/page-header";
@@ -9,6 +9,7 @@ import { UserRowActions } from "../_components/user-row-actions";
 import { ReassignCard } from "./_components/reassign-card";
 import { formatMoney } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,7 @@ export const dynamic = "force-dynamic";
   else before letting the account go.
 */
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const scope = await getScope();
-  if (scope.role !== "OWNER") redirect("/dashboard");
+  const scope = await requireCapability("settings");
 
   const { id } = await params;
   const profile = await getUserProfile(scope.businessId, id);
@@ -45,7 +45,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
           </Link>
         }
         title={user.name}
-        description={`${user.email} · ${user.role === "OWNER" ? "Owner" : "Manager"} · joined ${fmtDate(user.createdAt)}${isSelf ? " · you" : ""}`}
+        description={`${user.email} · ${ROLE_LABELS[user.role]} · joined ${fmtDate(user.createdAt)}${isSelf ? " · you" : ""}${user.mustChangePassword ? " · still on a temporary password" : ""}`}
         actions={
           <UserRowActions
             userId={user.id}
@@ -59,6 +59,8 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
       <div className="mx-auto max-w-[1400px] space-y-5 px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <p className="text-xs text-muted-foreground">
+          <span className="text-foreground">{ROLE_DESCRIPTIONS[user.role]}</span>
+          {" · "}
           Locations: <span className="text-foreground">{locationNames}</span>
           {stats.lastActiveAt && (
             <>

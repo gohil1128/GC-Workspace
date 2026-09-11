@@ -6,8 +6,10 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { startOfDay } from "@/lib/date";
 import { vendorSchema, payVendorSchema, incentiveSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createVendorAction(formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = vendorSchema.parse({
     name: formData.get("name"),
@@ -43,6 +45,7 @@ export async function createVendorAction(formData: FormData) {
 }
 
 export async function updateVendorAction(id: string, formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = vendorSchema.parse({
     name: formData.get("name"),
@@ -76,6 +79,7 @@ export async function updateVendorAction(id: string, formData: FormData) {
 }
 
 export async function deleteVendorAction(id: string) {
+  await requireCan("expenses");
   const scope = await getScope();
   const v = await prisma.vendor.findFirst({ where: { id, businessId: scope.businessId } });
   if (!v) throw new Error("Not found");
@@ -91,6 +95,7 @@ export async function deleteVendorAction(id: string) {
  * row using the vendor's defaultCategory and monthly fee (unless overridden).
  */
 export async function payVendorAction(formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = payVendorSchema.parse({
     vendorId: formData.get("vendorId"),
@@ -129,6 +134,7 @@ export async function payVendorAction(formData: FormData) {
  * and surfaced separately on the vendor's history.
  */
 export async function logIncentiveAction(formData: FormData) {
+  await requireCan("expenses");
   const scope = await getScope();
   const parsed = incentiveSchema.parse({
     vendorId: formData.get("vendorId"),

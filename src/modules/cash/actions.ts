@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { startOfDay } from "@/lib/date";
 import { cashCloseSchema, depositSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 async function recomputeOverShort(tx: any, locationId: string, businessDate: Date) {
   // Sum deposits for the day
@@ -22,6 +23,7 @@ async function recomputeOverShort(tx: any, locationId: string, businessDate: Dat
 }
 
 export async function saveCashCloseAction(payload: unknown) {
+  await requireCan("cash");
   const scope = await getScope();
   const parsed = cashCloseSchema.parse(payload);
   const businessDate = startOfDay(new Date(parsed.businessDate));
@@ -73,6 +75,7 @@ export async function saveCashCloseAction(payload: unknown) {
 }
 
 export async function addDepositAction(payload: unknown) {
+  await requireCan("cash");
   const scope = await getScope();
   const parsed = depositSchema.parse(payload);
   const businessDate = startOfDay(new Date(parsed.businessDate));
@@ -110,6 +113,7 @@ export async function addDepositAction(payload: unknown) {
 }
 
 export async function deleteDepositAction(id: string) {
+  await requireCan("cash");
   const scope = await getScope();
   const dep = await prisma.deposit.findFirst({ where: { id, locationId: scope.locationId } });
   if (!dep) throw new Error("Not found");
@@ -123,6 +127,7 @@ export async function deleteDepositAction(id: string) {
 }
 
 export async function verifyCloseAction(closeId: string) {
+  await requireCan("cashVerify");
   const scope = await getScope();
   const c = await prisma.cashClose.findFirst({ where: { id: closeId, locationId: scope.locationId } });
   if (!c) throw new Error("Not found");

@@ -11,9 +11,13 @@ datasource db {
 // Enums
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Ordered most to least privileged. Nothing should test `role === "OWNER"` to
+// decide what a non-owner may do — with three roles that silently grants a
+// STAFF member everything a MANAGER has. Go through src/lib/permissions.ts.
 enum Role {
   OWNER
   MANAGER
+  STAFF
 }
 
 enum LocationKind {
@@ -138,6 +142,11 @@ model User {
   name         String
   role         Role     @default(MANAGER)
   businessId   String
+  // True while the account is still on a password somebody else chose — set
+  // when an owner creates the account or resets it, cleared the moment the
+  // person picks their own. Everything behind the app refuses to load until
+  // then, so a handed-over password can only ever be used once.
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -151,8 +160,26 @@ model User {
   invoices         Invoice[]
   expenses         Expense[]
   capitalAssets    CapitalAsset[]
+  resetTokens      PasswordResetToken[]
 
   @@index([businessId])
+}
+
+// A single-use, expiring password reset. Only the hash of the token is stored,
+// for the same reason passwords are hashed: read access to this table must not
+// be enough to take over an account. The raw token exists only in the link.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model UserLocation {

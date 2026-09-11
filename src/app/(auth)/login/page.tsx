@@ -98,11 +98,6 @@ export default function LoginPage() {
             )}
 
             <Submit />
-
-            <label className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" name="keepSignedIn" className="h-3.5 w-3.5 accent-[hsl(var(--brand))]" />
-              Keep me signed in on this device
-            </label>
           </form>
         </div>
       </main>

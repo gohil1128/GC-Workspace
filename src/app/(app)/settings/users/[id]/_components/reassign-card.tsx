@@ -2,6 +2,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft } from "lucide-react";
+import type { Role } from "@prisma/client";
+import { ROLE_LABELS } from "@/lib/permissions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -9,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { reassignUserRecordsAction } from "@/modules/users/actions";
 
-type Person = { id: string; name: string; email: string; role: "OWNER" | "MANAGER" };
+type Person = { id: string; name: string; email: string; role: Role };
 export type ReassignableCounts = {
   purchaseOrders: number;
   invoices: number;
@@ -102,7 +104,7 @@ export function ReassignCard({
               <SelectContent>
                 {others.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
-                    {o.name} · {o.role === "OWNER" ? "Owner" : "Manager"}
+                    {o.name} · {ROLE_LABELS[o.role]}
                   </SelectItem>
                 ))}
               </SelectContent>

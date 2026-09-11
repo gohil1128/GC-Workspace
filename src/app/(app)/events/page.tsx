@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { listEventsWithTotals } from "@/modules/events/detail";
 import { fmtDate } from "@/lib/date";
 import { formatMoney, formatPercent } from "@/lib/money";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 // Pick-an-event index. Each card opens everything recorded against that event.
 export default async function EventsPage() {
-  const scope = await getScope();
+  const scope = await requireCapability("events");
   const rows = await listEventsWithTotals(scope.businessId, scope.locationId);
   const now = new Date();
 

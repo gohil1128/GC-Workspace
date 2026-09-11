@@ -3,7 +3,9 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock, Plus } from "lucide-react";
+import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { can, ROLE_LABELS, type Capability } from "@/lib/permissions";
 
 /*
   Web navigation (design revision: 216px left sidebar).
@@ -13,49 +15,59 @@ import { cn } from "@/lib/utils";
   Below `lg` the sidebar is hidden and MobileTabBar takes over.
 */
 
-type Sub = { href: string; label: string };
-type Item = { href: string; label: string; ownerOnly?: boolean; subs?: Sub[] };
+type Sub = { href: string; label: string; cap: Capability };
+type Item = { href: string; label: string; cap: Capability; subs?: Sub[] };
 
 const ITEMS: Item[] = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/events", label: "Events" },
-  { href: "/reports", label: "Profit & loss" },
+  { href: "/dashboard", label: "Overview", cap: "overview" },
+  { href: "/events", label: "Events", cap: "events" },
+  { href: "/reports", label: "Profit & loss", cap: "financials" },
   {
     href: "/purchasing/invoices",
     label: "Invoices",
+    cap: "purchasing",
     subs: [
-      { href: "/purchasing/invoices/new", label: "New invoice" },
-      { href: "/purchasing", label: "Purchase orders" },
-      { href: "/purchasing/new", label: "New purchase order" },
+      { href: "/purchasing/invoices/new", label: "New invoice", cap: "purchasing" },
+      { href: "/purchasing", label: "Purchase orders", cap: "purchasing" },
+      { href: "/purchasing/new", label: "New purchase order", cap: "purchasing" },
     ],
   },
-  { href: "/cash", label: "Cash closes", subs: [{ href: "/cash/new", label: "New cash close" }] },
+  {
+    href: "/cash",
+    label: "Cash closes",
+    cap: "cash",
+    subs: [{ href: "/cash/new", label: "New cash close", cap: "cash" }],
+  },
   {
     href: "/inventory",
     label: "Inventory",
+    cap: "inventory",
     subs: [
-      { href: "/inventory/counts", label: "Counts" },
-      { href: "/inventory/variance", label: "Variance" },
-      { href: "/recipes", label: "Recipes" },
+      // Deliberately its own capability: recording a count is the one thing in
+      // this section a staff member does, and it exposes no costs.
+      { href: "/inventory/counts", label: "Counts", cap: "inventoryCount" },
+      { href: "/inventory/variance", label: "Variance", cap: "inventory" },
+      { href: "/recipes", label: "Recipes", cap: "inventory" },
     ],
   },
   {
     href: "/labor",
     label: "Labor",
+    cap: "labor",
     subs: [
-      { href: "/labor/employees", label: "Employees" },
-      { href: "/labor/report", label: "Labor report" },
+      { href: "/labor/employees", label: "Employees", cap: "labor" },
+      { href: "/labor/report", label: "Labor report", cap: "labor" },
     ],
   },
-  { href: "/expenses", label: "Expenses" },
+  { href: "/expenses", label: "Expenses", cap: "expenses" },
   {
     href: "/settings",
     label: "Settings",
-    ownerOnly: true,
+    cap: "settings",
     subs: [
-      { href: "/settings/users", label: "Team" },
-      { href: "/settings/integrations", label: "Integrations" },
-      { href: "/settings/exports", label: "Data export" },
+      { href: "/settings/users", label: "Team", cap: "settings" },
+      { href: "/settings/integrations", label: "Integrations", cap: "settings" },
+      { href: "/settings/exports", label: "Data export", cap: "settings" },
     ],
   },
 ];
@@ -76,7 +88,7 @@ export function SideNav({
   userName,
   openInvoices,
 }: {
-  role: "OWNER" | "MANAGER";
+  role: Role;
   /** Sections currently behind the PIN — badged so the lock isn't a surprise. */
   lockedSections: readonly string[];
   events: SideNavEvent[];
@@ -85,7 +97,18 @@ export function SideNav({
   openInvoices: number;
 }) {
   const pathname = usePathname();
-  const items = ITEMS.filter((i) => !i.ownerOnly || role === "OWNER");
+  /*
+    A section shows if the role can reach the section itself OR any of its
+    sub-pages. Staff can open /inventory/counts but not /inventory, so the
+    section has to appear and point at the count page — filtering on the
+    parent alone would make the one inventory page they may use unreachable.
+  */
+  const items = ITEMS.flatMap((i) => {
+    const subs = (i.subs ?? []).filter((s) => can(role, s.cap));
+    const self = can(role, i.cap);
+    if (!self && subs.length === 0) return [];
+    return [{ ...i, href: self ? i.href : subs[0].href, subs }];
+  });
 
   const within = (href: string) => pathname === href || pathname.startsWith(href + "/");
   // "Invoices" shouldn't light up while you're on /purchasing (purchase orders),
@@ -185,7 +208,7 @@ export function SideNav({
             </Link>
           ))}
         </div>
-        {role === "OWNER" && (
+        {can(role, "settings") && (
           <Link href="/settings" className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
             <Plus className="h-3 w-3" /> New event
           </Link>
@@ -198,7 +221,7 @@ export function SideNav({
         </span>
         <div className="min-w-0 text-xs">
           <div className="truncate font-semibold">{userName}</div>
-          <div className="text-muted-foreground">{role === "OWNER" ? "Owner" : "Manager"}</div>
+          <div className="text-muted-foreground">{ROLE_LABELS[role]}</div>
         </div>
       </div>
     </aside>

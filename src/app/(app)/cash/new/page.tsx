@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { getCashCloseByDate, getSalesForDate, listDepositsForDate } from "@/modules/cash/queries";
 import { listActiveEvents, getActiveEvent } from "@/modules/events/queries";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewClosePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const sp = await searchParams;
-  const scope = await getScope();
+  const scope = await requireCapability("cash");
   const dateStr = sp.date ?? new Date().toISOString().slice(0, 10);
   const [sales, existing, deposits, events, activeEvent] = await Promise.all([
     getSalesForDate(scope.locationId, dateStr),

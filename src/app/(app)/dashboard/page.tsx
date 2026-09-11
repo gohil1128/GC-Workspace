@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Download, Lock } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
 import { resolveRange } from "@/modules/dashboard/range";
@@ -41,7 +41,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, scope] = await Promise.all([searchParams, getScope()]);
+  const [params, scope] = await Promise.all([searchParams, requireCapability("overview")]);
   const activeEvent = await getActiveEvent(scope.businessId);
   const range = await resolveRange(scope.businessId, params, activeEvent);
   const now = new Date();

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Download, ExternalLink } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { getEventDetail } from "@/modules/events/detail";
 import { PageHeader } from "@/components/page-header";
 import { EventSection, Money, Num } from "./_components/section";
@@ -26,7 +26,7 @@ const EXPENSE_LABEL = new Map(EXPENSE_CATEGORIES.map((c) => [c.value, c.label]))
 */
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const scope = await getScope();
+  const scope = await requireCapability("events");
   const detail = await getEventDetail(scope.businessId, scope.locationId, id);
   if (!detail) notFound();
 

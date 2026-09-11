@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus, Download, CheckCircle2 } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { getActiveEvent } from "@/modules/events/queries";
 import { listCashCloses } from "@/modules/cash/queries";
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +14,7 @@ import { fmtDate } from "@/lib/date";
 export const dynamic = "force-dynamic";
 
 export default async function CashPage() {
-  const scope = await getScope();
+  const scope = await requireCapability("cash");
   const activeEvent = await getActiveEvent(scope.businessId);
   const closes = await listCashCloses(scope.locationId, 30, activeEvent?.id ?? null);
   const totalOverShort = closes.reduce((a, c) => a + c.overShortCents, 0);
