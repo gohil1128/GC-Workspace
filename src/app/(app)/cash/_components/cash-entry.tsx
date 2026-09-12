@@ -16,6 +16,8 @@ import {
   addPayoutAction, deletePayoutAction,
 } from "@/modules/cash/actions";
 import { toast } from "@/components/ui/use-toast";
+import { PAYOUT_KINDS, payoutKindLabel } from "@/modules/cash/payout-kinds";
+import type { PayoutKind } from "@prisma/client";
 
 type Existing = {
   id: string;
@@ -31,18 +33,11 @@ type Deposit = {
   id: string; sequence: number | null; amountDollars: number;
   bagCode: string | null; preparedBy: string | null; notes: string | null;
 };
-export type PayoutKind = "REIMBURSEMENT" | "SUPPLIER" | "OTHER";
 type Payout = {
   id: string; amountDollars: number; kind: PayoutKind;
   reason: string; paidTo: string | null; reference: string | null;
 };
 type Event = { id: string; name: string; color: string | null };
-
-const PAYOUT_KINDS: { value: PayoutKind; label: string; blurb: string }[] = [
-  { value: "REIMBURSEMENT", label: "Reimbursement", blurb: "Someone paid for it themselves and took the cash back" },
-  { value: "SUPPLIER", label: "Paid a supplier", blurb: "Paid in cash straight out of the till" },
-  { value: "OTHER", label: "Other", blurb: "Anything else that left the drawer" },
-];
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
@@ -325,9 +320,7 @@ export function CashEntry({
                           <TableCell className="text-right num font-medium">{fmt(p.amountDollars)}</TableCell>
                           <TableCell>{p.reason}</TableCell>
                           <TableCell>{p.paidTo ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {PAYOUT_KINDS.find((k) => k.value === p.kind)?.label ?? p.kind}
-                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{payoutKindLabel(p.kind)}</TableCell>
                           <TableCell className="font-mono text-xs">{p.reference ?? "—"}</TableCell>
                           <TableCell>
                             <DeletePayoutButton id={p.id} />

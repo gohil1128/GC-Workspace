@@ -113,7 +113,7 @@ export default async function SalesPage({
           <StatTile
             label="Distinct items"
             value={data.totals.itemCount.toLocaleString()}
-            meta={avgItemValue > 0 ? `${formatMoney(Math.round(avgItemValue))} avg per unit` : undefined}
+            meta={avgItemValue > 0 ? `${formatMoney(Math.round(avgItemValue))} / unit` : undefined}
           />
         </StatTileRow>
 
