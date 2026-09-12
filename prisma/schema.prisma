@@ -122,6 +122,7 @@ model Location {
   dailySales       DailySales[]
   cashCloses       CashClose[]
   deposits         Deposit[]
+  cashPayouts      CashPayout[]
   reportSnapshots  ReportSnapshot[]
   invoices         Invoice[]
   expenses         Expense[]
@@ -527,6 +528,38 @@ model Deposit {
   notes        String?
   reference    String?
   createdAt    DateTime @default(now())
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId, businessDate])
+}
+
+enum PayoutKind {
+  REIMBURSEMENT // someone bought something with their own money and took the cash back
+  SUPPLIER // paid a supplier in cash straight out of the till
+  OTHER
+}
+
+// Cash legitimately taken out of the drawer during the day, itemised.
+//
+// The counterpart to Deposit, and the reason CashClose.paidOutCents stops
+// being a number somebody types: a payout has to say what it was for and who
+// took it, or a drawer that is $40 light is indistinguishable from a mistake.
+//
+// Carries no User foreign key on purpose. `paidTo` is free text because the
+// person reimbursed is often not somebody with an account — and because every
+// required FK onto User is one more thing blocking that account from ever
+// being deleted.
+model CashPayout {
+  id           String     @id @default(cuid())
+  locationId   String
+  businessDate DateTime
+  amountCents  Int
+  kind         PayoutKind @default(REIMBURSEMENT)
+  reason       String // what the money was spent on
+  paidTo       String? // who took the cash
+  reference    String? // receipt or invoice number, if there is one
+  createdAt    DateTime   @default(now())
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 

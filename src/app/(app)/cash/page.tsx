@@ -42,6 +42,7 @@ export default async function CashPage() {
                 <TableHead className="text-right">Cash</TableHead>
                 <TableHead className="text-right">Credit</TableHead>
                 <TableHead className="text-right">Deposit</TableHead>
+                <TableHead className="text-right">Paid out</TableHead>
                 <TableHead className="text-right">Expected</TableHead>
                 <TableHead className="text-right">Over/Short</TableHead>
                 <TableHead>Verified</TableHead>
@@ -69,6 +70,9 @@ export default async function CashPage() {
                     <TableCell className="text-right num">{formatMoney(c.cashCents)}</TableCell>
                     <TableCell className="text-right num">{formatMoney(c.creditCents)}</TableCell>
                     <TableCell className="text-right num">{formatMoney(c.depositCents)}</TableCell>
+                    <TableCell className={`text-right num ${c.paidOutCents > 0 ? "" : "text-muted-foreground"}`}>
+                      {c.paidOutCents > 0 ? formatMoney(c.paidOutCents) : "—"}
+                    </TableCell>
                     <TableCell className="text-right num">{formatMoney(c.expectedCents)}</TableCell>
                     <TableCell className={`text-right num ${c.overShortCents < 0 ? "text-destructive" : c.overShortCents > 0 ? "text-warning" : "text-success"}`}>{formatMoney(c.overShortCents, { signed: true })}</TableCell>
                     <TableCell>
@@ -118,6 +122,7 @@ export default async function CashPage() {
                 <MobileField label="Cash" value={formatMoney(c.cashCents)} />
                 <MobileField label="Credit" value={formatMoney(c.creditCents)} />
                 <MobileField label="Deposit" value={formatMoney(c.depositCents)} />
+                {c.paidOutCents > 0 && <MobileField label="Paid out" value={formatMoney(c.paidOutCents)} />}
                 <MobileField label="Expected" value={formatMoney(c.expectedCents)} />
                 <MobileField
                   label="Event"

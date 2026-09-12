@@ -81,6 +81,26 @@ export function SectionPinGate({ title, blurb }: { title: string; blurb: string 
               <Label htmlFor="section-pin">PIN</Label>
               <Input
                 id="section-pin"
+                /*
+                  Masked, and kept away from every password manager.
+
+                  It was a plain text input, so the PIN sat on screen in
+                  half-inch letter-spaced digits — readable across a counter by
+                  anyone the lock exists to keep out. Worse, browsers were
+                  offering to save it and then suggesting it straight back in a
+                  dropdown, which turns the gate into a button.
+
+                  autoComplete alone is widely ignored for this; the vendor
+                  attributes are what actually stop 1Password, LastPass and
+                  Bitwarden filling or capturing it. The field stays unnamed so
+                  there is nothing for a manager to key a saved entry against.
+                */
+                type="password"
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
+                data-bwignore
+                data-form-type="other"
                 inputMode="numeric"
                 pattern="\d{4}"
                 maxLength={4}

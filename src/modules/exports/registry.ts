@@ -3,7 +3,7 @@ import { fromCents } from "@/lib/money";
 import { dailySummary, weeklyTrend, purchaseSpendByPeriod, pnlByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport, listIngredients } from "@/modules/inventory/queries";
-import { listCashCloses } from "@/modules/cash/queries";
+import { listCashCloses, listPayouts } from "@/modules/cash/queries";
 import { listInvoicesForExport, type InvoiceFilters } from "@/modules/invoices/queries";
 import { listCapitalAssets, depreciationForPeriod } from "@/modules/capital/queries";
 import { listExpenses, EXPENSE_CATEGORIES } from "@/modules/expenses/queries";
@@ -391,15 +391,37 @@ export const EXPORTS: ExportDef[] = [
     build: async ({ scope }) => {
       const data = await listCashCloses(scope.locationId, 365);
       return {
-        columns: ["date", "opening", "closing", "deposit", "expected", "overShort", "closedBy"],
+        columns: ["date", "opening", "closing", "deposit", "paidIn", "paidOut", "expected", "overShort", "closedBy"],
         rows: data.map((c) => ({
           date: iso(c.businessDate),
           opening: money(c.openingCents),
           closing: money(c.closingCents),
           deposit: money(c.depositCents),
+          paidIn: money(c.paidInCents),
+          paidOut: money(c.paidOutCents),
           expected: money(c.expectedCents),
           overShort: money(c.overShortCents),
           closedBy: c.closedBy.name,
+        })),
+      };
+    },
+  },
+  {
+    key: "payouts",
+    label: "Cash payouts",
+    description: "Cash taken out of the drawer — what for, who took it, and the receipt.",
+    group: "Money",
+    build: async ({ scope }) => {
+      const data = await listPayouts(scope.locationId, 365);
+      return {
+        columns: ["date", "amount", "type", "reason", "paidTo", "reference"],
+        rows: data.map((p) => ({
+          date: iso(p.businessDate),
+          amount: money(p.amountCents),
+          type: p.kind,
+          reason: p.reason,
+          paidTo: p.paidTo ?? "",
+          reference: p.reference ?? "",
         })),
       };
     },

@@ -28,6 +28,7 @@ export function PeriodControl({
   eventSegment,
   from,
   to,
+  basePath = "/dashboard",
 }: {
   active: RangeKey;
   /** Present when one event scopes the page — from the header's event
@@ -35,12 +36,16 @@ export function PeriodControl({
   eventSegment?: { label: string; href: string } | null;
   from?: string;
   to?: string;
+  /** Which page the segments link back to. Sales reads the same resolved
+      range as the Overview, so it reuses this control rather than growing a
+      second date picker that drifts from it. */
+  basePath?: string;
 }) {
   const segs: Seg[] = [
     ...(eventSegment ? [{ key: "event" as RangeKey, ...eventSegment }] : []),
-    { key: "season", label: "Season", href: "/dashboard?range=season" },
-    { key: "month", label: "This month", href: "/dashboard?range=month" },
-    { key: "last-event", label: "Last event", href: "/dashboard?range=last-event" },
+    { key: "season", label: "Season", href: `${basePath}?range=season` },
+    { key: "month", label: "This month", href: `${basePath}?range=month` },
+    { key: "last-event", label: "Last event", href: `${basePath}?range=last-event` },
   ];
 
   const segClass = (isActive: boolean) =>
@@ -71,7 +76,7 @@ export function PeriodControl({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 p-3">
-          <form method="GET" action="/dashboard" className="space-y-2.5">
+          <form method="GET" action={basePath} className="space-y-2.5">
             <input type="hidden" name="range" value="custom" />
             <div className="text-2xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
               Custom range

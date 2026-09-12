@@ -22,6 +22,7 @@ const ITEMS: Item[] = [
   { href: "/dashboard", label: "Overview", cap: "overview" },
   { href: "/events", label: "Events", cap: "events" },
   { href: "/reports", label: "Profit & loss", cap: "financials" },
+  { href: "/sales", label: "Sales", cap: "financials" },
   {
     href: "/purchasing/invoices",
     label: "Invoices",

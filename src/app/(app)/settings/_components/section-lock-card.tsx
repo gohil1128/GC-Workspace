@@ -101,8 +101,18 @@ export function SectionLockCard({
       <form onSubmit={setPinSubmit} className="grid items-end gap-2 sm:grid-cols-[auto_auto]">
         <div className="grid gap-1.5">
           <Label htmlFor="section-pin-set">{hasPin ? "Change PIN (4 digits)" : "Set PIN (4 digits)"}</Label>
+          {/* Masked for the same reason as the gate itself: this is set at the
+              counter, and a PIN typed in the clear here is one somebody behind
+              you now knows. The vendor attributes keep password managers from
+              capturing it on the way past. */}
           <Input
             id="section-pin-set"
+            type="password"
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore
+            data-form-type="other"
             inputMode="numeric"
             pattern="\d{4}"
             maxLength={4}

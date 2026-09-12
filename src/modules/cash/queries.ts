@@ -40,3 +40,18 @@ export async function listDepositsForDate(locationId: string, isoDate: string) {
     orderBy: { sequence: "asc" },
   });
 }
+
+export async function listPayouts(locationId: string, days = 365) {
+  const { from, to } = lastNDays(days);
+  return prisma.cashPayout.findMany({
+    where: { locationId, businessDate: { gte: from, lte: to } },
+    orderBy: [{ businessDate: "desc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function listPayoutsForDate(locationId: string, isoDate: string) {
+  return prisma.cashPayout.findMany({
+    where: { locationId, businessDate: startOfDay(new Date(isoDate)) },
+    orderBy: { createdAt: "asc" },
+  });
+}

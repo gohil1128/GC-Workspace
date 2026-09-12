@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BarChart3, Wallet, FileText, Menu,
-  Boxes, Users, Receipt, Settings as SettingsIcon, ChefHat, X, CalendarDays,
+  Boxes, Users, Receipt, Settings as SettingsIcon, ChefHat, X, CalendarDays, ShoppingBag,
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,10 @@ const DESTINATIONS: { href: string; label: string; icon: typeof Wallet; cap: Cap
   { href: "/events", label: "Events", icon: CalendarDays, cap: "events" },
   { href: "/reports", label: "Reports", icon: BarChart3, cap: "financials" },
   { href: "/purchasing/invoices", label: "Invoices", icon: FileText, cap: "purchasing" },
+  // Below the four bar slots on purpose: Sales is a read-it-later screen, and
+  // promoting it would push Invoices — which carries the open-bill badge —
+  // into the More sheet.
+  { href: "/sales", label: "Sales", icon: ShoppingBag, cap: "financials" },
   { href: "/cash", label: "Cash closes", icon: Wallet, cap: "cash" },
   { href: "/inventory/counts", label: "Counts", icon: Boxes, cap: "inventoryCount" },
   { href: "/inventory", label: "Ingredients", icon: Boxes, cap: "inventory" },
