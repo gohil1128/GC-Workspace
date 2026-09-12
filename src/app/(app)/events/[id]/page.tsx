@@ -88,10 +88,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           <EventSection title="Profit & loss" count={null} subtitle="The event's column from the P&L statement.">
             <dl className="num divide-y divide-border text-[13px]">
               <PnlLine label="Net sales" value={formatMoney(column.netSalesCents)} strong />
-              <PnlLine label="Supplier invoices (COGS)" value={formatMoney(-column.cogsCents)} muted />
-              <PnlLine label="Labor" value={formatMoney(-column.laborCents)} muted />
-              <PnlLine label="Operating expenses" value={formatMoney(-column.opexCents)} muted />
-              <PnlLine label="Event fees" value={formatMoney(-column.feeCents)} muted />
+              {/* Cost lines with nothing recorded are dropped rather than
+                  printed as a column of em-dashes. Net sales and profit always
+                  show, so the card never loses its anchors. */}
+              {column.cogsCents > 0 && (
+                <PnlLine label="Supplier invoices (COGS)" value={formatMoney(-column.cogsCents)} muted />
+              )}
+              {column.laborCents > 0 && (
+                <PnlLine label="Labor" value={formatMoney(-column.laborCents)} muted />
+              )}
+              {column.opexCents > 0 && (
+                <PnlLine label="Operating expenses" value={formatMoney(-column.opexCents)} muted />
+              )}
+              {column.feeCents > 0 && (
+                <PnlLine label="Event fees" value={formatMoney(-column.feeCents)} muted />
+              )}
+              {column.cogsCents + column.laborCents + column.opexCents + column.feeCents === 0 && (
+                <PnlLine label="No costs recorded against this event" value="" muted />
+              )}
               <PnlLine
                 label="Profit"
                 value={`${formatMoney(column.profitCents, { signed: true })} (${formatPercent(column.marginPct)})`}

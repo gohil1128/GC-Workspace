@@ -172,10 +172,44 @@ export async function getEventDetail(businessId: string, locationId: string, eve
 
 /** The events index: every event with the headline numbers, newest first. */
 export async function listEventsWithTotals(businessId: string, locationId: string) {
-  const [events, pnl] = await Promise.all([
+  const [events, pnl, invoiceSpend, expenseSpend] = await Promise.all([
     prisma.event.findMany({ where: { businessId }, orderBy: { startDate: "desc" } }),
     pnlByEvent(businessId, locationId),
+    /*
+      Spend tagged to this event and this event only.
+
+      The P&L column cannot answer this: it carries each event's 1/N share of
+      every invoice flagged "applies to all events", so an event created a
+      minute ago already shows COGS against it. That share is real for
+      reporting, but it is not evidence anybody bought anything *for* this
+      event — and telling those two apart is exactly what says whether an
+      event with no sales has been stocked up or simply has not happened yet.
+    */
+    prisma.invoice.groupBy({
+      by: ["eventId"],
+      where: { locationId, eventId: { not: null }, appliesToAllEvents: false },
+      _sum: { totalCents: true },
+    }),
+    prisma.expense.groupBy({
+      by: ["eventId"],
+      where: { locationId, eventId: { not: null } },
+      _sum: { amountCents: true },
+    }),
   ]);
+
   const byKey = new Map(pnl.map((c) => [c.key, c]));
-  return events.map((e) => ({ event: e, column: byKey.get(e.id) ?? null }));
+  const ownSpend = new Map<string, number>();
+  for (const r of invoiceSpend) {
+    if (r.eventId) ownSpend.set(r.eventId, (ownSpend.get(r.eventId) ?? 0) + (r._sum.totalCents ?? 0));
+  }
+  for (const r of expenseSpend) {
+    if (r.eventId) ownSpend.set(r.eventId, (ownSpend.get(r.eventId) ?? 0) + (r._sum.amountCents ?? 0));
+  }
+
+  return events.map((e) => ({
+    event: e,
+    column: byKey.get(e.id) ?? null,
+    // The booth fee is money committed to this event specifically, so it counts.
+    ownSpendCents: (ownSpend.get(e.id) ?? 0) + e.feeCents,
+  }));
 }

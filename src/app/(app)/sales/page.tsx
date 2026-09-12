@@ -7,6 +7,7 @@ import { getSalesBreakdown, type SalesSort } from "@/modules/sales/queries";
 import { categoryStyle } from "@/modules/items/categories";
 import { PageHeader } from "@/components/page-header";
 import { PeriodControl } from "@/components/dashboard/ledger/period-control";
+import { StickyToolbar } from "@/components/sticky-toolbar";
 import { StatTile, StatTileRow } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -81,29 +82,30 @@ export default async function SalesPage({
         eyebrow={`${range.scopeLabel} · ${range.subjectLabel}`}
         title="Sales"
         description={`${range.dateLabel} · ${data.totals.dayCount} day${data.totals.dayCount === 1 ? "" : "s"} with sales`}
-        actions={
-          <>
-            <PeriodControl
-              active={range.key}
-              basePath="/sales"
-              eventSegment={
-                range.key === "event" && range.eventId
-                  ? { label: range.subjectLabel, href: `/sales?event=${range.eventId}` }
-                  : activeEvent
-                    ? { label: activeEvent.name, href: "/sales" }
-                    : null
-              }
-              from={one(params.from)}
-              to={one(params.to)}
-            />
-            <Button asChild variant="outline" size="sm">
-              <a href="/api/exports/sales-items" download>
-                <Download className="h-3.5 w-3.5" /> CSV
-              </a>
-            </Button>
-          </>
-        }
       />
+
+      {/* The item list runs long, so the period control and the export stay
+          pinned under the header rather than scrolling away with the title. */}
+      <StickyToolbar>
+        <PeriodControl
+          active={range.key}
+          basePath="/sales"
+          eventSegment={
+            range.key === "event" && range.eventId
+              ? { label: range.subjectLabel, href: `/sales?event=${range.eventId}` }
+              : activeEvent
+                ? { label: activeEvent.name, href: "/sales" }
+                : null
+          }
+          from={one(params.from)}
+          to={one(params.to)}
+        />
+        <Button asChild variant="outline" size="sm">
+          <a href="/api/exports/sales-items" download>
+            <Download className="h-3.5 w-3.5" /> CSV
+          </a>
+        </Button>
+      </StickyToolbar>
 
       <div className="mx-auto max-w-[1400px] space-y-5 px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <StatTileRow>

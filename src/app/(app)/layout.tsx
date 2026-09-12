@@ -12,6 +12,7 @@ import { UserMenu } from "@/components/shell/user-menu";
 import { PageTransition } from "@/components/shell/page-transition";
 import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
 import { SideNav } from "@/components/shell/side-nav";
+import { HeaderHeightVar } from "@/components/shell/header-height";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -93,6 +94,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
+      <HeaderHeightVar />
       <MobileTabBar role={scope.role} />
     </div>
   );

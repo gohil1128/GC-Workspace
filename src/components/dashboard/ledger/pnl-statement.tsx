@@ -319,10 +319,15 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
             </div>
             <dl className="num mt-3 space-y-1.5 text-[13px]">
               <MobileLine label="Net sales" value={money(c.netSalesCents)} strong />
-              <MobileLine label="Supplier invoices" value={neg(c.cogsCents)} muted />
-              <MobileLine label="Labor" value={neg(c.laborCents)} muted />
-              <MobileLine label="Operating expenses" value={neg(c.opexCents)} muted />
-              <MobileLine label="Event fees" value={neg(c.feeCents)} muted />
+              {/* Lines with nothing recorded are dropped on phones, where four
+                  rows of em-dashes was most of the card's height. */}
+              {c.cogsCents > 0 && <MobileLine label="Supplier invoices" value={neg(c.cogsCents)} muted />}
+              {c.laborCents > 0 && <MobileLine label="Labor" value={neg(c.laborCents)} muted />}
+              {c.opexCents > 0 && <MobileLine label="Operating expenses" value={neg(c.opexCents)} muted />}
+              {c.feeCents > 0 && <MobileLine label="Event fees" value={neg(c.feeCents)} muted />}
+              {c.cogsCents + c.laborCents + c.opexCents + c.feeCents === 0 && (
+                <MobileLine label="No costs recorded" value="" muted />
+              )}
             </dl>
             <div className="ledger-highlight mt-3 flex items-baseline justify-between rounded-lg px-3 py-2.5">
               <dt className="text-[13px] font-bold">Profit</dt>
