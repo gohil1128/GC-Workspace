@@ -123,6 +123,7 @@ model Location {
   cashCloses       CashClose[]
   deposits         Deposit[]
   cashPayouts      CashPayout[]
+  itemRecipeLinks  ItemRecipeLink[]
   reportSnapshots  ReportSnapshot[]
   invoices         Invoice[]
   expenses         Expense[]
@@ -278,9 +279,32 @@ model Recipe {
 
   business    Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
+  itemLinks   ItemRecipeLink[]
 
   @@unique([businessId, name])
   @@index([businessId])
+}
+
+// Which recipe a sold item is made from.
+//
+// Square sends an item name and nothing else, so there is no way to cost what
+// sold without somebody saying "Masala Chai (12oz) is this recipe" once. That
+// mapping keys on the NAME rather than living on the SalesItem rows: a new
+// import writes fresh rows, and a per-row link would be lost every time the
+// operator uploaded a CSV — the mapping has to outlive the data it describes.
+model ItemRecipeLink {
+  id         String   @id @default(cuid())
+  locationId String
+  itemName   String
+  recipeId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, itemName])
+  @@index([recipeId])
 }
 
 model RecipeIngredient {

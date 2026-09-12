@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
-import { setItemCategoryAction, deleteItemSalesAction } from "@/modules/items/actions";
+import { setItemCategoryAction, deleteItemSalesAction, setItemRecipeAction } from "@/modules/items/actions";
 import { ITEM_CATEGORIES, categoryStyle } from "@/modules/items/categories";
 
 type Item = {
@@ -20,12 +20,18 @@ type Item = {
   qty: number;
   netSalesDollars: number;
   dayCount: number;
+  /** The recipe this item is made from, if it has been pointed at one. */
+  recipeId: string | null;
 };
+
+export type RecipeOption = { id: string; name: string; unitCostCents: number };
+
+const NO_RECIPE = "__none__";
 
 // Shared formatter so thousands separators match the rest of the app.
 const money = (n: number) => formatMoney(Math.round(n * 100));
 
-export function ItemsManager({ items }: { items: Item[] }) {
+export function ItemsManager({ items, recipes }: { items: Item[]; recipes: RecipeOption[] }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [q, setQ] = React.useState("");
@@ -34,10 +40,34 @@ export function ItemsManager({ items }: { items: Item[] }) {
   const [cats, setCats] = React.useState<Record<string, string>>(
     () => Object.fromEntries(items.map((i) => [i.itemName, i.category]))
   );
+  const [links, setLinks] = React.useState<Record<string, string>>(
+    () => Object.fromEntries(items.map((i) => [i.itemName, i.recipeId ?? NO_RECIPE]))
+  );
 
   React.useEffect(() => {
     setCats(Object.fromEntries(items.map((i) => [i.itemName, i.category])));
+    setLinks(Object.fromEntries(items.map((i) => [i.itemName, i.recipeId ?? NO_RECIPE])));
   }, [items]);
+
+  const onRecipe = (itemName: string, next: string) => {
+    setLinks((l) => ({ ...l, [itemName]: next }));
+    setBusy(`rec:${itemName}`);
+    (async () => {
+      try {
+        await setItemRecipeAction(itemName, next === NO_RECIPE ? null : next);
+        const name = recipes.find((r) => r.id === next)?.name;
+        toast({
+          title: next === NO_RECIPE ? "Recipe unlinked" : "Recipe linked",
+          description: next === NO_RECIPE ? itemName : `${itemName} → ${name}`,
+        });
+        router.refresh();
+      } catch (err: any) {
+        toast({ title: "Failed", description: String(err?.message ?? err), variant: "destructive" });
+      } finally {
+        setBusy(null);
+      }
+    })();
+  };
 
   const onCategory = (itemName: string, next: string) => {
     setCats((c) => ({ ...c, [itemName]: next }));
@@ -97,6 +127,7 @@ export function ItemsManager({ items }: { items: Item[] }) {
             <TableRow>
               <TableHead>Item</TableHead>
               <TableHead className="w-44">Category</TableHead>
+              <TableHead className="w-52">Recipe</TableHead>
               <TableHead className="text-right">Units</TableHead>
               <TableHead className="text-right">Net</TableHead>
               <TableHead className="w-12" />
@@ -130,6 +161,31 @@ export function ItemsManager({ items }: { items: Item[] }) {
                       {busy === `cat:${i.itemName}` && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                     </div>
                   </TableCell>
+                  {/* Pointing an item at its recipe is what makes a margin
+                      possible: Square sends a name and a price, never a cost. */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Select
+                        value={links[i.itemName] ?? NO_RECIPE}
+                        onValueChange={(v) => onRecipe(i.itemName, v)}
+                        disabled={busy === `rec:${i.itemName}` || recipes.length === 0}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder={recipes.length === 0 ? "No recipes yet" : "Not costed"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_RECIPE}>Not costed</SelectItem>
+                          {recipes.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name}
+                              {r.unitCostCents > 0 && ` · ${formatMoney(r.unitCostCents)}/unit`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {busy === `rec:${i.itemName}` && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right num text-muted-foreground">{i.qty.toLocaleString()}</TableCell>
                   <TableCell className="text-right num">{money(i.netSalesDollars)}</TableCell>
                   <TableCell>
@@ -153,7 +209,7 @@ export function ItemsManager({ items }: { items: Item[] }) {
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No items match.</TableCell>
+                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No items match.</TableCell>
               </TableRow>
             )}
           </TableBody>

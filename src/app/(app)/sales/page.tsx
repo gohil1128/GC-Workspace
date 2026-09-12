@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
 import { Badge } from "@/components/ui/badge";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, formatPercent } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 const SORTS: { key: SalesSort; label: string }[] = [
   { key: "revenue", label: "Revenue" },
+  { key: "profit", label: "Profit" },
   { key: "qty", label: "Units" },
   { key: "name", label: "Name" },
 ];
@@ -111,13 +112,42 @@ export default async function SalesPage({
         <StatTileRow>
           <StatTile label="Net sales" value={formatMoney(data.totals.netSalesCents)} />
           <StatTile label="Units sold" value={qtyFmt(data.totals.qty)} />
-          <StatTile label="Transactions" value={data.totals.txCount.toLocaleString()} />
           <StatTile
-            label="Distinct items"
-            value={data.totals.itemCount.toLocaleString()}
-            meta={avgItemValue > 0 ? `${formatMoney(Math.round(avgItemValue))} / unit` : undefined}
+            label="Gross profit"
+            value={data.totals.marginPct === null ? "—" : formatMoney(data.totals.profitCents)}
+          />
+          <StatTile
+            label="Margin"
+            value={data.totals.marginPct === null ? "—" : formatPercent(data.totals.marginPct)}
           />
         </StatTileRow>
+
+        {/* Says what the margin is actually over. A figure computed across only
+            the costed items, presented without that, invites reading it as the
+            whole business. */}
+        {data.totals.uncostedItemCount > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Profit and margin cover the{" "}
+            <span className="text-foreground">{data.totals.costedItemCount}</span> item
+            {data.totals.costedItemCount === 1 ? "" : "s"} with a recipe against{" "}
+            {data.totals.costedItemCount === 1 ? "it" : "them"} —{" "}
+            <span className="text-foreground">{formatMoney(data.totals.costedNetSalesCents)}</span> of{" "}
+            {formatMoney(data.totals.netSalesCents)} in sales.{" "}
+            <span className="text-foreground">{data.totals.uncostedItemCount}</span> item
+            {data.totals.uncostedItemCount === 1 ? " is" : "s are"} not costed yet;{" "}
+            <Link href="/settings/integrations" className="text-brand-ink hover:underline">
+              link {data.totals.uncostedItemCount === 1 ? "it" : "them"} to a recipe
+            </Link>{" "}
+            to include {data.totals.uncostedItemCount === 1 ? "it" : "them"}.
+          </p>
+        ) : (
+          data.totals.itemCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Every item is costed from its recipe, so profit moves on its own as ingredient
+              prices change.
+            </p>
+          )
+        )}
 
         {/* ── Categories ─────────────────────────────────────────────── */}
         <div className="bento p-4 sm:p-5">
@@ -160,6 +190,19 @@ export default async function SalesPage({
                       </span>
                       <span className="num shrink-0 text-right">
                         <span className="font-semibold">{formatMoney(c.netSalesCents)}</span>
+                        {c.marginPct !== null && (
+                          <span className="ml-2 text-2xs text-success">
+                            {formatPercent(c.marginPct)} margin
+                            {/* Named when it is only part of the category, so
+                                one costed item out of three cannot be read as
+                                the whole category's margin. */}
+                            {c.costedItemCount < c.itemCount && (
+                              <span className="text-muted-foreground">
+                                {" "}on {c.costedItemCount} of {c.itemCount}
+                              </span>
+                            )}
+                          </span>
+                        )}
                         <span className="ml-2 text-2xs text-muted-foreground">{c.sharePct.toFixed(1)}%</span>
                       </span>
                     </div>
@@ -216,8 +259,10 @@ export default async function SalesPage({
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Units</TableHead>
                   <TableHead className="text-right">Net sales</TableHead>
-                  <TableHead className="text-right">Tax</TableHead>
-                  <TableHead className="text-right">Txns</TableHead>
+                  <TableHead className="text-right">Unit cost</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                  <TableHead className="text-right">Margin</TableHead>
                   <TableHead className="text-right">Share</TableHead>
                 </TableRow>
               </TableHeader>
@@ -233,14 +278,33 @@ export default async function SalesPage({
                     </TableCell>
                     <TableCell className="num text-right">{qtyFmt(i.qty)}</TableCell>
                     <TableCell className="num text-right font-medium">{formatMoney(i.netSalesCents)}</TableCell>
-                    <TableCell className="num text-right text-muted-foreground">{formatMoney(i.taxCents)}</TableCell>
-                    <TableCell className="num text-right text-muted-foreground">{i.txCount.toLocaleString()}</TableCell>
+                    <TableCell className="num text-right text-muted-foreground" title={i.recipeName ?? undefined}>
+                      {i.unitCostCents === null ? "—" : formatMoney(i.unitCostCents)}
+                    </TableCell>
+                    <TableCell className="num text-right text-muted-foreground">
+                      {i.costCents === null ? "—" : formatMoney(i.costCents)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "num text-right font-medium",
+                        i.profitCents !== null && i.profitCents < 0 && "text-destructive",
+                      )}
+                    >
+                      {i.profitCents === null ? (
+                        <span className="font-normal text-muted-foreground">Not costed</span>
+                      ) : (
+                        formatMoney(i.profitCents, { signed: true })
+                      )}
+                    </TableCell>
+                    <TableCell className="num text-right text-muted-foreground">
+                      {i.marginPct === null ? "—" : formatPercent(i.marginPct)}
+                    </TableCell>
                     <TableCell className="num text-right text-muted-foreground">{i.sharePct.toFixed(1)}%</TableCell>
                   </TableRow>
                 ))}
                 {data.items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={9} className="py-8 text-center text-xs text-muted-foreground">
                       Nothing sold in this period{category ? ` in ${category}` : ""}.
                     </TableCell>
                   </TableRow>
@@ -258,7 +322,14 @@ export default async function SalesPage({
                 badges={<Badge variant="muted">{i.category}</Badge>}
               >
                 <MobileField label="Net sales" value={formatMoney(i.netSalesCents)} />
-                <MobileField label="Transactions" value={i.txCount.toLocaleString()} />
+                <MobileField
+                  label="Profit"
+                  value={
+                    i.profitCents === null
+                      ? "Not costed"
+                      : `${formatMoney(i.profitCents, { signed: true })}${i.marginPct !== null ? ` · ${formatPercent(i.marginPct)}` : ""}`
+                  }
+                />
               </MobileRow>
             ))}
             {data.items.length === 0 && (

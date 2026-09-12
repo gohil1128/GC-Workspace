@@ -3,6 +3,8 @@ import { requireCapability } from "@/lib/scope";
 import { listActiveEvents } from "@/modules/events/queries";
 import { listImportedDays } from "@/modules/imports/queries";
 import { listItemCatalog } from "@/modules/items/queries";
+import { listItemRecipeLinks } from "@/modules/items/costing";
+import { listRecipes } from "@/modules/recipes/queries";
 import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,13 +25,26 @@ export default async function IntegrationsPage() {
   const defaultEventId = broadway?.id;
 
   const importedDays = await listImportedDays(scope.locationId);
-  const itemCatalog = await listItemCatalog(scope.locationId);
+  const [itemCatalog, itemLinks, recipes] = await Promise.all([
+    listItemCatalog(scope.locationId),
+    listItemRecipeLinks(scope.locationId),
+    listRecipes(scope.businessId),
+  ]);
+  const linkByName = new Map(itemLinks.map((l) => [l.itemName, l.recipeId]));
   const itemRows = itemCatalog.map((i) => ({
     itemName: i.itemName,
     category: i.category,
     qty: i.qty,
     netSalesDollars: i.netSalesCents / 100,
     dayCount: i.dayCount,
+    recipeId: linkByName.get(i.itemName) ?? null,
+  }));
+  // Plate cost is the whole batch; what a sold unit costs is that over the
+  // recipe's yield, which is the number worth showing next to a menu item.
+  const recipeOptions = recipes.map((r) => ({
+    id: r.id,
+    name: r.name,
+    unitCostCents: Math.round(r.plateCostCents / (r.yieldQty > 0 ? r.yieldQty : 1)),
   }));
   const managerDays = importedDays.map((d) => ({
     iso: d.iso,
@@ -119,7 +134,7 @@ export default async function IntegrationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ItemsManager items={itemRows} />
+            <ItemsManager items={itemRows} recipes={recipeOptions} />
           </CardContent>
         </Card>
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeCategory } from "@/modules/items/categories";
+import { getItemCosts } from "@/modules/items/costing";
 
 /*
   Item sales, rolled up two ways over one date window.
@@ -11,7 +12,7 @@ import { normalizeCategory } from "@/modules/items/categories";
   item's raw Square category maps onto a real menu category.
 */
 
-export type SalesSort = "revenue" | "qty" | "name";
+export type SalesSort = "revenue" | "qty" | "profit" | "name";
 
 export type ItemRow = {
   itemName: string;
@@ -21,6 +22,14 @@ export type ItemRow = {
   taxCents: number;
   txCount: number;
   sharePct: number;
+  /* Costing, from the item's linked recipe. Null throughout when the item has
+     no recipe against it — which is not the same as costing nothing, and is
+     why these are nullable rather than zero. */
+  recipeName: string | null;
+  unitCostCents: number | null;
+  costCents: number | null;
+  profitCents: number | null;
+  marginPct: number | null;
 };
 
 export type CategoryRow = {
@@ -30,6 +39,12 @@ export type CategoryRow = {
   txCount: number;
   itemCount: number;
   sharePct: number;
+  /** Only over the items in this category that are costed. */
+  costedNetSalesCents: number;
+  costedItemCount: number;
+  costCents: number;
+  profitCents: number;
+  marginPct: number | null;
 };
 
 export async function getSalesBreakdown(params: {
@@ -40,22 +55,25 @@ export async function getSalesBreakdown(params: {
   category?: string | null;
   sort?: SalesSort;
 }) {
-  const rows = await prisma.salesItem.findMany({
-    where: {
-      locationId: params.locationId,
-      businessDate: { gte: params.from, lte: params.to },
-      ...(params.eventId ? { eventId: params.eventId } : {}),
-    },
-    select: {
-      itemName: true,
-      category: true,
-      qty: true,
-      netSalesCents: true,
-      taxCents: true,
-      txCount: true,
-      businessDate: true,
-    },
-  });
+  const [rows, costs] = await Promise.all([
+    prisma.salesItem.findMany({
+      where: {
+        locationId: params.locationId,
+        businessDate: { gte: params.from, lte: params.to },
+        ...(params.eventId ? { eventId: params.eventId } : {}),
+      },
+      select: {
+        itemName: true,
+        category: true,
+        qty: true,
+        netSalesCents: true,
+        taxCents: true,
+        txCount: true,
+        businessDate: true,
+      },
+    }),
+    getItemCosts(params.locationId),
+  ]);
 
   // One row per item name; the same item appears once per business date.
   const byItem = new Map<string, ItemRow & { days: Set<number> }>();
@@ -77,9 +95,26 @@ export async function getSalesBreakdown(params: {
         taxCents: r.taxCents,
         txCount: r.txCount,
         sharePct: 0,
+        recipeName: null,
+        unitCostCents: null,
+        costCents: null,
+        profitCents: null,
+        marginPct: null,
         days: new Set([r.businessDate.getTime()]),
       });
     }
+  }
+
+  // Cost every item that has a recipe against it. Quantities are summed first,
+  // so the cost is one unit's cost times everything that sold in the window.
+  for (const item of byItem.values()) {
+    const cost = costs.get(item.itemName.toLowerCase());
+    if (!cost || cost.unpriced) continue;
+    item.recipeName = cost.recipeName;
+    item.unitCostCents = cost.unitCostCents;
+    item.costCents = Math.round(cost.unitCostCents * item.qty);
+    item.profitCents = item.netSalesCents - item.costCents;
+    item.marginPct = item.netSalesCents > 0 ? (item.profitCents / item.netSalesCents) * 100 : null;
   }
 
   const all = [...byItem.values()];
@@ -92,26 +127,44 @@ export async function getSalesBreakdown(params: {
 
   const catMap = new Map<string, CategoryRow>();
   for (const i of all) {
-    const ex = catMap.get(i.category);
-    if (ex) {
-      ex.qty += i.qty;
-      ex.netSalesCents += i.netSalesCents;
-      ex.txCount += i.txCount;
-      ex.itemCount += 1;
-    } else {
-      catMap.set(i.category, {
-        category: i.category,
-        qty: i.qty,
-        netSalesCents: i.netSalesCents,
-        txCount: i.txCount,
-        itemCount: 1,
-        sharePct: 0,
-      });
+    const ex =
+      catMap.get(i.category) ??
+      (catMap
+        .set(i.category, {
+          category: i.category,
+          qty: 0,
+          netSalesCents: 0,
+          txCount: 0,
+          itemCount: 0,
+          sharePct: 0,
+          costedNetSalesCents: 0,
+          costedItemCount: 0,
+          costCents: 0,
+          profitCents: 0,
+          marginPct: null,
+        })
+        .get(i.category) as CategoryRow);
+    ex.qty += i.qty;
+    ex.netSalesCents += i.netSalesCents;
+    ex.txCount += i.txCount;
+    ex.itemCount += 1;
+    // A category's margin is over its costed items only. Folding in an
+    // uncosted item's revenue at zero cost would report a 100% margin on it
+    // and drag the category's number up for no reason but missing data.
+    if (i.costCents !== null) {
+      ex.costedNetSalesCents += i.netSalesCents;
+      ex.costedItemCount += 1;
+      ex.costCents += i.costCents;
+      ex.profitCents += i.profitCents ?? 0;
     }
   }
 
   const byCategory = [...catMap.values()]
-    .map((c) => ({ ...c, sharePct: totalCents > 0 ? (c.netSalesCents / totalCents) * 100 : 0 }))
+    .map((c) => ({
+      ...c,
+      sharePct: totalCents > 0 ? (c.netSalesCents / totalCents) * 100 : 0,
+      marginPct: c.costedNetSalesCents > 0 ? (c.profitCents / c.costedNetSalesCents) * 100 : null,
+    }))
     .sort((a, b) => b.netSalesCents - a.netSalesCents);
 
   const sort = params.sort ?? "revenue";
@@ -121,8 +174,19 @@ export async function getSalesBreakdown(params: {
     .sort((a, b) => {
       if (sort === "qty") return b.qty - a.qty;
       if (sort === "name") return a.itemName.localeCompare(b.itemName);
+      // Uncosted items sink rather than sorting as zero profit, which would
+      // scatter them through the middle of the list.
+      if (sort === "profit") {
+        if (a.profitCents === null) return b.profitCents === null ? 0 : 1;
+        if (b.profitCents === null) return -1;
+        return b.profitCents - a.profitCents;
+      }
       return b.netSalesCents - a.netSalesCents;
     });
+
+  const costed = all.filter((i) => i.costCents !== null);
+  const costedNetCents = costed.reduce((a, i) => a + i.netSalesCents, 0);
+  const costedCostCents = costed.reduce((a, i) => a + (i.costCents ?? 0), 0);
 
   return {
     items,
@@ -133,6 +197,15 @@ export async function getSalesBreakdown(params: {
       txCount: totalTx,
       itemCount: all.length,
       dayCount: new Set(rows.map((r) => r.businessDate.getTime())).size,
+      // Margin is reported over the costed slice only, with the count of what
+      // is still missing shown beside it — a number that quietly treated
+      // uncosted items as free would be flattering and wrong.
+      costedItemCount: costed.length,
+      uncostedItemCount: all.length - costed.length,
+      costedNetSalesCents: costedNetCents,
+      costCents: costedCostCents,
+      profitCents: costedNetCents - costedCostCents,
+      marginPct: costedNetCents > 0 ? ((costedNetCents - costedCostCents) / costedNetCents) * 100 : null,
     },
     /** Set when a category filter is on and matched nothing. */
     filteredCount: items.length,
