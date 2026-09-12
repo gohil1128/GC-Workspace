@@ -28,18 +28,28 @@ export default async function CashPage() {
   const totalBanked = closes.reduce((a, c) => a + c.depositCents, 0);
 
   /*
-    Cash in hand is a balance, not a flow, so it is the most recent count —
-    not a sum. Adding thirty days of counted drawers together would also add
-    the opening float back in thirty times.
+    Cash in hand: the day's takings, from the most recent drawer count.
 
-    The counted figure already has the day's payouts and deposits out of it:
-    that money physically left the till before it was counted, which is
-    exactly why the over/short arithmetic adds both back before comparing
-    against expected sales.
+    A balance, not a flow, so it is the latest count rather than a sum —
+    adding thirty days of counted drawers together would also add the float
+    back in thirty times.
+
+    Two deliberate choices, both confirmed against how this business actually
+    counts:
+
+    The float comes off. The counted drawer includes the opening float, which
+    is tomorrow's change and not money the day earned.
+
+    Payouts do NOT come off, even though they reduce cash on hand — because
+    they already have. The drawer is counted at close, and payout cash left
+    the till before that count, so it is missing from `cashCents` already.
+    Subtracting it a second time would deduct the same money twice. It is
+    named in the caption instead, so it is visible rather than merely absent.
   */
   const latest = closes[0] ?? null;
-  const inHandCents = latest?.cashCents ?? 0;
+  const inHandCents = latest ? latest.cashCents - latest.openingCents : 0;
   const safeCents = latest?.safeCountCents ?? 0;
+  const latestPaidOutCents = latest?.paidOutCents ?? 0;
 
   return (
     <div>
@@ -68,9 +78,16 @@ export default async function CashPage() {
 
         {latest ? (
           <p className="text-xs text-muted-foreground">
-            Cash in hand is the drawer as counted on{" "}
-            <span className="text-foreground">{fmtDate(latest.businessDate)}</span> — the day&rsquo;s
-            payouts and deposits are already out of it.
+            Cash in hand is the <span className="text-foreground">{fmtDate(latest.businessDate)}</span>{" "}
+            drawer count of <span className="text-foreground">{formatMoney(latest.cashCents)}</span> less the{" "}
+            <span className="text-foreground">{formatMoney(latest.openingCents)}</span> opening float.
+            {latestPaidOutCents > 0 && (
+              <>
+                {" "}
+                The day&rsquo;s <span className="text-foreground">{formatMoney(latestPaidOutCents)}</span> of
+                payouts is already out of it — that cash left the till before the drawer was counted.
+              </>
+            )}
             {safeCents > 0 && (
               <> A further <span className="text-foreground">{formatMoney(safeCents)}</span> was counted in the safe.</>
             )}{" "}
