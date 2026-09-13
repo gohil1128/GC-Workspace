@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   saveCashCloseAction, addDepositAction, deleteDepositAction, verifyCloseAction,
-  addPayoutAction, deletePayoutAction,
+  addPayoutAction, updatePayoutAction, deletePayoutAction,
 } from "@/modules/cash/actions";
 import { toast } from "@/components/ui/use-toast";
 import { PAYOUT_KINDS, payoutKindLabel } from "@/modules/cash/payout-kinds";
@@ -50,6 +50,19 @@ export function CashEntry({
 }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
+
+  /*
+    Which payout is being corrected, held here rather than on the row.
+
+    The correction form has to live outside the table: the payouts table
+    scrolls sideways on a phone, and a form inside one of its cells inherits
+    that — half the fields end up off the edge. Above the table it is the same
+    shape as the add form, which already lays out at 390px.
+  */
+  const [editingPayoutId, setEditingPayoutId] = React.useState<string | null>(null);
+  // Derived, not stored: if the row is deleted or refreshed away underneath
+  // us, the form closes instead of editing something that is gone.
+  const editingPayout = payouts.find((p) => p.id === editingPayoutId) ?? null;
 
   const [opening, setOpening] = React.useState(String(existing?.openingDollars ?? 300));
   const [closing, setClosing] = React.useState(String(existing?.closingDollars ?? 0));
@@ -301,7 +314,15 @@ export function CashEntry({
                   who bought something on their own card. Recording it here keeps the till
                   balanced: a payout is money accounted for, not money missing.
                 </p>
-                <AddPayout businessDate={businessDate} />
+                {editingPayout ? (
+                  <EditPayout
+                    key={editingPayout.id}
+                    payout={editingPayout}
+                    onDone={() => setEditingPayoutId(null)}
+                  />
+                ) : (
+                  <AddPayout businessDate={businessDate} />
+                )}
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
@@ -311,21 +332,17 @@ export function CashEntry({
                         <TableHead>Paid to</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Receipt</TableHead>
-                        <TableHead className="w-12" />
+                        <TableHead className="w-20" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payouts.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="text-right num font-medium">{fmt(p.amountDollars)}</TableCell>
-                          <TableCell>{p.reason}</TableCell>
-                          <TableCell>{p.paidTo ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{payoutKindLabel(p.kind)}</TableCell>
-                          <TableCell className="font-mono text-xs">{p.reference ?? "—"}</TableCell>
-                          <TableCell>
-                            <DeletePayoutButton id={p.id} />
-                          </TableCell>
-                        </TableRow>
+                        <PayoutRow
+                          key={p.id}
+                          payout={p}
+                          editing={p.id === editingPayoutId}
+                          onEdit={() => setEditingPayoutId(p.id)}
+                        />
                       ))}
                       {payouts.length === 0 && (
                         <TableRow>
@@ -460,38 +477,123 @@ function AddDeposit({ businessDate }: { businessDate: string }) {
   );
 }
 
+/*
+  One set of payout fields, shared by the add form and by a row being
+  corrected — so a payout is described the same way whether it is being
+  written down for the first time or fixed afterwards.
+*/
+type PayoutDraft = {
+  amount: string; kind: PayoutKind; reason: string; paidTo: string; reference: string;
+};
+
+const emptyDraft: PayoutDraft = {
+  amount: "", kind: "REIMBURSEMENT", reason: "", paidTo: "", reference: "",
+};
+
+function PayoutFields({
+  idPrefix, draft, set, pending, submitLabel, submitIcon, onCancel,
+}: {
+  idPrefix: string;
+  draft: PayoutDraft;
+  set: (patch: Partial<PayoutDraft>) => void;
+  pending: boolean;
+  submitLabel: string;
+  submitIcon: React.ReactNode;
+  onCancel?: () => void;
+}) {
+  return (
+    <>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${idPrefix}-amt`} className="text-xs">Amount *</Label>
+        <Input
+          id={`${idPrefix}-amt`} type="number" step="0.01" min="0.01"
+          value={draft.amount} onChange={(e) => set({ amount: e.target.value })}
+          className="num text-right w-32 h-8" required
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${idPrefix}-reason`} className="text-xs">What for *</Label>
+        <Input
+          id={`${idPrefix}-reason`} value={draft.reason}
+          onChange={(e) => set({ reason: e.target.value })}
+          className="h-8" placeholder="e.g. bag of ice, milk run" required
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${idPrefix}-to`} className="text-xs">Paid to</Label>
+        <Input
+          id={`${idPrefix}-to`} value={draft.paidTo}
+          onChange={(e) => set({ paidTo: e.target.value })}
+          className="h-8" placeholder="who took the cash"
+        />
+      </div>
+      <div className="grid gap-1.5 min-w-[160px]">
+        <Label htmlFor={`${idPrefix}-kind`} className="text-xs">Type</Label>
+        <Select value={draft.kind} onValueChange={(v) => set({ kind: v as PayoutKind })}>
+          <SelectTrigger id={`${idPrefix}-kind`} className="h-8"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {PAYOUT_KINDS.map((k) => (
+              <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${idPrefix}-ref`} className="text-xs">Receipt</Label>
+        <Input
+          id={`${idPrefix}-ref`} value={draft.reference}
+          onChange={(e) => set({ reference: e.target.value })}
+          className="h-8 w-28 font-mono"
+        />
+      </div>
+      <div className="flex items-center gap-2 md:col-start-5">
+        <Button type="submit" size="sm" disabled={pending}>
+          {submitIcon} {submitLabel}
+        </Button>
+        {onCancel && (
+          <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+// Shared by both forms so the two cannot disagree about what is required —
+// the server checks the same things, this just says so before the round trip.
+function invalidDraft(draft: PayoutDraft): string | null {
+  const n = Number(draft.amount);
+  if (!isFinite(n) || n <= 0) return "Enter a valid amount";
+  if (!draft.reason.trim()) return "Say what the money was for";
+  return null;
+}
+
 function AddPayout({ businessDate }: { businessDate: string }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
-  const [amount, setAmount] = React.useState("");
-  const [kind, setKind] = React.useState<PayoutKind>("REIMBURSEMENT");
-  const [reason, setReason] = React.useState("");
-  const [paidTo, setPaidTo] = React.useState("");
-  const [reference, setReference] = React.useState("");
+  const [draft, setDraft] = React.useState<PayoutDraft>(emptyDraft);
+  const set = (patch: Partial<PayoutDraft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
-    const n = Number(amount);
-    if (!isFinite(n) || n <= 0) {
-      toast({ title: "Enter a valid amount", variant: "destructive" });
-      return;
-    }
-    if (!reason.trim()) {
-      toast({ title: "Say what the money was for", variant: "destructive" });
+    const problem = invalidDraft(draft);
+    if (problem) {
+      toast({ title: problem, variant: "destructive" });
       return;
     }
     start(async () => {
       try {
         await addPayoutAction({
           businessDate,
-          amountDollars: n,
-          kind,
-          reason: reason.trim(),
-          paidTo: paidTo || null,
-          reference: reference || null,
+          amountDollars: Number(draft.amount),
+          kind: draft.kind,
+          reason: draft.reason.trim(),
+          paidTo: draft.paidTo || null,
+          reference: draft.reference || null,
         });
         toast({ title: "Payout recorded" });
-        setAmount(""); setReason(""); setPaidTo(""); setReference("");
+        setDraft(emptyDraft);
         router.refresh();
       } catch (err: any) {
         toast({ title: "Failed", description: String(err?.message ?? err), variant: "destructive" });
@@ -501,38 +603,116 @@ function AddPayout({ businessDate }: { businessDate: string }) {
 
   return (
     <form onSubmit={add} className="rounded-md border bg-muted/30 p-3 grid grid-cols-1 gap-3 md:grid-cols-[auto_1fr_1fr_auto_auto] md:items-end">
-      <div className="grid gap-1.5">
-        <Label htmlFor="po-amt" className="text-xs">Amount *</Label>
-        <Input id="po-amt" type="number" step="0.01" min="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="num text-right w-32 h-8" required />
-      </div>
-      <div className="grid gap-1.5">
-        <Label htmlFor="po-reason" className="text-xs">What for *</Label>
-        <Input id="po-reason" value={reason} onChange={(e) => setReason(e.target.value)} className="h-8" placeholder="e.g. bag of ice, milk run" required />
-      </div>
-      <div className="grid gap-1.5">
-        <Label htmlFor="po-to" className="text-xs">Paid to</Label>
-        <Input id="po-to" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} className="h-8" placeholder="who took the cash" />
-      </div>
-      <div className="grid gap-1.5 min-w-[160px]">
-        <Label htmlFor="po-kind" className="text-xs">Type</Label>
-        <Select value={kind} onValueChange={(v) => setKind(v as PayoutKind)}>
-          <SelectTrigger id="po-kind" className="h-8"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {PAYOUT_KINDS.map((k) => (
-              <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-1.5">
-        <Label htmlFor="po-ref" className="text-xs">Receipt</Label>
-        <Input id="po-ref" value={reference} onChange={(e) => setReference(e.target.value)} className="h-8 w-28 font-mono" />
-      </div>
-      <Button type="submit" size="sm" disabled={pending} className="md:col-start-5">
-        <Plus className="h-3.5 w-3.5" /> Add payout
-      </Button>
+      <PayoutFields
+        idPrefix="po" draft={draft} set={set} pending={pending}
+        submitLabel="Add payout" submitIcon={<Plus className="h-3.5 w-3.5" />}
+      />
     </form>
   );
+}
+
+/*
+  Correcting a payout already recorded.
+
+  Sits where the add form sits, so the fields are in the place the person
+  already knows, and the row it belongs to is marked in the table below while
+  it is open.
+*/
+function EditPayout({ payout, onDone }: { payout: Payout; onDone: () => void }) {
+  const router = useRouter();
+  const [pending, start] = React.useTransition();
+  const [draft, setDraft] = React.useState<PayoutDraft>(() => draftOf(payout));
+  const set = (patch: Partial<PayoutDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const formRef = React.useRef<HTMLFormElement>(null);
+
+  // The form opens above a list that may be long enough to have scrolled it
+  // out of view — otherwise pressing Edit looks like it did nothing.
+  React.useEffect(() => {
+    formRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, []);
+
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    const problem = invalidDraft(draft);
+    if (problem) {
+      toast({ title: problem, variant: "destructive" });
+      return;
+    }
+    start(async () => {
+      const res = await updatePayoutAction(payout.id, {
+        amountDollars: Number(draft.amount),
+        kind: draft.kind,
+        reason: draft.reason.trim(),
+        paidTo: draft.paidTo || null,
+        reference: draft.reference || null,
+      });
+      if ("error" in res) {
+        toast({ title: "Could not save", description: res.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Payout updated" });
+      onDone();
+      router.refresh();
+    });
+  };
+
+  return (
+    <form
+      ref={formRef}
+      onSubmit={save}
+      className="grid grid-cols-1 gap-3 rounded-md border border-brand/40 bg-brand/5 p-3 md:grid-cols-[auto_1fr_1fr_auto_auto] md:items-end"
+    >
+      <p className="text-xs text-muted-foreground md:col-span-5">
+        Correcting the {fmt(payout.amountDollars)} payout for &ldquo;{payout.reason}&rdquo;. The
+        day&rsquo;s over/short is worked out again from the new amount.
+      </p>
+      <PayoutFields
+        idPrefix="po-edit" draft={draft} set={set} pending={pending}
+        submitLabel={pending ? "Saving..." : "Save changes"}
+        submitIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+        onCancel={onDone}
+      />
+    </form>
+  );
+}
+
+function PayoutRow({
+  payout, editing, onEdit,
+}: {
+  payout: Payout; editing: boolean; onEdit: () => void;
+}) {
+  return (
+    <TableRow className={editing ? "bg-brand/10" : undefined}>
+      <TableCell className="text-right num font-medium">{fmt(payout.amountDollars)}</TableCell>
+      <TableCell>{payout.reason}</TableCell>
+      <TableCell>{payout.paidTo ?? "—"}</TableCell>
+      <TableCell className="text-xs text-muted-foreground">{payoutKindLabel(payout.kind)}</TableCell>
+      <TableCell className="font-mono text-xs">{payout.reference ?? "—"}</TableCell>
+      <TableCell>
+        <div className="flex items-center">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onEdit}
+            aria-label={`Edit payout: ${payout.reason}`}
+          >
+            <Pencil className={`h-3.5 w-3.5 ${editing ? "text-brand-ink" : "text-muted-foreground"}`} />
+          </Button>
+          <DeletePayoutButton id={payout.id} />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function draftOf(p: Payout): PayoutDraft {
+  return {
+    amount: p.amountDollars.toFixed(2),
+    kind: p.kind,
+    reason: p.reason,
+    paidTo: p.paidTo ?? "",
+    reference: p.reference ?? "",
+  };
 }
 
 function DeletePayoutButton({ id }: { id: string }) {

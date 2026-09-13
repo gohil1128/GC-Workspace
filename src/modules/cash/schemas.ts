@@ -37,6 +37,13 @@ export const payoutSchema = z.object({
   reference: z.string().optional().nullable(),
 });
 
+/*
+  The same payout, minus the day it belongs to. Editing corrects what was
+  written down; it does not move cash from one drawer to another, which would
+  mean re-balancing two closes.
+*/
+export const payoutEditSchema = payoutSchema.omit({ businessDate: true });
+
 export const verifyCloseSchema = z.object({
   closeId: z.string(),
 });

@@ -6,7 +6,7 @@ import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { startOfDay } from "@/lib/date";
-import { cashCloseSchema, depositSchema, payoutSchema } from "./schemas";
+import { cashCloseSchema, depositSchema, payoutSchema, payoutEditSchema } from "./schemas";
 import { overShortCentsFor } from "./reconcile";
 import { requireCan } from "@/lib/auth";
 
@@ -176,6 +176,77 @@ export async function addPayoutAction(payload: unknown) {
   revalidatePath("/cash");
   revalidatePath("/cash/new");
   revalidatePath("/dashboard");
+}
+
+/*
+  Correcting a payout, rather than deleting and re-typing it.
+
+  A payout is usually written down in a hurry at the stall — the amount off by
+  a digit, the reason half a word — and the old answer was to delete the row
+  and add it again, which loses the record that it was ever wrong. This keeps
+  the row and re-derives the day's over/short from the new amount.
+
+  The day itself is not editable here: a payout belongs to the day whose drawer
+  it came out of, and moving it would have to re-balance two closes. A payout
+  filed against the wrong day is still a delete-and-re-add.
+
+  Returns its error rather than throwing: production redacts thrown Server
+  Action messages, so a thrown validation message reaches the user as a digest.
+*/
+export async function updatePayoutAction(
+  id: string,
+  payload: unknown,
+): Promise<{ ok: true } | { error: string }> {
+  await requireCan("cash");
+  const scope = await getScope();
+
+  const parsed = payoutEditSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the amount and the reason." };
+  }
+  const next = parsed.data;
+
+  const before = await prisma.cashPayout.findFirst({
+    where: { id, locationId: scope.locationId },
+  });
+  if (!before) return { error: "That payout is no longer there — reload the page." };
+
+  const amountCents = toCents(next.amountDollars);
+  await prisma.$transaction(async (tx) => {
+    await tx.cashPayout.update({
+      where: { id },
+      data: {
+        amountCents,
+        kind: next.kind,
+        reason: next.reason.trim(),
+        paidTo: next.paidTo?.trim() || null,
+        reference: next.reference?.trim() || null,
+      },
+    });
+    await recomputeOverShort(tx, scope.locationId, before.businessDate);
+  });
+
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "payout.update", entityType: "CashPayout", entityId: id,
+    // Before and after, so the correction itself is auditable — that is the
+    // whole reason this edits rather than replaces.
+    diff: {
+      before: {
+        amountCents: before.amountCents, kind: before.kind, reason: before.reason,
+        paidTo: before.paidTo, reference: before.reference,
+      },
+      after: {
+        amountCents, kind: next.kind, reason: next.reason.trim(),
+        paidTo: next.paidTo?.trim() || null, reference: next.reference?.trim() || null,
+      },
+    },
+  });
+
+  revalidatePath("/cash");
+  revalidatePath("/cash/new");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 export async function deletePayoutAction(id: string) {
