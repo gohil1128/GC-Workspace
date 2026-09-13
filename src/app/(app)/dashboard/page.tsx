@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, Download, Lock } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
 import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
-import { resolveRange } from "@/modules/dashboard/range";
+import { resolveEventScope, listEventOptions } from "@/modules/dashboard/event-scope";
 import { getActiveEvent, listUpcomingEvents } from "@/modules/events/queries";
 import { getInvoiceTracking, listOpenInvoicesDue } from "@/modules/invoices/queries";
 import { pnlByEvent } from "@/modules/reports/queries";
@@ -11,14 +11,14 @@ import { isSectionLocked } from "@/modules/section-lock/actions";
 import { fmtDate } from "@/lib/date";
 import { formatMoney, formatMoneyHeadline, formatPercent, safeDivide } from "@/lib/money";
 import { KpiStrip, type Kpi } from "@/components/dashboard/ledger/kpi-strip";
-import { PeriodControl } from "@/components/dashboard/ledger/period-control";
+import { EventControl } from "@/components/dashboard/event-control";
 import { PnlStatement } from "@/components/dashboard/ledger/pnl-statement";
 import {
   TopItemsCard,
   InvoicesDueCard,
   UpcomingEventsCard,
 } from "@/components/dashboard/ledger/rail-cards";
-import { RevenueChart } from "@/components/dashboard/bento/revenue-chart";
+import { EventRevenueChart } from "@/components/dashboard/event-revenue-chart";
 import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +28,12 @@ export const dynamic = "force-dynamic";
 
   Statement first: one ruled KPI band, then the per-event P&L as the hero, with
   a narrow rail for what sold and what's owed. Everything on the page reads
-  from a single resolved date range so the period control moves all of it at
-  once.
+  from one resolved scope, so the event control moves all of it at once.
 
-  The revenue chart and item mix sit below the fold. They aren't in the ledger
-  handoff, which covers roughly one screen, but they are the only day-by-day
-  and category views in the app and dropping them would lose real function.
+  Scoped by event rather than by date. This business does not trade daily — it
+  trades at events, with weeks of nothing between them — so a date range asked
+  a question nobody here has, and could hide an event that fell a day outside
+  the window.
 */
 
 export default async function DashboardPage({
@@ -43,7 +43,10 @@ export default async function DashboardPage({
 }) {
   const [params, scope] = await Promise.all([searchParams, requireCapability("overview")]);
   const activeEvent = await getActiveEvent(scope.businessId);
-  const range = await resolveRange(scope.businessId, params, activeEvent);
+  const [range, eventOptions] = await Promise.all([
+    resolveEventScope(scope.businessId, params, activeEvent),
+    listEventOptions(scope.businessId),
+  ]);
   const now = new Date();
   // Locking "Profit & loss" has to cover the Overview too. The statement and
   // the profit figures live here as well, so gating only /reports would hide
@@ -127,38 +130,49 @@ export default async function DashboardPage({
     },
   ];
 
-  // trends.*.x is already a formatted "MMM d" label — re-parsing it would lose
-  // the year (new Date("Aug 21") lands in 2001).
-  const salesPoints = data.trends.sales.map((s) => ({ x: s.x, y: s.y }));
-  const costPoints = data.trends.labor.map((s) => ({ x: s.x, y: s.y }));
-
-  const asDay = (d: Date) => d.toISOString().slice(0, 10);
+  /*
+    Revenue by event, not by day. The P&L already has a column per event, so
+    the bars read straight off it rather than being recomputed — the chart and
+    the statement under it cannot disagree. "Overall" is the statement's total
+    column, not an event, so it is dropped.
+  */
+  const eventBars = pnl
+    .filter((c) => c.key !== "overall" && c.netSalesCents > 0)
+    .map((c) => ({
+      id: c.key,
+      name: c.name,
+      color: c.color,
+      netSalesCents: c.netSalesCents,
+      costCents: c.cogsCents + c.laborCents + c.opexCents + c.feeCents,
+      profitCents: c.profitCents,
+      marginPct: c.marginPct,
+    }))
+    .sort((a, b) => b.netSalesCents - a.netSalesCents);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-12 pt-6 sm:px-6 lg:px-8">
-      {/* Breadcrumb + period control */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-[13px] font-normal tracking-normal text-muted-foreground">
-          <span className="sr-only">Overview — </span>
-          {range.scopeLabel} · <span className="text-foreground">{range.subjectLabel}</span> ·{" "}
-          {range.dateLabel}
-        </h1>
-        <div className="-mx-4 overflow-x-auto px-4 scroll-contain sm:mx-0 sm:overflow-visible sm:px-0">
-          <PeriodControl
-            active={range.key}
-            eventSegment={
-              range.key === "event" && range.eventId
-                ? { label: range.subjectLabel, href: `/dashboard?event=${range.eventId}` }
-                : activeEvent
-                  ? { label: activeEvent.name, href: "/dashboard" }
-                  : null
-            }
-            from={asDay(range.start)}
-            to={asDay(range.end)}
+    <div className="pb-12">
+      {/*
+        The Overview has no PageHeader of its own, so it carries the same
+        photograph masthead explicitly — marked the same way, so the contrast
+        sweep knows the type over it is meant to be light.
+      */}
+      <div className="relative" data-on-photo>
+        <div className="app-photo" aria-hidden />
+        <div className="relative mx-auto flex max-w-[1400px] flex-col gap-3 px-4 pb-5 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <h1 className="text-[13px] font-normal tracking-normal text-white/80">
+            <span className="sr-only">Overview — </span>
+            <span className="font-semibold text-white">{range.label}</span> · {range.subLabel}
+          </h1>
+          <EventControl
+            events={eventOptions}
+            activeKey={range.key}
+            activeLabel={range.label}
+            basePath="/dashboard"
           />
         </div>
       </div>
 
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
       <KpiStrip items={kpis} />
 
       {/* Statement + rail */}
@@ -209,8 +223,8 @@ export default async function DashboardPage({
               <PnlStatement columns={pnl} />
             ) : (
               <p className="panel p-6 text-sm text-muted-foreground">
-                No events fall inside {range.dateLabel}. Pick a wider range, or add an event to start
-                splitting sales and costs by where they happened.
+                Nothing recorded against {range.label} yet. Tag sales and invoices to an event to
+                start splitting them by where they happened.
               </p>
             )}
           </div>
@@ -223,15 +237,15 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {/* Day-by-day and category views, below the statement. */}
+      {/* Per-event and category views, below the statement. */}
       <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
-              <h2 className="text-base font-semibold">Revenue · day by day</h2>
+              <h2 className="text-base font-semibold">Revenue · by event</h2>
               <span className="flex gap-3.5 text-xs text-muted-foreground">
                 <span>● Net sales</span>
-                <span className="text-brand-ink">● Labor cost</span>
+                <span className="text-brand-ink">● What it cost</span>
               </span>
             </div>
             <Link
@@ -242,7 +256,7 @@ export default async function DashboardPage({
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <RevenueChart sales={salesPoints} costs={costPoints} label="Net sales and labor cost by day" />
+          <EventRevenueChart bars={eventBars} />
         </div>
 
         <div className="bento min-w-0 p-4 sm:p-[22px]">
@@ -266,6 +280,7 @@ export default async function DashboardPage({
             </p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -28,16 +28,17 @@ const TONE = {
 export function KpiStrip({ items }: { items: Kpi[] }) {
   const last = items.length - 1;
   return (
-    <div className="mt-7 grid grid-cols-2 border-b border-t-2 border-b-input border-t-espresso lg:grid-cols-4">
+    /*
+      A frosted panel, not a bare ruled band. The strip sits inside the
+      photograph band now, and dark figures straight on the photo were
+      unreadable — the handoff specifies this same glass treatment for it.
+    */
+    <div className="bento mt-7 grid grid-cols-2 overflow-hidden lg:grid-cols-4">
       {items.map((k, i) => (
         <div
           key={k.label}
           className={cn(
-            "min-w-0 border-input px-4 py-4 sm:py-[18px]",
-            // Flush with the page margin wherever a cell opens or closes a row.
-            "[&:nth-child(2n+1)]:pl-0 [&:nth-child(2n)]:pr-0",
-            "lg:[&:nth-child(2n+1)]:pl-4 lg:[&:nth-child(2n)]:pr-4",
-            "lg:first:pl-0 lg:last:pr-0",
+            "min-w-0 border-input px-4 py-4 sm:px-5 sm:py-[18px]",
             // Dividers: vertical between columns, horizontal only while wrapped.
             i % 2 === 0 && "border-r",
             i < last - 1 && "border-b",

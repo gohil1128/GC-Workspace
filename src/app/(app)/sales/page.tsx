@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
-import { resolveRange } from "@/modules/dashboard/range";
+import { resolveEventScope, listEventOptions } from "@/modules/dashboard/event-scope";
 import { getActiveEvent } from "@/modules/events/queries";
 import { getSalesBreakdown, type SalesSort } from "@/modules/sales/queries";
 import { categoryStyle } from "@/modules/items/categories";
 import { PageHeader } from "@/components/page-header";
-import { PeriodControl } from "@/components/dashboard/ledger/period-control";
+import { EventControl } from "@/components/dashboard/event-control";
 import { StickyToolbar } from "@/components/sticky-toolbar";
 import { StatTile, StatTileRow } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,10 @@ export default async function SalesPage({
 }) {
   const [params, scope] = await Promise.all([searchParams, requireCapability("financials")]);
   const activeEvent = await getActiveEvent(scope.businessId);
-  const range = await resolveRange(scope.businessId, params, activeEvent);
+  const [range, eventOptions] = await Promise.all([
+    resolveEventScope(scope.businessId, params, activeEvent),
+    listEventOptions(scope.businessId),
+  ]);
 
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const sort = (SORTS.find((s) => s.key === one(params.sort))?.key ?? "revenue") as SalesSort;
@@ -65,7 +68,7 @@ export default async function SalesPage({
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
       const s = one(v);
-      if (s && ["range", "from", "to", "event", "sort", "category"].includes(k)) q.set(k, s);
+      if (s && ["event", "sort", "category"].includes(k)) q.set(k, s);
     }
     for (const [k, v] of Object.entries(patch)) {
       if (v === null) q.delete(k);
@@ -80,26 +83,19 @@ export default async function SalesPage({
   return (
     <div>
       <PageHeader
-        eyebrow={`${range.scopeLabel} · ${range.subjectLabel}`}
+        eyebrow={range.label}
         title="Sales"
-        description={`${range.dateLabel} · ${data.totals.dayCount} day${data.totals.dayCount === 1 ? "" : "s"} with sales`}
+        description={`${range.subLabel} · ${data.totals.dayCount} day${data.totals.dayCount === 1 ? "" : "s"} with sales`}
       />
 
       {/* The item list runs long, so the period control and the export stay
           pinned under the header rather than scrolling away with the title. */}
       <StickyToolbar>
-        <PeriodControl
-          active={range.key}
+        <EventControl
+          events={eventOptions}
+          activeKey={range.key}
+          activeLabel={range.label}
           basePath="/sales"
-          eventSegment={
-            range.key === "event" && range.eventId
-              ? { label: range.subjectLabel, href: `/sales?event=${range.eventId}` }
-              : activeEvent
-                ? { label: activeEvent.name, href: "/sales" }
-                : null
-          }
-          from={one(params.from)}
-          to={one(params.to)}
         />
         <Button asChild variant="outline" size="sm">
           <a href="/api/exports/sales-items" download>

@@ -52,10 +52,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       {/* lg:pl-24 is the 96px inset the floating rail needs. */}
       <div className="relative flex min-w-0 flex-1 flex-col lg:pl-24">
-        {/* The photograph every page's masthead sits on. Decorative, so it is
-            hidden from assistive tech and sits beneath the content. */}
-        <div className="app-photo" aria-hidden />
-
         {/* Content top strip: scope on the left, switchers on the right.
             Transparent now — it floats over the photograph, and the pieces
             inside it carry their own frosted pills. */}

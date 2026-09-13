@@ -17,12 +17,23 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "mx-auto flex max-w-[1400px] flex-col gap-3 px-4 pb-1 pt-5 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:px-6 sm:pt-6 lg:px-8",
-        className,
-      )}
-    >
+    /*
+      The photograph belongs to the masthead, not the page.
+
+      It used to be a fixed 288px band on the scrolling column, which meant
+      whatever a page put immediately under its title — a stat tile, a toolbar
+      — landed on the photo in whatever colour it was written for, and was
+      unreadable. Sized to this block instead, the band always ends where the
+      masthead ends and everything below it is on cream, whatever the page.
+    */
+    <div className="relative" data-on-photo>
+      <div className="app-photo" aria-hidden />
+      <div
+        className={cn(
+          "relative mx-auto flex max-w-[1400px] flex-col gap-3 px-4 pb-5 pt-5 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:px-6 sm:pt-6 lg:px-8",
+          className,
+        )}
+      >
       {/*
         The masthead sits inside the photograph band, so its type is light in
         both themes — the scrim behind it is ink either way. Display type at
@@ -40,7 +51,15 @@ export function PageHeader({
         </h1>
         {description && <p className="mt-1.5 text-sm text-white/85">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {/* Actions sit on the photograph, so they get the frosted pill the
+            toolbar uses — dark button labels straight on the photo were the
+            other half of this problem. */}
+        {actions && (
+          <div className="glass-pill flex flex-wrap items-center gap-2 self-start rounded-full p-1 sm:self-auto">
+            {actions}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

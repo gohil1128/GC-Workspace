@@ -75,10 +75,9 @@
     --glass-edge: 0 0% 100% / 0.8;     /* the lit edge that bounds a frosted card */
     --pill-bg: 0 0% 100% / 0.84;       /* toolbar + rail; .84 is the contrast floor */
     --scrim: 24 51% 7%;                /* #1C1009 */
-    /* Photograph and the height of its band. Overridden per route where the
-       design calls for a taller hero. */
+    /* The photograph. Its band is sized by the masthead it sits behind, so
+       there is no height to set here. */
     --app-photo-src: url("/hero-chai.jpg");
-    --app-photo-h: 288px;
 
     /* Orders board. The handoff gives the dark screen its own status colours
        rather than reusing the light ones: #2F8F5B and #C63F3F are tuned to sit
@@ -415,8 +414,7 @@
      needed no markup change to sit on it. */
   .app-photo {
     position: absolute;
-    inset: 0 0 auto 0;
-    height: var(--app-photo-h);
+    inset: 0;
     z-index: 0;
     pointer-events: none;
     /*
