@@ -13,8 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   saveCashCloseAction, addDepositAction, deleteDepositAction, verifyCloseAction,
-  addPayoutAction, updatePayoutAction, deletePayoutAction,
+  addPayoutAction, updatePayoutAction, deletePayoutAction, deleteCashCloseAction,
 } from "@/modules/cash/actions";
+import { DeleteButton } from "@/components/delete-button";
 import { toast } from "@/components/ui/use-toast";
 import { PAYOUT_KINDS, payoutKindLabel } from "@/modules/cash/payout-kinds";
 import type { PayoutKind } from "@prisma/client";
@@ -43,10 +44,14 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 export function CashEntry({
   businessDate, locationName, netSalesDollars, events, activeEventId, existing, deposits, payouts,
+  canVerify,
 }: {
   businessDate: string; locationName: string; netSalesDollars: number;
   events: Event[]; activeEventId: string | null;
   existing: Existing | null; deposits: Deposit[]; payouts: Payout[];
+  // Signing off somebody else's count, and — because it is the same check —
+  // removing a close that has already been signed off.
+  canVerify: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = React.useTransition();
@@ -147,18 +152,25 @@ export function CashEntry({
                 <CardTitle>General information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* The verify buttons only appear for someone who may verify.
+                    They were rendered for everyone, so a staff member got a
+                    button that could only ever fail. */}
                 {existing?.verifiedByName ? (
                   <div className="rounded border border-success/30 bg-success/10 text-success px-3 py-2 text-xs flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Verified by {existing.verifiedByName} on {existing.verifiedAt && new Date(existing.verifiedAt).toLocaleString()}
-                    <Button type="button" variant="ghost" size="sm" onClick={verify} disabled={pending} className="ml-auto h-6 text-2xs">Unverify</Button>
+                    {canVerify && (
+                      <Button type="button" variant="ghost" size="sm" onClick={verify} disabled={pending} className="ml-auto h-6 text-2xs">Unverify</Button>
+                    )}
                   </div>
                 ) : existing ? (
                   <div className="rounded border bg-muted/40 text-muted-foreground px-3 py-2 text-xs flex items-center gap-2">
                     Not yet verified.
-                    <Button type="button" size="sm" variant="success" onClick={verify} disabled={pending} className="ml-auto h-6 text-2xs">
-                      <CheckCircle2 className="h-3 w-3" /> Verify entry
-                    </Button>
+                    {canVerify && (
+                      <Button type="button" size="sm" variant="success" onClick={verify} disabled={pending} className="ml-auto h-6 text-2xs">
+                        <CheckCircle2 className="h-3 w-3" /> Verify entry
+                      </Button>
+                    )}
                   </div>
                 ) : null}
 
@@ -237,8 +249,22 @@ export function CashEntry({
             />
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={saveClose} disabled={pending}>{pending ? "Saving..." : (existing ? "Update entry" : "Create entry")}</Button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {/* Only once there is something to delete, and kept away from the
+                primary action so the two are not next to each other. */}
+            {existing && (
+              <DeleteCloseButton
+                closeId={existing.id}
+                businessDate={businessDate}
+                depositCount={deposits.length}
+                payoutCount={payouts.length}
+                verified={Boolean(existing.verifiedByName)}
+                canVerify={canVerify}
+              />
+            )}
+            <Button onClick={saveClose} disabled={pending}>
+              {pending ? "Saving..." : (existing ? "Update entry" : "Create entry")}
+            </Button>
           </div>
         </TabsContent>
 
@@ -372,6 +398,83 @@ export function CashEntry({
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+/*
+  Deleting the whole entry for a day.
+
+  The close was only ever upsertable, so one entered against the wrong day
+  could be corrected but not removed, and its over/short stayed in every total
+  on /cash.
+
+  Deleting it leaves that day's deposits and payouts alone — they are records
+  of money that actually moved, keyed by the day rather than by the close, and
+  someone else may have entered them. The confirmation names how many there
+  are and says they stay, so nothing about it is discovered afterwards.
+*/
+function DeleteCloseButton({
+  closeId, businessDate, depositCount, payoutCount, verified, canVerify,
+}: {
+  closeId: string; businessDate: string;
+  depositCount: number; payoutCount: number;
+  verified: boolean; canVerify: boolean;
+}) {
+  const router = useRouter();
+
+  // A verified close takes the verify capability to remove. Saying so beats
+  // offering a button that can only fail.
+  if (verified && !canVerify) {
+    return (
+      <span className="mr-auto text-2xs text-muted-foreground">
+        Verified entries can only be deleted by a manager or the owner.
+      </span>
+    );
+  }
+
+  const attached = [
+    depositCount > 0 ? `${depositCount} deposit${depositCount === 1 ? "" : "s"}` : null,
+    payoutCount > 0 ? `${payoutCount} payout${payoutCount === 1 ? "" : "s"}` : null,
+  ].filter(Boolean).join(" and ");
+  // Agreement follows the total, not either count: "1 deposit … stays", but
+  // "1 deposit and 1 payout … stay".
+  const attachedCount = depositCount + payoutCount;
+  const one = attachedCount === 1;
+
+  const confirmText =
+    `This removes the cash close for ${businessDate} — the counts, the over/short and the notes. It can't be undone.` +
+    (attached
+      // Worth saying before rather than after: deleting the close sends you
+      // back to the list, so the tabs holding these are no longer in front of
+      // you once it is gone.
+      ? ` The ${attached} recorded on this day ${one ? "stays" : "stay"}.` +
+        ` If ${one ? "that was" : "those were"} a mistake too, cancel and delete` +
+        ` ${one ? "it" : "them"} from the tabs above first.`
+      : "") +
+    (verified ? " This entry has been verified." : "");
+
+  return (
+    <div className="mr-auto">
+      <DeleteButton
+        action={async () => {
+          const res = await deleteCashCloseAction(closeId);
+          // The action returns its error rather than throwing, because
+          // production redacts thrown Server Action messages. Throwing it
+          // here, on the client, is what puts it in front of the user.
+          if ("error" in res) throw new Error(res.error);
+          router.push("/cash");
+        }}
+        itemLabel="cash close"
+        itemName={businessDate}
+        confirmText={confirmText}
+        successMessage="Cash close deleted"
+        size="sm"
+        variant="outline"
+        refreshAfter={false}
+      >
+        <Trash2 className="h-3.5 w-3.5" /> Delete entry
+      </DeleteButton>
+    </div>
   );
 }
 

@@ -9,6 +9,7 @@ import { startOfDay } from "@/lib/date";
 import { cashCloseSchema, depositSchema, payoutSchema, payoutEditSchema } from "./schemas";
 import { overShortCentsFor } from "./reconcile";
 import { requireCan } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 
 async function recomputeOverShort(tx: any, locationId: string, businessDate: Date) {
   const [deposits, payouts, close] = await Promise.all([
@@ -265,6 +266,69 @@ export async function deletePayoutAction(id: string) {
   revalidatePath("/cash");
   revalidatePath("/cash/new");
   revalidatePath("/dashboard");
+}
+
+/*
+  Removing a close that should not exist.
+
+  Until now a close could be overwritten but never removed, so one entered
+  against the wrong day sat in the list forever, dragging its over/short into
+  every total on the page.
+
+  It deletes the close and nothing else. The deposits and the payouts for that
+  day are records of money that actually moved, keyed by the day rather than by
+  the close, and someone else may have entered them — so they stay, and are
+  deleted one at a time from the day's entry if they were mistakes too. The
+  confirmation says so rather than leaving it to be discovered.
+
+  A verified close takes cashVerify to delete. Signing off somebody else's
+  count is deliberately a separate capability from doing the count; letting the
+  person who counted the drawer delete the sign-off would put that check back
+  in their own hands.
+
+  The audit entry carries the whole row, not just its id: this is the only
+  copy, so if it turns out not to have been a mistake the numbers can be read
+  back out and entered again.
+*/
+export async function deleteCashCloseAction(
+  closeId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const user = await requireCan("cash");
+  const scope = await getScope();
+
+  const close = await prisma.cashClose.findFirst({
+    where: { id: closeId, locationId: scope.locationId },
+  });
+  if (!close) return { error: "That close is no longer there — reload the page." };
+
+  if (close.verifiedById && !can(user.role, "cashVerify")) {
+    return {
+      error:
+        "This close has been verified. Ask a manager or the owner to remove the verification first.",
+    };
+  }
+
+  await prisma.cashClose.delete({ where: { id: closeId } });
+
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "cash.close.delete", entityType: "CashClose", entityId: closeId,
+    diff: {
+      businessDate: close.businessDate.toISOString().slice(0, 10),
+      openingCents: close.openingCents, closingCents: close.closingCents,
+      cashCents: close.cashCents, creditCents: close.creditCents,
+      safeCountCents: close.safeCountCents, depositCents: close.depositCents,
+      paidInCents: close.paidInCents, paidOutCents: close.paidOutCents,
+      expectedCents: close.expectedCents, overShortCents: close.overShortCents,
+      eventId: close.eventId, notes: close.notes,
+      closedById: close.closedById, verifiedById: close.verifiedById,
+    },
+  });
+
+  revalidatePath("/cash");
+  revalidatePath("/cash/new");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 export async function verifyCloseAction(closeId: string) {

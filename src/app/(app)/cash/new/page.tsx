@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
+import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getCashCloseByDate, getSalesForDate, listDepositsForDate, listPayoutsForDate } from "@/modules/cash/queries";
 import { listActiveEvents, getActiveEvent } from "@/modules/events/queries";
@@ -49,6 +50,7 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
           netSalesDollars={sales ? fromCents(sales.netSalesCents) : 0}
           events={events.map((e) => ({ id: e.id, name: e.name, color: e.color }))}
           activeEventId={activeEvent?.id ?? null}
+          canVerify={can(scope.role, "cashVerify")}
           existing={existing ? {
             id: existing.id,
             openingDollars: fromCents(existing.openingCents),
