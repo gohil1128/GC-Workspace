@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { createInvoiceSchema, updateInvoiceTotalsSchema, addInvoiceItemSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
   const items = await tx.invoiceItem.findMany({ where: { invoiceId } });
@@ -41,6 +42,7 @@ function validateImageDataUrl(raw: unknown): string | null {
 }
 
 export async function createInvoiceAction(formData: FormData) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = createInvoiceSchema.parse({
     supplierId: formData.get("supplierId"),
@@ -128,6 +130,7 @@ export async function createInvoiceAction(formData: FormData) {
 }
 
 export async function updateInvoiceAction(id: string, formData: FormData) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = updateInvoiceTotalsSchema.parse({
     invoiceNumber: formData.get("invoiceNumber"),
@@ -181,6 +184,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
 }
 
 export async function addInvoiceItemAction(invoiceId: string, payload: unknown) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = addInvoiceItemSchema.parse(payload);
   const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, locationId: scope.locationId } });
@@ -240,6 +244,7 @@ export async function addInvoiceItemAction(invoiceId: string, payload: unknown) 
 }
 
 export async function removeInvoiceItemAction(invoiceId: string, itemId: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -279,6 +284,7 @@ export async function removeInvoiceItemAction(invoiceId: string, itemId: string)
 // Lightweight event tag for an existing invoice — works even on closed
 // invoices, since tagging doesn't change line items or totals.
 export async function setInvoiceEventAction(id: string, eventIdRaw: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -301,6 +307,7 @@ export async function setInvoiceEventAction(id: string, eventIdRaw: string | nul
 // Lightweight category tag for an existing invoice — same instant-save
 // pattern as the event tagger, works on closed invoices.
 export async function setInvoiceCategoryAction(id: string, categoryRaw: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -318,6 +325,7 @@ export async function setInvoiceCategoryAction(id: string, categoryRaw: string |
 // Attach, replace, or remove (null) the invoice photo. Allowed on closed
 // invoices too — a photo is documentation, not a financial edit.
 export async function setInvoiceImageAction(id: string, dataUrl: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -332,6 +340,7 @@ export async function setInvoiceImageAction(id: string, dataUrl: string | null) 
 }
 
 export async function closeInvoiceAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -345,6 +354,7 @@ export async function closeInvoiceAction(id: string) {
 }
 
 export async function deleteInvoiceAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({
     where: { id, locationId: scope.locationId },

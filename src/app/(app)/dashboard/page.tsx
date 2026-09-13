@@ -1,132 +1,251 @@
 import Link from "next/link";
-import { CalendarDays, Coffee, FileText, ArrowUpRight } from "lucide-react";
-import { getScope } from "@/lib/scope";
-import { auth } from "@/lib/auth";
-import { getDashboard } from "@/modules/dashboard/queries";
+import { ArrowRight, ArrowUpRight, Download, Lock } from "lucide-react";
+import { requireCapability } from "@/lib/scope";
+import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
-import { getActiveEvent, getAllEventsRange, listAllEvents, listUpcomingEvents } from "@/modules/events/queries";
-import { getInvoiceTracking } from "@/modules/invoices/queries";
+import { resolveEventScope, listEventOptions } from "@/modules/dashboard/event-scope";
+import { getActiveEvent, listUpcomingEvents } from "@/modules/events/queries";
+import { getInvoiceTracking, listOpenInvoicesDue } from "@/modules/invoices/queries";
 import { pnlByEvent } from "@/modules/reports/queries";
+import { isSectionLocked } from "@/modules/section-lock/actions";
 import { fmtDate } from "@/lib/date";
-import { formatMoney } from "@/lib/money";
-import { EventMixBar } from "@/components/dashboard/bento/event-mix-bar";
-import { UpcomingEvents } from "@/components/dashboard/bento/upcoming-events";
-import { PnlByEvent } from "@/components/dashboard/bento/pnl-by-event";
-import { InvoiceTracking } from "@/components/dashboard/bento/invoice-tracking";
-import { RevenueChart } from "@/components/dashboard/bento/revenue-chart";
+import { formatMoney, formatMoneyHeadline, formatPercent, safeDivide } from "@/lib/money";
+import { KpiStrip, type Kpi } from "@/components/dashboard/ledger/kpi-strip";
+import { EventControl } from "@/components/dashboard/event-control";
+import { PnlStatement } from "@/components/dashboard/ledger/pnl-statement";
+import {
+  TopItemsCard,
+  InvoicesDueCard,
+  UpcomingEventsCard,
+} from "@/components/dashboard/ledger/rail-cards";
+import { EventRevenueChart } from "@/components/dashboard/event-revenue-chart";
 import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
 
 export const dynamic = "force-dynamic";
 
-function greeting(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+/*
+  Overview — the "ledger" layout.
 
-export default async function DashboardPage() {
-  const [session, scope] = await Promise.all([auth(), getScope()]);
+  Statement first: one ruled KPI band, then the per-event P&L as the hero, with
+  a narrow rail for what sold and what's owed. Everything on the page reads
+  from one resolved scope, so the event control moves all of it at once.
+
+  Scoped by event rather than by date. This business does not trade daily — it
+  trades at events, with weeks of nothing between them — so a date range asked
+  a question nobody here has, and could hide an event that fell a day outside
+  the window.
+*/
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [params, scope] = await Promise.all([searchParams, requireCapability("overview")]);
   const activeEvent = await getActiveEvent(scope.businessId);
-  const allEventsRange = activeEvent ? null : await getAllEventsRange(scope.businessId);
-  const dashboardRange = activeEvent
-    ? { start: activeEvent.startDate, end: activeEvent.endDate }
-    : allEventsRange;
-
+  const [range, eventOptions] = await Promise.all([
+    resolveEventScope(scope.businessId, params, activeEvent),
+    listEventOptions(scope.businessId),
+  ]);
   const now = new Date();
-  const [data, pnl, invoiceTracking, allEvents, upcoming] = await Promise.all([
+  // Locking "Profit & loss" has to cover the Overview too. The statement and
+  // the profit figures live here as well, so gating only /reports would hide
+  // the page while leaving the same margins on the landing screen.
+  const pnlLocked = await isSectionLocked(scope.businessId, "REPORTS");
+
+  const [data, pnl, invoiceTracking, dueInvoices, priorNetSales, upcoming] = await Promise.all([
     getDashboard({
       businessId: scope.businessId,
       locationId: scope.locationId,
-      days: 14,
-      eventId: activeEvent?.id ?? null,
-      eventRange: dashboardRange,
+      eventId: range.eventId,
+      eventRange: { start: range.start, end: range.end },
     }),
-    pnlByEvent(scope.businessId, scope.locationId),
+    pnlByEvent(scope.businessId, scope.locationId, { start: range.start, end: range.end }),
     getInvoiceTracking(scope.locationId),
-    listAllEvents(scope.businessId),
+    listOpenInvoicesDue(scope.locationId, 3),
+    getPriorNetSales(scope.locationId, { start: range.start, end: range.end }),
     listUpcomingEvents(scope.businessId, now, 3),
   ]);
 
   const topItems = await getTopItems({
     locationId: scope.locationId,
-    from: data.period.from,
-    to: data.period.to,
-    eventId: activeEvent?.id ?? null,
+    from: range.start,
+    to: range.end,
+    eventId: range.eventId,
     limit: 12,
   });
 
-  const firstName = (session?.user?.name ?? "there").split(" ")[0];
+  const overall = pnl.find((c) => c.key === "overall");
+  // When one event scopes the page, the headline figures have to come from
+  // that event's column, not from Overall. Overall covers everything inside
+  // the window — including other events running the same days — while the
+  // top-items list is filtered to the event, so reading both from Overall
+  // would put a net-sales figure next to an item list that doesn't add up
+  // to it. The statement keeps showing the whole window: comparing against
+  // what else ran those days is the point of it.
+  const focus = (range.eventId ? pnl.find((c) => c.key === range.eventId) : null) ?? overall;
+  const netSalesCents = focus?.netSalesCents ?? 0;
+  const profitCents = focus?.profitCents ?? 0;
+  const txns = focus?.txns ?? 0;
 
-  // Event-mix bar: real share of net sales per event, biggest first.
-  const eventCols = pnl.filter((c) => c.key !== "overall" && c.netSalesCents > 0);
-  const mixTotal = eventCols.reduce((a, c) => a + c.netSalesCents, 0);
-  const mixSegments = eventCols
+  const deltaPct = priorNetSales ? ((netSalesCents - priorNetSales) / priorNetSales) * 100 : null;
+  const avgTicketCents = txns > 0 ? Math.round(safeDivide(netSalesCents, txns)) : 0;
+
+  const kpis: Kpi[] = [
+    {
+      label: "Net sales",
+      value: formatMoneyHeadline(netSalesCents),
+      tone: deltaPct === null ? "muted" : deltaPct >= 0 ? "success" : "danger",
+      // "vs last season" isn't derivable — there is no season concept — so the
+      // comparison is the preceding window of equal length, and says so.
+      sub:
+        deltaPct === null
+          ? "No earlier period to compare"
+          : `${deltaPct >= 0 ? "▲" : "▼"} ${formatPercent(Math.abs(deltaPct))} vs previous period`,
+    },
+    {
+      label: "Profit",
+      value: pnlLocked ? "•••" : formatMoneyHeadline(profitCents, { signed: true }),
+      sub: pnlLocked
+        ? "Locked"
+        : netSalesCents > 0
+          ? `${formatPercent(focus?.marginPct ?? 0)} margin`
+          : "No sales in range",
+    },
+    {
+      label: "Open invoices",
+      value: formatMoneyHeadline(invoiceTracking.openBalanceCents),
+      tone: invoiceTracking.openCount > 0 ? "brand" : "muted",
+      sub:
+        invoiceTracking.openCount === 0
+          ? "Every bill closed"
+          : `${invoiceTracking.openCount} open · oldest ${
+              invoiceTracking.oldestOpen ? fmtDate(invoiceTracking.oldestOpen.date, "MMM d") : "—"
+            }`,
+    },
+    {
+      label: "Avg. ticket",
+      value: avgTicketCents > 0 ? formatMoney(avgTicketCents) : "—",
+      sub: `${topItems.totalQty.toLocaleString()} items · ${txns.toLocaleString()} tickets`,
+    },
+  ];
+
+  /*
+    Revenue by event, not by day. The P&L already has a column per event, so
+    the bars read straight off it rather than being recomputed — the chart and
+    the statement under it cannot disagree. "Overall" is the statement's total
+    column, not an event, so it is dropped.
+  */
+  const eventBars = pnl
+    .filter((c) => c.key !== "overall" && c.netSalesCents > 0)
     .map((c) => ({
+      id: c.key,
       name: c.name,
+      color: c.color,
       netSalesCents: c.netSalesCents,
-      sharePct: mixTotal > 0 ? (c.netSalesCents / mixTotal) * 100 : 0,
+      costCents: c.cogsCents + c.laborCents + c.opexCents + c.feeCents,
+      profitCents: c.profitCents,
+      marginPct: c.marginPct,
     }))
-    .sort((a, b) => b.netSalesCents - a.netSalesCents)
-    .slice(0, 4);
-
-  // Cost line for the chart: labor is the only real per-day cost series the
-  // dashboard query returns, so that's what the dashed line shows.
-  // trends.*.x is already a formatted "MMM d" label — re-parsing it would
-  // lose the year (new Date("Aug 21") lands in 2001).
-  const salesPoints = data.trends.sales.map((s) => ({ x: s.x, y: s.y }));
-  const costPoints = data.trends.labor.map((s) => ({ x: s.x, y: s.y }));
-
-  const periodLabel = activeEvent
-    ? `${activeEvent.name} · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`
-    : `All events · ${fmtDate(data.period.from)} – ${fmtDate(data.period.to)}`;
+    .sort((a, b) => b.netSalesCents - a.netSalesCents);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-      {/* Greeting + the three headline counts */}
-      <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="display-num text-[30px] font-medium sm:text-[40px]">
-            {greeting(now.getHours())}, {firstName}
+    <div className="pb-12">
+      {/*
+        The Overview has no PageHeader of its own, so it carries the same
+        photograph masthead explicitly — marked the same way, so the contrast
+        sweep knows the type over it is meant to be light.
+      */}
+      <div className="relative" data-on-photo>
+        <div className="app-photo" aria-hidden />
+        <div className="relative mx-auto flex max-w-[1400px] flex-col gap-3 px-4 pb-5 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <h1 className="text-[13px] font-normal tracking-normal text-white/80">
+            <span className="sr-only">Overview — </span>
+            <span className="font-semibold text-white">{range.label}</span> · {range.subLabel}
           </h1>
-          <div className="mt-2.5 text-[13px] text-muted-foreground">
-            {scope.locationName} · {periodLabel}
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4 sm:flex sm:flex-wrap sm:gap-10">
-          <StatCluster icon={<CalendarDays className="h-3.5 w-3.5" />} value={allEvents.length} label="Events" />
-          <StatCluster icon={<Coffee className="h-3.5 w-3.5" />} value={topItems.totalQty} label="Items sold" />
-          <StatCluster icon={<FileText className="h-3.5 w-3.5" />} value={invoiceTracking.totalCount} label="Invoices" />
+          <EventControl
+            events={eventOptions}
+            activeKey={range.key}
+            activeLabel={range.label}
+            basePath="/dashboard"
+          />
         </div>
       </div>
 
-      {/* Event revenue mix */}
-      {mixSegments.length > 0 && (
-        <div className="mt-7">
-          <EventMixBar segments={mixSegments} />
-        </div>
-      )}
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      <KpiStrip items={kpis} />
 
-      {/* Bento grid — 320px | 1fr | 300px on desktop, stacking down */}
-      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
-        <UpcomingEvents events={upcoming} />
-        <PnlByEvent columns={pnl} />
-        <div className="min-w-0 lg:col-span-2 2xl:col-span-1">
-          <InvoiceTracking
-            paidCount={invoiceTracking.paidCount}
-            openCount={invoiceTracking.openCount}
-            openBalanceCents={invoiceTracking.openBalanceCents}
-            oldestOpen={invoiceTracking.oldestOpen}
-            recentStatuses={invoiceTracking.recentStatuses}
-          />
-        </div>
+      {/* Statement + rail */}
+      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="min-w-0">
+          <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="font-display text-xl font-semibold">Profit &amp; loss statement</h2>
+            {/* Not rendered rather than CSS-hidden: a locked page should not
+                carry a live link to its own export, even an invisible one. */}
+            {!pnlLocked && (
+            <div className="flex shrink-0 items-center gap-3">
+              {/* The statement's column headings already open an event, but
+                  that isn't discoverable — this names the destination. */}
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+              >
+                Browse events
+                <ArrowRight className="h-3 w-3" aria-hidden />
+              </Link>
+              <a
+                href="/api/exports/pnl"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"
+              >
+                Export CSV
+                <Download className="h-3 w-3" aria-hidden />
+              </a>
+            </div>
+            )}
+          </header>
+          <div className="mt-3.5">
+            {pnlLocked ? (
+              <div className="panel flex flex-col items-center gap-3 p-8 text-center">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-muted">
+                  <Lock className="h-4 w-4 text-muted-foreground" aria-hidden />
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  Profit &amp; loss is locked. Enter the PIN to see the statement.
+                </p>
+                <Link
+                  href="/reports"
+                  className="rounded-full bg-espresso px-4 py-2 text-[13px] font-medium text-espresso-foreground"
+                >
+                  Unlock
+                </Link>
+              </div>
+            ) : pnl.length > 1 ? (
+              <PnlStatement columns={pnl} />
+            ) : (
+              <p className="panel p-6 text-sm text-muted-foreground">
+                Nothing recorded against {range.label} yet. Tag sales and invoices to an event to
+                start splitting them by where they happened.
+              </p>
+            )}
+          </div>
+        </section>
 
-        <div className="bento min-w-0 p-4 sm:p-[22px] lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-5">
+          <TopItemsCard items={topItems.items} />
+          <InvoicesDueCard invoices={dueInvoices} now={now} />
+          <UpcomingEventsCard events={upcoming} />
+        </div>
+      </div>
+
+      {/* Per-event and category views, below the statement. */}
+      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
-              <span className="text-base font-semibold">Revenue · day by day</span>
+              <h2 className="text-base font-semibold">Revenue · by event</h2>
               <span className="flex gap-3.5 text-xs text-muted-foreground">
                 <span>● Net sales</span>
-                <span className="text-brand">● Labor cost</span>
+                <span className="text-brand-ink">● What it cost</span>
               </span>
             </div>
             <Link
@@ -137,12 +256,12 @@ export default async function DashboardPage() {
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <RevenueChart sales={salesPoints} costs={costPoints} label="Net sales and labor cost by day" />
+          <EventRevenueChart bars={eventBars} />
         </div>
 
         <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex items-center justify-between">
-            <span className="text-base font-semibold">Item mix</span>
+            <h2 className="text-base font-semibold">Item mix</h2>
             <Link
               href="/reports"
               className="grid h-7 w-7 place-items-center rounded-full border border-border transition-colors hover:bg-accent"
@@ -157,24 +276,11 @@ export default async function DashboardPage() {
             <p className="py-10 text-center text-sm text-muted-foreground">
               {topItems.count === 0
                 ? "No item-level sales yet. Upload the Square per-item CSV to see the mix."
-                : `No item sales between ${fmtDate(data.period.from)} and ${fmtDate(data.period.to)}.`}
+                : `No item sales between ${fmtDate(range.start)} and ${fmtDate(range.end)}.`}
             </p>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCluster({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className="hidden h-[26px] w-[26px] place-items-center rounded-lg border border-border bg-card text-muted-foreground sm:grid">
-        {icon}
-      </span>
-      <div>
-        <div className="display-num text-[26px] font-medium sm:text-[38px]">{value.toLocaleString()}</div>
-        <div className="mt-1 text-xs text-muted-foreground">{label}</div>
       </div>
     </div>
   );

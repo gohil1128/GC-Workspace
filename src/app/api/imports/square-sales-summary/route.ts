@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
-import { getScope } from "@/lib/scope";
+import { scopeFor } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { startOfDay } from "@/lib/date";
 import { toCents } from "@/lib/money";
@@ -66,7 +66,8 @@ function get(lookup: Map<string, string>, candidates: string[]): string | undefi
 }
 
 export async function POST(req: Request) {
-  const scope = await getScope();
+  const scope = await scopeFor("settings");
+  if (!scope) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {

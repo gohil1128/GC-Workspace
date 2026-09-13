@@ -8,7 +8,7 @@ import { UtensilsCrossed } from "lucide-react";
 export function BrandBar({ businessName }: { businessName: string }) {
   const [logoFailed, setLogoFailed] = React.useState(false);
   return (
-    <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+    <Link href="/dashboard" className={`flex shrink-0 items-center gap-2${logoFailed ? "" : " logo-plate"}`}>
       {!logoFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

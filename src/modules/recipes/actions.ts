@@ -6,8 +6,10 @@ import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { recipeSchema, updateBomSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createRecipeAction(formData: FormData) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = recipeSchema.parse({
     name: formData.get("name"),
@@ -34,6 +36,7 @@ export async function createRecipeAction(formData: FormData) {
 }
 
 export async function updateRecipeAction(id: string, formData: FormData) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = recipeSchema.parse({
     name: formData.get("name"),
@@ -62,6 +65,7 @@ export async function updateRecipeAction(id: string, formData: FormData) {
 }
 
 export async function updateBomAction(recipeId: string, payload: unknown) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = updateBomSchema.parse(payload);
   const r = await prisma.recipe.findFirst({ where: { id: recipeId, businessId: scope.businessId } });
@@ -81,6 +85,7 @@ export async function updateBomAction(recipeId: string, payload: unknown) {
 }
 
 export async function deleteRecipeAction(id: string) {
+  await requireCan("inventory");
   const scope = await getScope();
   const r = await prisma.recipe.findFirst({ where: { id, businessId: scope.businessId } });
   if (!r) throw new Error("Not found");

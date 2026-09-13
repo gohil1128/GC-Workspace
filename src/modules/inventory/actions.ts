@@ -6,8 +6,10 @@ import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { ingredientSchema, newCountSchema, wasteSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createIngredientAction(formData: FormData) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = ingredientSchema.parse({
     name: formData.get("name"),
@@ -41,6 +43,7 @@ export async function createIngredientAction(formData: FormData) {
 }
 
 export async function updateIngredientAction(id: string, formData: FormData) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = ingredientSchema.parse({
     name: formData.get("name"),
@@ -107,6 +110,7 @@ export async function updateIngredientAction(id: string, formData: FormData) {
 }
 
 export async function saveCountAction(formData: FormData) {
+  await requireCan("inventoryCount");
   const scope = await getScope();
   const raw = JSON.parse(String(formData.get("payload") ?? "{}"));
   const parsed = newCountSchema.parse(raw);
@@ -172,6 +176,7 @@ export async function saveCountAction(formData: FormData) {
 }
 
 export async function recordWasteAction(formData: FormData) {
+  await requireCan("inventory");
   const scope = await getScope();
   const parsed = wasteSchema.parse({
     ingredientId: formData.get("ingredientId"),
@@ -211,6 +216,7 @@ export async function quickCreateIngredientAction(input: {
   lastCostDollars?: number;
   supplierId?: string | null;
 }): Promise<{ id: string; name: string; sku: string | null; unit: string; category: string | null; lastCostCents: number; supplierId: string | null }> {
+  await requireCan("inventory");
   const scope = await getScope();
   const name = input.name.trim();
   const unit = input.unit.trim();
@@ -245,6 +251,7 @@ export async function quickCreateIngredientAction(input: {
 }
 
 export async function deleteIngredientAction(id: string) {
+  await requireCan("inventory");
   const scope = await getScope();
   const ing = await prisma.ingredient.findFirst({ where: { id, businessId: scope.businessId } });
   if (!ing) throw new Error("Not found");

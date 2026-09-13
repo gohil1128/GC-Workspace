@@ -6,8 +6,10 @@ import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { employeeSchema, shiftSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createEmployeeAction(formData: FormData) {
+  await requireCan("labor");
   const scope = await getScope();
   const parsed = employeeSchema.parse({
     name: formData.get("name"),
@@ -31,6 +33,7 @@ export async function createEmployeeAction(formData: FormData) {
 }
 
 export async function createShiftAction(payload: unknown) {
+  await requireCan("labor");
   const scope = await getScope();
   const parsed = shiftSchema.parse(payload);
   const start = new Date(parsed.start);
@@ -52,6 +55,7 @@ export async function createShiftAction(payload: unknown) {
 }
 
 export async function deleteShiftAction(id: string) {
+  await requireCan("labor");
   const scope = await getScope();
   const s = await prisma.shift.findFirst({ where: { id, locationId: scope.locationId } });
   if (!s) throw new Error("Not found");
@@ -61,6 +65,7 @@ export async function deleteShiftAction(id: string) {
 }
 
 export async function deleteEmployeeAction(id: string) {
+  await requireCan("labor");
   const scope = await getScope();
   const e = await prisma.employee.findFirst({ where: { id, businessId: scope.businessId } });
   if (!e) throw new Error("Not found");

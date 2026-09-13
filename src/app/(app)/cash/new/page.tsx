@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
-import { getCashCloseByDate, getSalesForDate, listDepositsForDate } from "@/modules/cash/queries";
+import { getCashCloseByDate, getSalesForDate, listDepositsForDate, listPayoutsForDate } from "@/modules/cash/queries";
 import { listActiveEvents, getActiveEvent } from "@/modules/events/queries";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,13 @@ export const dynamic = "force-dynamic";
 
 export default async function NewClosePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const sp = await searchParams;
-  const scope = await getScope();
+  const scope = await requireCapability("cash");
   const dateStr = sp.date ?? new Date().toISOString().slice(0, 10);
-  const [sales, existing, deposits, events, activeEvent] = await Promise.all([
+  const [sales, existing, deposits, payouts, events, activeEvent] = await Promise.all([
     getSalesForDate(scope.locationId, dateStr),
     getCashCloseByDate(scope.locationId, dateStr),
     listDepositsForDate(scope.locationId, dateStr),
+    listPayoutsForDate(scope.locationId, dateStr),
     listActiveEvents(scope.businessId),
     getActiveEvent(scope.businessId),
   ]);
@@ -75,6 +76,14 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
             bagCode: d.bagCode,
             preparedBy: d.preparedBy,
             notes: d.notes,
+          }))}
+          payouts={payouts.map((p) => ({
+            id: p.id,
+            amountDollars: fromCents(p.amountCents),
+            kind: p.kind,
+            reason: p.reason,
+            paidTo: p.paidTo,
+            reference: p.reference,
           }))}
         />
       </div>

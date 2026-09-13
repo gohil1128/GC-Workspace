@@ -7,8 +7,10 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { newPoSchema, receivePoSchema, supplierSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
 
 export async function createSupplierAction(formData: FormData) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = supplierSchema.parse({
     name: formData.get("name"),
@@ -35,6 +37,7 @@ export async function createSupplierAction(formData: FormData) {
 // details can be added later. Idempotent on name so re-typing an existing
 // supplier reuses it instead of duplicating.
 export async function quickCreateSupplierAction(nameRaw: string): Promise<{ id: string; name: string }> {
+  await requireCan("purchasing");
   const scope = await getScope();
   const name = String(nameRaw ?? "").trim();
   if (!name) throw new Error("Supplier name is required");
@@ -54,6 +57,7 @@ export async function quickCreateSupplierAction(nameRaw: string): Promise<{ id: 
 }
 
 export async function createPoAction(payload: unknown) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = newPoSchema.parse(payload);
   const subtotalCents = parsed.items.reduce((a, it) => a + Math.round(it.qtyOrdered * toCents(it.unitCostDollars)), 0);
@@ -84,6 +88,7 @@ export async function createPoAction(payload: unknown) {
 }
 
 export async function setPoStatusAction(poId: string, status: "DRAFT" | "SENT" | "CANCELLED") {
+  await requireCan("purchasing");
   const scope = await getScope();
   const po = await prisma.purchaseOrder.findFirst({ where: { id: poId, locationId: scope.locationId } });
   if (!po) throw new Error("Not found");
@@ -94,6 +99,7 @@ export async function setPoStatusAction(poId: string, status: "DRAFT" | "SENT" |
 }
 
 export async function receivePoAction(poId: string, payload: unknown) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = receivePoSchema.parse(payload);
   const po = await prisma.purchaseOrder.findFirst({
@@ -162,6 +168,7 @@ export async function receivePoAction(poId: string, payload: unknown) {
 }
 
 export async function deleteSupplierAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const s = await prisma.supplier.findFirst({ where: { id, businessId: scope.businessId } });
   if (!s) throw new Error("Not found");
@@ -177,6 +184,7 @@ export async function deleteSupplierAction(id: string) {
 }
 
 export async function deletePoAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const po = await prisma.purchaseOrder.findFirst({ where: { id, locationId: scope.locationId } });
   if (!po) throw new Error("Not found");

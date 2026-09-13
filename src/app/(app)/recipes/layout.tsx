@@ -1,20 +1,35 @@
 import { PageHeader } from "@/components/page-header";
 import { getScope } from "@/lib/scope";
-import { isRecipesLocked } from "@/modules/recipes-lock/actions";
-import { PinGate } from "./_components/pin-gate";
+import { isSectionLocked, isSectionUnlockedByPin } from "@/modules/section-lock/actions";
+import { SectionPinGate } from "@/components/section-pin-gate";
+import { SectionLockButton } from "@/components/section-lock-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecipesLayout({ children }: { children: React.ReactNode }) {
   const scope = await getScope();
-  const locked = await isRecipesLocked(scope.businessId);
-  if (locked) {
+  if (await isSectionLocked(scope.businessId, "RECIPES")) {
     return (
       <div>
         <PageHeader title="Recipes" description="Section protected by PIN" />
-        <PinGate />
+        <SectionPinGate
+          title="Recipes are locked"
+          blurb="Enter the 4-digit PIN to view recipes and BOM costs."
+        />
       </div>
     );
   }
-  return <>{children}</>;
+  // Only when it is open because of the PIN — a section nobody locked has
+  // nothing to re-lock and should not carry the control.
+  const canRelock = await isSectionUnlockedByPin(scope.businessId, "RECIPES");
+  return (
+    <>
+      {canRelock && (
+        <div className="mx-auto flex max-w-[1400px] justify-end px-4 pt-3 sm:px-6 lg:px-8">
+          <SectionLockButton />
+        </div>
+      )}
+      {children}
+    </>
+  );
 }

@@ -9,12 +9,32 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # A Next build plus `prisma migrate deploy` normally lands well inside
+    # this; the cap is here so a wedged build fails instead of hanging.
+    timeout-minutes: 20
     steps:
+      # NOTE: the payload below asks for target "production" and this workflow
+      # runs on BOTH branches above, so a push to the feature branch is aliased
+      # onto bolochai.com — a draft PR publishes to the live domain. Left as-is
+      # because it is how the site has been reviewed all along; switch to
+      # "preview" for non-main refs if that is not wanted. (Keep notes out here:
+      # inside the run block a "#" would land in the JSON body.)
       - name: Trigger Vercel deployment
+        id: trigger
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          curl -s -X POST \
+          set -euo pipefail
+
+          # --fail-with-body, not plain -s: without it curl exits 0 on a 401 or
+          # a 500, and this step used to go green while nothing deployed. The
+          # rc is caught rather than left to `set -e` so the error body Vercel
+          # sent still reaches the log — otherwise the job dies with a bare
+          # exit code and no reason.
+          set +e
+          response=$(curl -sS --fail-with-body -X POST \
             "https://api.vercel.com/v13/deployments?teamId=team_3DKVAzvgNM5RAnO8zNG6llDN" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
               "name": "northwind-eats-ops",
@@ -26,4 +46,72 @@ jobs:
                 "ref": "${{ github.ref_name }}",
                 "sha": "${{ github.sha }}"
               }
-            }'
+            }')
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            echo "Vercel rejected the deployment request (curl exit $rc):"
+            jq . <<<"$response" 2>/dev/null || echo "$response"
+            exit 1
+          fi
+
+          id=$(jq -r '.id // empty' <<<"$response")
+          if [ -z "$id" ]; then
+            echo "Vercel accepted the request but returned no deployment id:"
+            jq . <<<"$response" || echo "$response"
+            exit 1
+          fi
+
+          url=$(jq -r '.url // empty' <<<"$response")
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Queued $id (https://$url)"
+
+      - name: Wait for the build to finish
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_ID: ${{ steps.trigger.outputs.id }}
+          DEPLOYMENT_URL: ${{ steps.trigger.outputs.url }}
+        run: |
+          set -euo pipefail
+
+          # Triggering a deployment is not deploying one. This step used to be
+          # absent, so the check went green about five seconds in — a build
+          # that failed a minute later still reported success.
+          for _ in $(seq 1 108); do   # 108 * 10s = 18 min, inside the job cap
+            state=$(curl -sS --fail-with-body \
+              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID?teamId=team_3DKVAzvgNM5RAnO8zNG6llDN" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              | jq -r '.readyState // .state // "UNKNOWN"') || state="REQUEST_FAILED"
+
+            case "$state" in
+              READY)
+                echo "READY — https://$DEPLOYMENT_URL"
+                {
+                  echo "### Deployed"
+                  echo ""
+                  echo "- <https://$DEPLOYMENT_URL>"
+                  echo "- Inspector: <https://vercel.com/god-s-chai-s-projects/northwind-eats-ops/${DEPLOYMENT_ID#dpl_}>"
+                } >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+                ;;
+              ERROR|CANCELED)
+                echo "Deployment finished as $state."
+                echo "Build logs: https://vercel.com/god-s-chai-s-projects/northwind-eats-ops/${DEPLOYMENT_ID#dpl_}"
+                exit 1
+                ;;
+              # A single failed poll is a network blip, not a failed deploy —
+              # keep waiting and let the loop's own timeout be the verdict.
+              REQUEST_FAILED)
+                echo "poll failed, retrying"
+                ;;
+              *)
+                echo "$state"
+                ;;
+            esac
+            sleep 10
+          done
+
+          echo "Gave up waiting; the deployment never reported a terminal state."
+          echo "Build logs: https://vercel.com/god-s-chai-s-projects/northwind-eats-ops/${DEPLOYMENT_ID#dpl_}"
+          exit 1

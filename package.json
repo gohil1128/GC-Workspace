@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "set-password": "tsx scripts/set-password.ts",
     "db:reset": "SEED_RESET=1 tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"

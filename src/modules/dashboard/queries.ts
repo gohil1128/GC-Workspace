@@ -116,7 +116,14 @@ export async function getDashboard(params: {
 
   // trends
   const trendSales = sales.map((s) => ({ x: fmtDate(s.businessDate, "MMM d"), y: s.netSalesCents / 100 }));
-  const trendLaborByDay = bucketLaborByDay(shifts, from, to);
+  // Labor has to line up with the sales series point for point. Sales carries
+  // one entry per day that HAS sales; labor was bucketed over every calendar
+  // day in the range, so on any range with gaps the two lengths differed and
+  // the chart silently dropped the labor line while the legend still promised
+  // it. Keying labor off the sales days makes index i mean the same day in
+  // both, which is what the chart's shared x-axis assumes.
+  const laborByDay = new Map(bucketLaborByDay(shifts, from, to).map((d) => [d.x, d.y]));
+  const trendLaborByDay = trendSales.map((s) => ({ x: s.x, y: laborByDay.get(s.x) ?? 0 }));
 
   const foodPct = safeDivide(foodCostCents, netSalesCents) * 100;
   const laborPct = safeDivide(laborCostCents, netSalesCents) * 100;
@@ -170,4 +177,28 @@ function bucketLaborByDay(
     out[key] = (out[key] ?? 0) + (minutes / 60) * (s.employee.hourlyRateCents / 100);
   }
   return Object.entries(out).map(([x, y]) => ({ x, y: Math.round(y * 100) / 100 }));
+}
+
+/**
+ * Net sales for the window of equal length immediately before `range`.
+ *
+ * The Overview's headline shows a change figure. "vs last season" isn't
+ * derivable — the app has no season concept — so the comparison is against the
+ * preceding stretch of the same length, and the label says exactly that.
+ * Returns null when that earlier window has no sales at all, since a change
+ * from zero is a meaningless percentage.
+ */
+export async function getPriorNetSales(
+  locationId: string,
+  range: { start: Date; end: Date },
+): Promise<number | null> {
+  const span = range.end.getTime() - range.start.getTime();
+  const priorEnd = new Date(range.start.getTime() - 1);
+  const priorStart = new Date(priorEnd.getTime() - span);
+  const agg = await prisma.dailySales.aggregate({
+    where: { locationId, businessDate: { gte: priorStart, lte: priorEnd } },
+    _sum: { netSalesCents: true },
+  });
+  const cents = agg._sum.netSalesCents ?? 0;
+  return cents > 0 ? cents : null;
 }

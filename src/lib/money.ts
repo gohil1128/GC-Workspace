@@ -29,3 +29,23 @@ export function formatPercent(value: number, fractionDigits = 1): string {
 export function safeDivide(num: number, denom: number): number {
   return denom === 0 ? 0 : num / denom;
 }
+
+const usdWhole = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+/**
+ * Headline figures: cents on a $12.60 average ticket carry information, cents
+ * on a $43,850 season total are noise that costs three characters the display
+ * numerals can't spare on a phone. Drops them past $1,000.
+ */
+export function formatMoneyHeadline(cents: number, opts?: { signed?: boolean }): string {
+  const value = fromCents(cents);
+  if (Math.abs(value) < 1000) return formatMoney(cents, opts);
+  const formatted = usdWhole.format(Math.abs(value));
+  if (opts?.signed && cents > 0) return `+${formatted}`;
+  if (cents < 0) return `−${formatted}`; // U+2212, matching the report tables
+  return formatted;
+}
