@@ -56,11 +56,41 @@
     /* Cross-highlight tint for the P&L statement's hovered row and column. */
     --cell-hot: 32 34% 92%;
 
-    /* Canvas + surfaces */
-    --background: 34 24% 90%;          /* flat canvas fallback */
-    --canvas-from: 38 44% 96%;         /* ─┐ page gradient, warming toward */
-    --canvas-via:  34 34% 93%;         /*  │ the logo rust at the far corner */
-    --canvas-to:   24 40% 91%;         /* ─┘ */
+    /* Canvas + surfaces.
+       Soft glass puts a photograph behind the top of every page and floats
+       frosted panels on it, so the canvas is a flat cream rather than the
+       gradient the solid-card system used — a gradient under translucent
+       panels shows through them and makes identical cards read as different
+       shades depending on where they sit. */
+    --background: 37 37% 93%;          /* #F4EFE7 */
+    --canvas-from: 37 37% 93%;
+    --canvas-via:  37 37% 93%;
+    --canvas-to:   37 37% 93%;
+
+    /* Glass. --panel-glass is the cream the frosted cards are tinted with,
+       --glass-edge the white their borders and the toolbar are drawn from,
+       --scrim the ink the photograph is darkened with so display type over
+       it clears 3:1. */
+    --panel-glass: 40 50% 98%;         /* #FDFBF7 */
+    --glass-edge: 0 0% 100% / 0.8;     /* the lit edge that bounds a frosted card */
+    --pill-bg: 0 0% 100% / 0.84;       /* toolbar + rail; .84 is the contrast floor */
+    --scrim: 24 51% 7%;                /* #1C1009 */
+    /* Photograph and the height of its band. Overridden per route where the
+       design calls for a taller hero. */
+    --app-photo-src: url("/hero-chai.jpg");
+    --app-photo-h: 288px;
+
+    /* Orders board. The handoff gives the dark screen its own status colours
+       rather than reusing the light ones: #2F8F5B and #C63F3F are tuned to sit
+       on cream and go muddy on espresso, so the board lifts them to
+       #8FD9AE / #FFC9C9 / #FFD9A0. These are theme-independent — the board is
+       dark in both themes, the way a stall-side screen has to be. */
+    --board-ground: 24 51% 6%;
+    --board-ink: 37 56% 94%;           /* #F8F1E6 */
+    --board-dim: 33 22% 70%;
+    --board-green: 148 52% 71%;        /* #8FD9AE */
+    --board-amber: 36 100% 81%;        /* #FFD9A0 */
+    --board-red: 0 100% 89%;           /* #FFC9C9 */
     --foreground: var(--ink-950);      /* 17.4:1 on card */
     --card: 40 50% 98%;                /* #FCFBF7 */
     --card-foreground: var(--ink-950);
@@ -151,6 +181,17 @@
     --canvas-from: 19 44% 8%;
     --canvas-via:  20 38% 8%;
     --canvas-to:   17 40% 10%;
+
+    /* Glass, inverted. The panel tint becomes a lifted brown rather than
+       cream, and the edge that gives a frosted card its boundary has to be a
+       low-alpha white here — a solid white hairline on a dark panel reads as
+       a drawn outline rather than a lit edge. The scrim stays ink: the
+       photograph is darkened toward the dark canvas either way. */
+    --panel-glass: 21 36% 14%;
+    --glass-edge: 37 40% 88% / 0.14;
+    --pill-bg: 21 36% 16% / 0.86;
+    --scrim: 19 50% 4%;
+
     --foreground: 37 56% 94%;
     --card: 21 36% 12%;
     --card-foreground: 37 56% 94%;
@@ -323,21 +364,86 @@
     overscroll-behavior-y: auto;
   }
 
-  /* Bento card — the system's primary surface. The hairline border does the
-     structural work; the shadow only lifts it off the canvas. */
+  /* Bento card — the system's primary surface, now a frosted panel.
+     The soft-glass handoff keeps the palette and changes the material: cards
+     are translucent cream over the page photograph rather than solid fills on
+     a hairline, so the ground reads through them.
+
+     The white top border is what gives the glass an edge; without it a
+     translucent panel on a light ground has no boundary at all. The shadow is
+     a long, soft, warm one rather than the tight elevation the solid cards
+     used. */
   .bento {
-    background-color: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 1.5rem;
-    box-shadow: var(--shadow-sm);
+    background-color: hsl(var(--panel-glass) / 0.86);
+    backdrop-filter: saturate(120%) blur(16px);
+    -webkit-backdrop-filter: saturate(120%) blur(16px);
+    border: 1px solid hsl(var(--glass-edge));
+    border-radius: 1.75rem;
+    box-shadow: 0 18px 40px -28px hsl(var(--ink-800) / 0.45);
   }
-  /* The one dark card per screen that carries contrast. */
+  /* The one dark panel per screen that carries contrast. Translucent for the
+     same reason, so the photograph is faintly present through it too. */
   .bento-dark {
-    background-color: hsl(var(--espresso));
+    background-color: hsl(var(--espresso) / 0.9);
+    backdrop-filter: saturate(120%) blur(16px);
+    -webkit-backdrop-filter: saturate(120%) blur(16px);
     color: hsl(var(--espresso-foreground));
-    border: 1px solid hsl(var(--espresso));
-    border-radius: 1.5rem;
-    box-shadow: var(--shadow-md);
+    border: 1px solid hsl(var(--espresso) / 0.9);
+    border-radius: 1.75rem;
+    box-shadow: 0 18px 40px -26px hsl(var(--ink-950) / 0.6);
+  }
+
+  /* Frosted pill — the toolbar over the photograph, and the icon rail.
+     .84 is load-bearing per the handoff: below it the label text drops under
+     4.5:1 against the darkest part of the photo behind. */
+  .glass-pill {
+    background-color: hsl(var(--pill-bg));
+    backdrop-filter: saturate(140%) blur(18px);
+    -webkit-backdrop-filter: saturate(140%) blur(18px);
+    border: 1px solid hsl(var(--glass-edge));
+    box-shadow: 0 14px 34px -24px hsl(var(--ink-900) / 0.5);
+  }
+
+  /* The photograph band behind the top of every page.
+
+     A real bounded element rather than a background on the scrolling column:
+     as a background the photo layer could only be sized `cover` against the
+     whole column, so it painted the entire page instead of a header strip.
+     Bounded, `cover` means what it should — fill the band, keep the crop.
+
+     Sits under the content, which is why the band is aria-hidden and pages
+     needed no markup change to sit on it. */
+  .app-photo {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: var(--app-photo-h);
+    z-index: 0;
+    pointer-events: none;
+    /*
+      The handoff's scrim is 0.66 → 0.5 → cream by 92%. Measured against this
+      photograph — a bright, sunlit shot, not the darker one the values were
+      drawn for — white masthead type landed at 2.49:1, under the 3:1 large
+      text needs, because the masthead reaches into the stretch where the
+      gradient has already turned to cream.
+
+      So the scrim holds its strength until 72% and only then releases, and
+      the band is deep enough that the whole masthead sits above that point.
+      The photo is also encoded a stop and a half down. Same look, type that
+      actually clears.
+    */
+    background-image:
+      linear-gradient(
+        180deg,
+        hsl(var(--scrim) / 0.78) 0%,
+        hsl(var(--scrim) / 0.72) 45%,
+        hsl(var(--scrim) / 0.6) 72%,
+        hsl(var(--canvas-from) / 0.92) 94%,
+        hsl(var(--canvas-from)) 100%
+      ),
+      var(--app-photo-src);
+    background-size: cover, cover;
+    background-position: center, center 42%;
+    background-repeat: no-repeat, no-repeat;
   }
   /* The logo is a two-colour mark and 64% of it is the roast brown, which
      falls to 1.26:1 on the dark canvas — the CHAI wordmark simply vanishes,

@@ -205,7 +205,7 @@ export function MobileTabBar({ role }: { role: Role }) {
                   active ? "text-brand-ink" : "text-muted-foreground",
                 )}
               >
-                <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", active && "bg-brand/12")}>
+                <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", active && "bg-brand/10")}>
                   <Icon className="h-[18px] w-[18px]" />
                 </span>
                 {t.label}
@@ -224,7 +224,7 @@ export function MobileTabBar({ role }: { role: Role }) {
                 moreActive || moreOpen ? "text-brand-ink" : "text-muted-foreground",
               )}
             >
-              <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", (moreActive || moreOpen) && "bg-brand/12")}>
+              <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", (moreActive || moreOpen) && "bg-brand/10")}>
                 <Menu className="h-[18px] w-[18px]" />
               </span>
               More

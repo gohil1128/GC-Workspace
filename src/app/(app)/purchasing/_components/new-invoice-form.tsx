@@ -203,7 +203,10 @@ export function NewInvoiceForm({
           </div>
           <div className="grid gap-1.5">
             <Label>Total</Label>
-            <div className="num h-9 inline-flex items-center font-semibold text-brand">
+            {/* brand-ink, not brand: the rust is an accent tuned for fills and
+                measured 4.25:1 as a 16px label on the panel. Same fix the
+                reports totals already carry. */}
+            <div className="num h-9 inline-flex items-center font-semibold text-brand-ink">
               ${liveTotal.toFixed(2)}
             </div>
           </div>

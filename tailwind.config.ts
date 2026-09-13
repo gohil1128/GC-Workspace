@@ -60,6 +60,15 @@ const config: Config = {
           muted: "hsl(var(--brand-muted))",
         },
         "chart-ink": "hsl(var(--chart-ink))",
+        /* Orders board — dark in both themes, with its own status ramp. */
+        board: {
+          ground: "hsl(var(--board-ground))",
+          ink: "hsl(var(--board-ink))",
+          dim: "hsl(var(--board-dim))",
+          green: "hsl(var(--board-green))",
+          amber: "hsl(var(--board-amber))",
+          red: "hsl(var(--board-red))",
+        },
         espresso: {
           DEFAULT: "hsl(var(--espresso))",
           foreground: "hsl(var(--espresso-foreground))",
