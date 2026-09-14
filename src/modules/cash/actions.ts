@@ -10,6 +10,7 @@ import { cashCloseSchema, depositSchema, payoutSchema, payoutEditSchema } from "
 import { overShortCentsFor } from "./reconcile";
 import { requireCan } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 async function recomputeOverShort(tx: any, locationId: string, businessDate: Date) {
   const [deposits, payouts, close] = await Promise.all([
@@ -51,6 +52,10 @@ export async function saveCashCloseAction(payload: unknown) {
   const paidInCents = toCents(parsed.paidInDollars);
   const expectedCents = toCents(parsed.expectedDollars);
 
+  // Resolved once, before the transaction: an event tag from the form must
+  // belong to this business, and the check should not run inside the write.
+  const eventId = await ownedId("event", scope.businessId, parsed.eventId);
+
   await prisma.$transaction(async (tx) => {
     const [existingDeposits, existingPayouts] = await Promise.all([
       tx.deposit.findMany({ where: { locationId: scope.locationId, businessDate } }),
@@ -71,7 +76,7 @@ export async function saveCashCloseAction(payload: unknown) {
         depositCents, paidInCents, paidOutCents, expectedCents, overShortCents,
         weather: parsed.weather ?? null,
         specialEvents: parsed.specialEvents ?? null,
-        eventId: parsed.eventId || null,
+        eventId,
         checklistJson: parsed.checklist as object,
         notes: parsed.notes ?? null,
         closedById: scope.userId,
@@ -82,7 +87,7 @@ export async function saveCashCloseAction(payload: unknown) {
         depositCents, paidInCents, paidOutCents, expectedCents, overShortCents,
         weather: parsed.weather ?? null,
         specialEvents: parsed.specialEvents ?? null,
-        eventId: parsed.eventId || null,
+        eventId,
         checklistJson: parsed.checklist as object,
         notes: parsed.notes ?? null,
         closedById: scope.userId,

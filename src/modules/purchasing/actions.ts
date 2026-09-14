@@ -8,6 +8,7 @@ import { toCents } from "@/lib/money";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { newPoSchema, receivePoSchema, supplierSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 export async function createSupplierAction(formData: FormData) {
   await requireCan("purchasing");
@@ -60,11 +61,21 @@ export async function createPoAction(payload: unknown) {
   await requireCan("purchasing");
   const scope = await getScope();
   const parsed = newPoSchema.parse(payload);
+
+  /*
+    The supplier and every ingredient must belong to this business before any
+    of them is written. Without this, receivePoAction later ran
+    ingredient.update() on whatever id was supplied — a write into another
+    tenant's stock and costs.
+  */
+  const supplierId = await requiredOwnedId("supplier", scope.businessId, parsed.supplierId);
+  await assertAllOwned("ingredient", scope.businessId, parsed.items.map((it) => it.ingredientId));
+
   const subtotalCents = parsed.items.reduce((a, it) => a + Math.round(it.qtyOrdered * toCents(it.unitCostDollars)), 0);
   const po = await prisma.purchaseOrder.create({
     data: {
       locationId: scope.locationId,
-      supplierId: parsed.supplierId,
+      supplierId,
       status: "DRAFT",
       expectedAt: parsed.expectedAt ? new Date(parsed.expectedAt) : null,
       notes: parsed.notes ?? null,

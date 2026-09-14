@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { recipeSchema, updateBomSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 export async function createRecipeAction(formData: FormData) {
   await requireCan("inventory");
@@ -70,6 +71,12 @@ export async function updateBomAction(recipeId: string, payload: unknown) {
   const parsed = updateBomSchema.parse(payload);
   const r = await prisma.recipe.findFirst({ where: { id: recipeId, businessId: scope.businessId } });
   if (!r) throw new Error("Not found");
+
+  // The recipe was checked; the ingredients were not. Costing reads the joined
+  // ingredient's avgCostCents, so an unowned id both prices this recipe off
+  // someone else's stock and renders their costs on this page.
+  await assertAllOwned("ingredient", scope.businessId, parsed.items.map((i) => i.ingredientId));
+
   await prisma.$transaction([
     prisma.recipeIngredient.deleteMany({ where: { recipeId } }),
     prisma.recipeIngredient.createMany({

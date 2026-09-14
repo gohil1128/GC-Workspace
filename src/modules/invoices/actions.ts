@@ -9,6 +9,7 @@ import { validateImageDataUrl } from "./attachments";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { createInvoiceSchema, updateInvoiceTotalsSchema, addInvoiceItemSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
   const items = await tx.invoiceItem.findMany({ where: { invoiceId } });
@@ -53,6 +54,10 @@ export async function createInvoiceAction(formData: FormData) {
     if (!ev) throw new Error("Selected event not found");
   }
   const imageDataUrl = validateImageDataUrl(parsed.imageDataUrl);
+
+  // The supplier is written straight onto the invoice; an unowned id files this
+  // business's bill against another one's supplier record.
+  const supplierId = await requiredOwnedId("supplier", scope.businessId, parsed.supplierId);
   const subtotalCents = toCents(parsed.subtotalDollars);
   const gstCents = toCents(parsed.gstDollars);
   const pstCents = toCents(parsed.pstDollars);
@@ -65,7 +70,7 @@ export async function createInvoiceAction(formData: FormData) {
     const inv = await tx.invoice.create({
       data: {
         locationId: scope.locationId,
-        supplierId: parsed.supplierId,
+        supplierId,
         poId: parsed.poId || null,
         eventId,
         appliesToAllEvents,

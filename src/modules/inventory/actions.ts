@@ -7,6 +7,7 @@ import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
 import { ingredientSchema, newCountSchema, wasteSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 export async function createIngredientAction(formData: FormData) {
   await requireCan("inventory");
@@ -32,7 +33,7 @@ export async function createIngredientAction(formData: FormData) {
       parLevel: parsed.parLevel,
       reorderPoint: parsed.reorderPoint,
       reorderQty: parsed.reorderQty,
-      supplierId: parsed.supplierId || null,
+      supplierId: await ownedId("supplier", scope.businessId, parsed.supplierId) || null,
       lastCostCents: toCents(parsed.lastCostDollars),
       avgCostCents: toCents(parsed.lastCostDollars),
     },
@@ -78,7 +79,7 @@ export async function updateIngredientAction(id: string, formData: FormData) {
         parLevel: parsed.parLevel,
         reorderPoint: parsed.reorderPoint,
         reorderQty: parsed.reorderQty,
-        supplierId: parsed.supplierId || null,
+        supplierId: await ownedId("supplier", scope.businessId, parsed.supplierId) || null,
         lastCostCents: toCents(parsed.lastCostDollars),
         ...(onHandDelta !== 0 ? { onHand: onHandNext! } : {}),
       },
