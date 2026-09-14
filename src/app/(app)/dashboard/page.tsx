@@ -143,9 +143,21 @@ export default async function DashboardPage({
       name: c.name,
       color: c.color,
       netSalesCents: c.netSalesCents,
-      costCents: c.cogsCents + c.laborCents + c.opexCents + c.feeCents,
-      profitCents: c.profitCents,
-      marginPct: c.marginPct,
+      /*
+        Cost, profit and margin are withheld when "Profit & loss" is locked.
+
+        The statement above shows a padlock and the Profit KPI reads "•••" when
+        locked, but this chart printed exact per-event profit and margin right
+        underneath them — so the lock hid the two places that say "locked" and
+        left the numbers themselves on screen. Net sales stays visible, matching
+        the Net sales KPI, which is deliberately not masked.
+
+        Withheld here rather than hidden in the component: a figure that never
+        reaches the client cannot be read out of the HTML.
+      */
+      costCents: pnlLocked ? null : c.cogsCents + c.laborCents + c.opexCents + c.feeCents,
+      profitCents: pnlLocked ? null : c.profitCents,
+      marginPct: pnlLocked ? null : c.marginPct,
     }))
     .sort((a, b) => b.netSalesCents - a.netSalesCents);
 

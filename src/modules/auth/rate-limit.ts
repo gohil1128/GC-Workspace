@@ -99,3 +99,51 @@ export class LoginLockedError extends Error {
     this.name = "LoginLockedError";
   }
 }
+
+/*
+  The section PIN uses the same counter table, in its own key namespace.
+
+  Thresholds differ from login on purpose. The PIN is four digits, so the space
+  is ten thousand — small enough that five tries per window is generous for an
+  honest owner who has forgotten it and hostile to anyone working through it.
+  The business-wide key is looser than the per-user one so a large team fumbling
+  the PIN on a busy day does not lock the whole business out, while still
+  capping a guess campaign spread across several accounts.
+*/
+const SECTION_PIN_USER_MAX = 5;
+const SECTION_PIN_BUSINESS_MAX = 20;
+
+export async function checkSectionPinAllowed(keys: string[]): Promise<RateLimitState> {
+  // The lockout question is identical for any key namespace, so this reuses the
+  // login check rather than keeping a second copy of the same expiry logic.
+  return checkLoginAllowed(keys);
+}
+
+export async function recordSectionPinFailure(keys: string[]): Promise<void> {
+  const now = new Date();
+  await Promise.all(
+    keys.map(async (key) => {
+      const max = key.startsWith("sectionpin:user:")
+        ? SECTION_PIN_USER_MAX
+        : SECTION_PIN_BUSINESS_MAX;
+      const existing = await prisma.loginAttempt.findUnique({ where: { key } });
+      const stale = existing ? now.getTime() - existing.updatedAt.getTime() > WINDOW_MS : false;
+      const failures = (stale || !existing ? 0 : existing.failures) + 1;
+      const lockedUntil =
+        failures >= max * LONG_LOCK_MULTIPLE
+          ? new Date(now.getTime() + LONG_LOCK_MS)
+          : failures >= max
+            ? new Date(now.getTime() + LOCK_MS)
+            : null;
+      await prisma.loginAttempt.upsert({
+        where: { key },
+        create: { key, failures, lockedUntil },
+        update: { failures, lockedUntil },
+      });
+    }),
+  );
+}
+
+export async function clearSectionPinFailures(keys: string[]): Promise<void> {
+  await prisma.loginAttempt.deleteMany({ where: { key: { in: keys } } });
+}

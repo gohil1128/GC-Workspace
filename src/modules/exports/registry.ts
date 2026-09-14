@@ -1,4 +1,5 @@
 import type { Scope } from "@/lib/scope";
+import type { SectionKey } from "@/modules/section-lock/sections";
 import { fromCents } from "@/lib/money";
 import { dailySummary, weeklyTrend, purchaseSpendByPeriod, pnlByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
@@ -32,6 +33,17 @@ export type ExportDef = {
   /** One line shown under the label on the export page. */
   description: string;
   group: ExportGroup;
+  /*
+    The lockable section this download belongs to, if any.
+
+    Declared here, beside the builder, rather than in a lookup table over in the
+    route. That table listed two of the four exports that needed it, so
+    /api/exports/recipes handed over every costed recipe while /recipes itself
+    sat behind the PIN, and /api/exports/events did the same. Removing a button
+    is not protection when the URL is guessable, and a second list that has to
+    be updated by hand every time an export is added will drift again.
+  */
+  section?: SectionKey;
   build: (ctx: ExportContext) => Promise<ExportResult>;
 };
 
@@ -168,6 +180,7 @@ export const EXPORTS: ExportDef[] = [
   },
   {
     key: "pnl",
+    section: "REPORTS",
     label: "Profit & loss by event",
     description: "The P&L matrix: sales, COGS, labor, expenses, fees, profit per event.",
     group: "Sales",
@@ -532,6 +545,7 @@ export const EXPORTS: ExportDef[] = [
   },
   {
     key: "recipes",
+    section: "RECIPES",
     label: "Recipes",
     description: "One row per recipe ingredient, with menu price and line cost.",
     group: "Inventory",
@@ -610,6 +624,7 @@ export const EXPORTS: ExportDef[] = [
 
   {
     key: "event-summary",
+    section: "EVENTS",
     label: "One event, end to end",
     description:
       "Everything tagged to a single event as one ledger — sales, items, invoices, expenses, labor, cash and equipment. Needs ?event=<id>.",
@@ -705,6 +720,7 @@ export const EXPORTS: ExportDef[] = [
   // ───────────────────────── Reference ─────────────────────────
   {
     key: "events",
+    section: "EVENTS",
     label: "Events",
     description: "Every event with its date range and booth fee.",
     group: "Reference",

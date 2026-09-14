@@ -7,7 +7,36 @@ on:
       - main
 
 jobs:
+  # Nothing deploys until this passes. The repo previously shipped straight to
+  # the live domain on every push with no typecheck, no lint and no tests — so a
+  # broken build was found by looking at bolochai.com.
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # Prisma's generated client is imported by the type checker and by the
+      # tests, and it is not in the repo.
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Lint
+        run: pnpm run lint
+      - name: Unit tests
+        run: pnpm run test
+
   deploy:
+    needs: verify
     runs-on: ubuntu-latest
     # A Next build plus `prisma migrate deploy` normally lands well inside
     # this; the cap is here so a wedged build fails instead of hanging.

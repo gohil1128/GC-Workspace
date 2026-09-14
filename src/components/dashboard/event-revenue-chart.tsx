@@ -13,14 +13,21 @@ import { cn } from "@/lib/utils";
   tracking should not ship a client bundle to draw itself.
 */
 
+/*
+  Profit, cost and margin are nullable because "Profit & loss" is lockable.
+  When the owner locks that section, the page hands over bars with those three
+  omitted rather than trusting this component to hide them — a figure that is
+  never sent cannot be leaked by a styling mistake, a title attribute or
+  View Source.
+*/
 export type EventBar = {
   id: string;
   name: string;
   color: string | null;
   netSalesCents: number;
-  costCents: number;
-  profitCents: number;
-  marginPct: number;
+  costCents: number | null;
+  profitCents: number | null;
+  marginPct: number | null;
 };
 
 export function EventRevenueChart({ bars }: { bars: EventBar[] }) {
@@ -40,7 +47,10 @@ export function EventRevenueChart({ bars }: { bars: EventBar[] }) {
     <ul className="space-y-3.5">
       {bars.map((b) => {
         const salesPct = (b.netSalesCents / peak) * 100;
-        const costPct = b.netSalesCents > 0 ? (b.costCents / b.netSalesCents) * salesPct : 0;
+        const costPct =
+          b.costCents !== null && b.netSalesCents > 0
+            ? (b.costCents / b.netSalesCents) * salesPct
+            : 0;
         return (
           <li key={b.id}>
             <div className="flex items-baseline justify-between gap-3 text-[13px]">
@@ -56,14 +66,17 @@ export function EventRevenueChart({ bars }: { bars: EventBar[] }) {
               </span>
               <span className="num shrink-0 text-right">
                 <span className="font-semibold">{formatMoney(b.netSalesCents)}</span>
-                <span
-                  className={cn(
-                    "ml-2 text-2xs",
-                    b.profitCents < 0 ? "text-destructive" : "text-success",
-                  )}
-                >
-                  {formatMoney(b.profitCents, { signed: true })} · {formatPercent(b.marginPct)}
-                </span>
+                {b.profitCents !== null && (
+                  <span
+                    className={cn(
+                      "ml-2 text-2xs",
+                      b.profitCents < 0 ? "text-destructive" : "text-success",
+                    )}
+                  >
+                    {formatMoney(b.profitCents, { signed: true })}
+                    {b.marginPct !== null && <> · {formatPercent(b.marginPct)}</>}
+                  </span>
+                )}
               </span>
             </div>
 

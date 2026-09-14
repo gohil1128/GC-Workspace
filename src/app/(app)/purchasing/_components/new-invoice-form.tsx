@@ -267,7 +267,7 @@ export function NewInvoiceForm({
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-2xs text-muted-foreground">Or "All events" for shared costs (cups, tent…), split evenly in the P&L.</span>
+            <span className="text-2xs text-muted-foreground">Or &ldquo;All events&rdquo; for shared costs (cups, tent…), split evenly in the P&amp;L.</span>
           </div>
         )}
         <div className="grid gap-1.5">

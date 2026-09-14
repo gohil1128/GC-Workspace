@@ -7,6 +7,11 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import {
+  checkSectionPinAllowed,
+  recordSectionPinFailure,
+  clearSectionPinFailures,
+} from "@/modules/auth/rate-limit";
 import { SECTION_KEYS, UNLOCK_TTL_MINUTES, type SectionKey } from "./sections";
 
 /*
@@ -87,6 +92,19 @@ export async function setLockedSectionsAction(sections: string[]) {
   revalidatePath("/", "layout");
 }
 
+/*
+  Keys for throttling PIN guesses.
+
+  Deliberately NOT the login buckets. Sharing them would let anyone who wanted a
+  colleague locked out of signing in simply mistype the section PIN five times.
+  These are their own namespace, counted per user and per business: the per-user
+  key stops one account grinding through the space, the per-business key stops
+  the same grind spread across several accounts.
+*/
+function sectionPinKeys(businessId: string, userId: string): string[] {
+  return [`sectionpin:user:${userId}`, `sectionpin:business:${businessId}`];
+}
+
 export async function unlockSectionsAction(formData: FormData) {
   const scope = await getScope();
   const pinRaw = String(formData.get("pin") ?? "");
@@ -96,8 +114,35 @@ export async function unlockSectionsAction(formData: FormData) {
   });
   if (!business?.sectionPinHash) return { ok: true as const };
 
+  /*
+    The PIN is four digits — ten thousand possibilities. Without a limit, a
+    signed-in manager could grind the whole space in minutes and hold an
+    hour-long unlock over Profit & loss, Recipes and Events, and because only
+    the success path was audited, the owner would never see it happen.
+  */
+  const keys = sectionPinKeys(scope.businessId, scope.userId);
+  const limit = await checkSectionPinAllowed(keys);
+  if (limit.locked) {
+    return {
+      error: `Too many incorrect PINs. Try again in ${Math.ceil(limit.retryAfterSec / 60)} minute${
+        limit.retryAfterSec > 60 ? "s" : ""
+      }.`,
+    };
+  }
+
   const ok = await bcrypt.compare(pinRaw, business.sectionPinHash);
-  if (!ok) return { error: "Incorrect PIN" };
+  if (!ok) {
+    await recordSectionPinFailure(keys);
+    // Failures are audited too, not just unlocks: a run of these is the signal
+    // that someone is guessing, and it was the one thing the log could not show.
+    await writeAudit({
+      businessId: scope.businessId, userId: scope.userId,
+      action: "sections.unlock.failed", entityType: "Business", entityId: scope.businessId,
+    });
+    return { error: "Incorrect PIN" };
+  }
+
+  await clearSectionPinFailures(keys);
 
   (await cookies()).set(UNLOCKED_COOKIE, String(Date.now()), {
     httpOnly: true,
