@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay } from "@/lib/date";
+import { businessDayOrNull, endOfBusinessDayOrNull } from "@/lib/date";
 
 export type InvoiceFilters = {
   supplierId?: string;
@@ -24,8 +24,10 @@ function buildInvoiceWhere(locationId: string, filters: InvoiceFilters) {
   if (filters.status === "closed") where.closedAt = { not: null };
   if (filters.from || filters.to) {
     where.invoiceDate = {};
-    if (filters.from) where.invoiceDate.gte = startOfDay(new Date(filters.from));
-    if (filters.to) where.invoiceDate.lte = endOfDay(new Date(filters.to));
+    const from = businessDayOrNull(filters.from);
+    const to = endOfBusinessDayOrNull(filters.to);
+    if (from) where.invoiceDate.gte = from;
+    if (to) where.invoiceDate.lte = to;
   }
   return where;
 }

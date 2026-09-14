@@ -8,7 +8,7 @@ import { listActiveEvents, getActiveEvent } from "@/modules/events/queries";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { fromCents } from "@/lib/money";
-import { addDays, fmtDate } from "@/lib/date";
+import { fmtBusinessDate, todayIsoIn, safeDateParam, businessDayFromIso, isoFromBusinessDay } from "@/lib/date";
 import { CashEntry } from "../_components/cash-entry";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,21 @@ export const dynamic = "force-dynamic";
 export default async function NewClosePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const sp = await searchParams;
   const scope = await requireCapability("cash");
-  const dateStr = sp.date ?? new Date().toISOString().slice(0, 10);
+
+  /*
+    "Today" means today where the business trades, not where the server runs.
+
+    This was new Date().toISOString(), which is the server's UTC date. Production
+    runs UTC and the business is in Toronto, so from 8pm EDT the default jumped
+    to tomorrow — and an evening market's cash close was filed under the next
+    day, where it did not line up with that day's sales and would collide with
+    the next real close on the (locationId, businessDate) unique key.
+  */
+  const business = await prisma.business.findUnique({
+    where: { id: scope.businessId },
+    select: { timezone: true },
+  });
+  const dateStr = safeDateParam(sp.date) ?? todayIsoIn(business?.timezone ?? "UTC");
   const [sales, existing, deposits, payouts, events, activeEvent] = await Promise.all([
     getSalesForDate(scope.locationId, dateStr),
     getCashCloseByDate(scope.locationId, dateStr),
@@ -26,15 +40,19 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
     getActiveEvent(scope.businessId),
   ]);
 
-  const prev = fmtDateForInput(addDays(new Date(dateStr), -1));
-  const next = fmtDateForInput(addDays(new Date(dateStr), 1));
+  // Stepped in UTC to match how the day is stored. date-fns addDays works in
+  // local time, so off a non-UTC server Prev/Next could land on the same day
+  // twice or skip one across a DST boundary.
+  const day = businessDayFromIso(dateStr);
+  const prev = isoFromBusinessDay(new Date(day.getTime() - 86_400_000));
+  const next = isoFromBusinessDay(new Date(day.getTime() + 86_400_000));
 
   return (
     <div>
       <PageHeader
         eyebrow="Cash · New close"
         title="Daily entry"
-        description={`${scope.locationName} · ${fmtDate(new Date(dateStr))}`}
+        description={`${scope.locationName} · ${fmtBusinessDate(dateStr)}`}
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link href={`/cash/new?date=${prev}`}>‹ Prev</Link></Button>
@@ -93,6 +111,3 @@ export default async function NewClosePage({ searchParams }: { searchParams: Pro
   );
 }
 
-function fmtDateForInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}

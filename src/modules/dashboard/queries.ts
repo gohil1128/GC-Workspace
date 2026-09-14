@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { lastNDays, businessDay, fmtDate } from "@/lib/date";
+import { lastNDays, fmtDate, isoFromBusinessDay, recentBusinessDays } from "@/lib/date";
 import { safeDivide } from "@/lib/money";
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
@@ -10,8 +10,11 @@ export async function getDashboard(params: {
   days?: number;
   eventId?: string | null;
   eventRange?: { start: Date; end: Date } | null;
+  /** IANA zone the business trades in; the missing-close window is counted in it. */
+  timezone?: string;
 }) {
   const days = params.days ?? 14;
+  const timezone = params.timezone ?? "UTC";
   const baseRange = lastNDays(days);
   const { from, to } = params.eventRange
     ? { from: params.eventRange.start, to: params.eventRange.end }
@@ -105,13 +108,18 @@ export async function getDashboard(params: {
     .filter((i) => i.onHand <= i.reorderPoint && i.reorderPoint > 0)
     .map((i) => ({ id: i.id, name: i.name, onHand: i.onHand, reorderPoint: i.reorderPoint, unit: i.unit }));
 
-  // missing close: any business day in last 7 days w/o a close
-  const last7 = lastNDays(7);
-  const closesByDay = new Set(cashCloses.map((c) => businessDay(c.businessDate).toISOString()));
-  const expectedDays: string[] = [];
-  for (let d = new Date(last7.from); d <= last7.to; d.setDate(d.getDate() + 1)) {
-    expectedDays.push(businessDay(d).toISOString());
-  }
+  /*
+    Missing close: any of the last 7 business days without one.
+
+    Both sides are plain YYYY-MM-DD now. This compared `startOfDay(storedDate)`
+    against days generated from the server's own clock — stored dates are UTC
+    midnight, so off a UTC server startOfDay moved them and every day in the
+    window came back "missing". The window is also counted in the business's own
+    timezone, so a market that ran last night is not reported as missed because
+    the server has already rolled into tomorrow.
+  */
+  const closesByDay = new Set(cashCloses.map((c) => isoFromBusinessDay(c.businessDate)));
+  const expectedDays = recentBusinessDays(timezone, 7);
   const missingCloseDays = expectedDays.filter((d) => !closesByDay.has(d));
 
   // trends

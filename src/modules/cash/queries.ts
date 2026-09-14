@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { lastNDays, startOfDay } from "@/lib/date";
+import { lastNDays, businessDayFromIso } from "@/lib/date";
 
 export async function listCashCloses(locationId: string, days = 30, eventId?: string | null) {
   const { from, to } = lastNDays(days);
@@ -20,7 +20,7 @@ export async function listCashCloses(locationId: string, days = 30, eventId?: st
 
 export async function getCashCloseByDate(locationId: string, isoDate: string) {
   return prisma.cashClose.findFirst({
-    where: { locationId, businessDate: startOfDay(new Date(isoDate)) },
+    where: { locationId, businessDate: businessDayFromIso(isoDate) },
     include: {
       closedBy: { select: { name: true } },
       verifiedBy: { select: { name: true } },
@@ -30,13 +30,13 @@ export async function getCashCloseByDate(locationId: string, isoDate: string) {
 
 export async function getSalesForDate(locationId: string, isoDate: string) {
   return prisma.dailySales.findFirst({
-    where: { locationId, businessDate: startOfDay(new Date(isoDate)) },
+    where: { locationId, businessDate: businessDayFromIso(isoDate) },
   });
 }
 
 export async function listDepositsForDate(locationId: string, isoDate: string) {
   return prisma.deposit.findMany({
-    where: { locationId, businessDate: startOfDay(new Date(isoDate)) },
+    where: { locationId, businessDate: businessDayFromIso(isoDate) },
     orderBy: { sequence: "asc" },
   });
 }
@@ -51,7 +51,7 @@ export async function listPayouts(locationId: string, days = 365) {
 
 export async function listPayoutsForDate(locationId: string, isoDate: string) {
   return prisma.cashPayout.findMany({
-    where: { locationId, businessDate: startOfDay(new Date(isoDate)) },
+    where: { locationId, businessDate: businessDayFromIso(isoDate) },
     orderBy: { createdAt: "asc" },
   });
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Download, Lock } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
+import { prisma } from "@/lib/prisma";
 import { getDashboard, getPriorNetSales } from "@/modules/dashboard/queries";
 import { getTopItems } from "@/modules/dashboard/items";
 import { resolveEventScope, listEventOptions } from "@/modules/dashboard/event-scope";
@@ -42,7 +43,10 @@ export default async function DashboardPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [params, scope] = await Promise.all([searchParams, requireCapability("overview")]);
-  const activeEvent = await getActiveEvent(scope.businessId);
+  const [activeEvent, business] = await Promise.all([
+    getActiveEvent(scope.businessId),
+    prisma.business.findUnique({ where: { id: scope.businessId }, select: { timezone: true } }),
+  ]);
   const [range, eventOptions] = await Promise.all([
     resolveEventScope(scope.businessId, params, activeEvent),
     listEventOptions(scope.businessId),
@@ -59,6 +63,7 @@ export default async function DashboardPage({
       locationId: scope.locationId,
       eventId: range.eventId,
       eventRange: { start: range.start, end: range.end },
+      timezone: business?.timezone ?? "UTC",
     }),
     pnlByEvent(scope.businessId, scope.locationId, { start: range.start, end: range.end }),
     getInvoiceTracking(scope.locationId),

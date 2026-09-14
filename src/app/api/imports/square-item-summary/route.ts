@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { scopeFor } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { parseCsv } from "@/lib/csv";
-import { startOfDay } from "@/lib/date";
+import { businessDayFromIso } from "@/lib/date";
 import { toCents } from "@/lib/money";
 import { writeAudit } from "@/lib/audit";
 
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   if (!isoDate) {
     return NextResponse.json({ error: `Bad date "${dateRaw}". Use YYYY-MM-DD.` }, { status: 400 });
   }
-  const businessDate = startOfDay(new Date(`${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`));
+  const businessDate = businessDayFromIso(`${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`);
 
   const eventIdRaw = String(form.get("eventId") ?? "");
   const eventId = eventIdRaw && eventIdRaw !== "none" ? eventIdRaw : null;

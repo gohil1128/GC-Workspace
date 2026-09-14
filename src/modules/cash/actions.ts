@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
-import { startOfDay } from "@/lib/date";
+import { businessDayFromIso } from "@/lib/date";
 import { cashCloseSchema, depositSchema, payoutSchema, payoutEditSchema } from "./schemas";
 import { overShortCentsFor } from "./reconcile";
 import { requireCan } from "@/lib/auth";
@@ -41,7 +41,7 @@ export async function saveCashCloseAction(payload: unknown) {
   await requireCan("cash");
   const scope = await getScope();
   const parsed = cashCloseSchema.parse(payload);
-  const businessDate = startOfDay(new Date(parsed.businessDate));
+  const businessDate = businessDayFromIso(parsed.businessDate);
 
   const openingCents = toCents(parsed.openingDollars);
   const closingCents = toCents(parsed.closingDollars);
@@ -100,7 +100,7 @@ export async function addDepositAction(payload: unknown) {
   await requireCan("cash");
   const scope = await getScope();
   const parsed = depositSchema.parse(payload);
-  const businessDate = startOfDay(new Date(parsed.businessDate));
+  const businessDate = businessDayFromIso(parsed.businessDate);
 
   // Auto-increment sequence if not provided
   let sequence = parsed.sequence ?? null;
@@ -152,7 +152,7 @@ export async function addPayoutAction(payload: unknown) {
   await requireCan("cash");
   const scope = await getScope();
   const parsed = payoutSchema.parse(payload);
-  const businessDate = startOfDay(new Date(parsed.businessDate));
+  const businessDate = businessDayFromIso(parsed.businessDate);
 
   await prisma.$transaction(async (tx) => {
     await tx.cashPayout.create({

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
-import { startOfDay } from "@/lib/date";
+import { businessDayFromIso } from "@/lib/date";
 import { vendorSchema, payVendorSchema, incentiveSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
 
@@ -112,7 +112,7 @@ export async function payVendorAction(formData: FormData) {
       locationId: scope.locationId,
       vendorId: vendor.id,
       category: vendor.defaultCategory,
-      businessDate: startOfDay(new Date(parsed.businessDate)),
+      businessDate: businessDayFromIso(parsed.businessDate),
       amountCents: toCents(parsed.amountDollars),
       description: parsed.description || `${vendor.name} — monthly fee`,
       isIncentive: false,
@@ -156,7 +156,7 @@ export async function logIncentiveAction(formData: FormData) {
       locationId: scope.locationId,
       vendorId: vendor.id,
       category: vendor.defaultCategory,
-      businessDate: startOfDay(new Date(parsed.businessDate)),
+      businessDate: businessDayFromIso(parsed.businessDate),
       amountCents: toCents(parsed.amountDollars),
       description: note,
       isIncentive: true,

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
-import { startOfDay } from "@/lib/date";
+import { businessDayFromIso } from "@/lib/date";
 import { expenseSchema } from "./schemas";
 import { requireCan } from "@/lib/auth";
 
@@ -24,7 +24,7 @@ export async function createExpenseAction(formData: FormData) {
       locationId: scope.locationId,
       eventId: parsed.eventId || null,
       category: parsed.category,
-      businessDate: startOfDay(new Date(parsed.businessDate)),
+      businessDate: businessDayFromIso(parsed.businessDate),
       amountCents: toCents(parsed.amountDollars),
       description: parsed.description || null,
       createdById: scope.userId,
@@ -57,7 +57,7 @@ export async function updateExpenseAction(id: string, formData: FormData) {
     where: { id },
     data: {
       category: parsed.category,
-      businessDate: startOfDay(new Date(parsed.businessDate)),
+      businessDate: businessDayFromIso(parsed.businessDate),
       amountCents: toCents(parsed.amountDollars),
       description: parsed.description || null,
       eventId: parsed.eventId || null,

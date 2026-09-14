@@ -60,6 +60,7 @@ export default async function SettingsPage() {
             {business && (
               <BusinessForm initial={{
                 name: business.name,
+                timezone: business.timezone,
                 foodTargetPct: business.foodTargetPct,
                 laborTargetPct: business.laborTargetPct,
                 ebitdaMultiplier: business.ebitdaMultiplier,
