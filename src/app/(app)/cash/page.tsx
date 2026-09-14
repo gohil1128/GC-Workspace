@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Plus, Download, CheckCircle2 } from "lucide-react";
+import { Plus, Download, CheckCircle2, AlertTriangle } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
 import { getActiveEvent } from "@/modules/events/queries";
-import { listCashCloses, listPayouts } from "@/modules/cash/queries";
+import { listCashCloses, listPayouts, getCashPosition } from "@/modules/cash/queries";
 import { payoutKindLabel } from "@/modules/cash/payout-kinds";
 import { PageHeader } from "@/components/page-header";
 import { StatTile, StatTileRow } from "@/components/stat-tile";
@@ -18,45 +18,32 @@ export const dynamic = "force-dynamic";
 export default async function CashPage() {
   const scope = await requireCapability("cash");
   const activeEvent = await getActiveEvent(scope.businessId);
-  const [closes, payouts] = await Promise.all([
+  /*
+    The summary band reads across every event, all the way back; the table
+    under it stays on the recent window and the chosen event.
+
+    All four tiles share that one basis deliberately. Cash in hand is a
+    balance that accumulates over every market this business has traded, and
+    putting it beside three thirty-day flows made the row read as one set of
+    figures when it was two — the kind of quiet mismatch that gets money
+    counted wrong. A thirty-day window is arbitrary here anyway: this business
+    trades at events with weeks of nothing in between, so a month can contain
+    no trading at all.
+  */
+  const [closes, payouts, position] = await Promise.all([
     listCashCloses(scope.locationId, 30, activeEvent?.id ?? null),
-    listPayouts(scope.locationId, 30),
+    listPayouts(scope.locationId, 3650),
+    getCashPosition(scope.locationId),
   ]);
 
-  const totalOverShort = closes.reduce((a, c) => a + c.overShortCents, 0);
-  const totalPaidOut = payouts.reduce((a, p) => a + p.amountCents, 0);
-  const totalBanked = closes.reduce((a, c) => a + c.depositCents, 0);
-
-  /*
-    Cash in hand: the day's takings, from the most recent drawer count.
-
-    A balance, not a flow, so it is the latest count rather than a sum —
-    adding thirty days of counted drawers together would also add the float
-    back in thirty times.
-
-    Two deliberate choices, both confirmed against how this business actually
-    counts:
-
-    The float comes off. The counted drawer includes the opening float, which
-    is tomorrow's change and not money the day earned.
-
-    Payouts do NOT come off, even though they reduce cash on hand — because
-    they already have. The drawer is counted at close, and payout cash left
-    the till before that count, so it is missing from `cashCents` already.
-    Subtracting it a second time would deduct the same money twice. It is
-    named in the caption instead, so it is visible rather than merely absent.
-  */
-  const latest = closes[0] ?? null;
-  const inHandCents = latest ? latest.cashCents - latest.openingCents : 0;
-  const safeCents = latest?.safeCountCents ?? 0;
-  const latestPaidOutCents = latest?.paidOutCents ?? 0;
+  const totalPaidOut = position.paidOutCents;
 
   return (
     <div>
       <PageHeader
         eyebrow="Cash · Closes"
         title="Cash close"
-        description={`${closes.length} close${closes.length === 1 ? "" : "s"} in the last 30 days`}
+        description={`${position.closes} close${position.closes === 1 ? "" : "s"} recorded · ${closes.length} in the last 30 days`}
         actions={
           <>
             <Button asChild variant="outline" size="sm"><a href="/api/exports/cash"><Download className="h-3.5 w-3.5" /> CSV</a></Button>
@@ -70,32 +57,67 @@ export default async function CashPage() {
               and a five-figure total beside even a two-word meta truncates the
               figure — which is the one thing on the tile that has to be exact.
               The supporting detail goes in the line underneath instead. */}
-          <StatTile label="Cash in hand" value={formatMoney(inHandCents)} />
-          <StatTile label="Paid out" value={formatMoney(totalPaidOut)} />
-          <StatTile label="Banked" value={formatMoney(totalBanked)} />
-          <StatTile label="Net over / short" value={formatMoney(totalOverShort, { signed: true })} />
+          <StatTile label="Cash in hand" value={formatMoney(position.inHandCents)} />
+          <StatTile label="Paid out" value={formatMoney(position.paidOutCents)} />
+          <StatTile label="Banked" value={formatMoney(position.bankedCents)} />
+          <StatTile label="Net over / short" value={formatMoney(position.overShortCents, { signed: true })} />
         </StatTileRow>
 
-        {latest ? (
+        {position.countedTills > 0 ? (
           <p className="text-xs text-muted-foreground">
-            Cash in hand is the <span className="text-foreground">{fmtDate(latest.businessDate)}</span>{" "}
-            drawer count of <span className="text-foreground">{formatMoney(latest.cashCents)}</span> less the{" "}
-            <span className="text-foreground">{formatMoney(latest.openingCents)}</span> opening float.
-            {latestPaidOutCents > 0 && (
+            Cash in hand adds up every counted till across{" "}
+            <span className="text-foreground">
+              {position.countedTills} event{position.countedTills === 1 ? "" : "s"}
+            </span>
+            {position.firstCountedDate && (
+              <> since <span className="text-foreground">{fmtDate(position.firstCountedDate)}</span></>
+            )}
+            , each one less the float put in to make change. Banked cash and payouts are already
+            out of it — both left the till before it was counted, so taking them off again would
+            deduct the same money twice.
+            {position.floatCents > 0 && (
               <>
                 {" "}
-                The day&rsquo;s <span className="text-foreground">{formatMoney(latestPaidOutCents)}</span> of
-                payouts is already out of it — that cash left the till before the drawer was counted.
+                The <span className="text-foreground">{formatMoney(position.floatCents)}</span>{" "}
+                float is on top of this, as working change rather than takings.
               </>
             )}
-            {safeCents > 0 && (
-              <> A further <span className="text-foreground">{formatMoney(safeCents)}</span> was counted in the safe.</>
+            {position.safeCents > 0 && (
+              <>
+                {" "}
+                A further <span className="text-foreground">{formatMoney(position.safeCents)}</span>{" "}
+                was counted in the safe at the last close.
+              </>
             )}{" "}
-            Paid out, banked and over/short cover the last 30 days.
+            Paid out, banked and over/short cover every event too.
+          </p>
+        ) : position.closes > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            None of the <span className="text-foreground">{position.closes}</span> closes recorded
+            has a till count, so there is nothing to add up yet. Open a day and enter what was in
+            the till at the end of it.
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
             No closes recorded yet, so there is nothing to count from.
+          </p>
+        )}
+
+        {/* Its own line rather than the tail of the explanation: it says the
+            headline figure is missing events, which is the one thing here
+            somebody has to act on. */}
+        {position.uncounted > 0 && position.countedTills > 0 && (
+          <p className="flex items-start gap-2 text-xs text-warning">
+            <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              <span className="font-medium">
+                {position.uncounted} close{position.uncounted === 1 ? "" : "s"} left out
+              </span>{" "}
+              — {position.uncounted === 1 ? "it has" : "they have"} no till count, and a counted
+              till always holds at least the float, so a zero there means nobody counted it. Open{" "}
+              {position.uncounted === 1 ? "that day" : "those days"} and enter what was in the till
+              to bring {position.uncounted === 1 ? "it" : "them"} into the total.
+            </span>
           </p>
         )}
 
@@ -217,7 +239,7 @@ export default async function CashPage() {
             <h2 className="text-sm font-semibold">
               Payouts
               <span className="ml-2 text-2xs font-normal text-muted-foreground">
-                {payouts.length} in the last 30 days
+                {payouts.length} across every event
               </span>
             </h2>
             <span className="num text-sm font-semibold">{formatMoney(totalPaidOut)}</span>
@@ -225,7 +247,7 @@ export default async function CashPage() {
 
           {payouts.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-muted-foreground sm:px-5">
-              Nothing has been taken out of the drawer in the last 30 days. Record one from a day&rsquo;s
+              Nothing has ever been taken out of the drawer. Record one from a day&rsquo;s
               entry under <span className="text-foreground">Payouts</span> — for example paying someone
               back who bought supplies on their own card.
             </p>
