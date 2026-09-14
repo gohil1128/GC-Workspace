@@ -35,6 +35,61 @@ jobs:
       - name: Unit tests
         run: pnpm run test
 
+  # End-to-end, against a real build and a seeded database. Runs on every push
+  # and reports, but deploy does NOT wait on it yet: it has only ever run on one
+  # machine, and a job that has not proved itself stable should not be the thing
+  # standing between a fix and production. Add it to deploy's `needs` once it has
+  # a few green runs.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gcops
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gcops?schema=public
+      NEXTAUTH_SECRET: ci-e2e-secret
+      AUTH_SECRET: ci-e2e-secret
+      NEXTAUTH_URL: http://localhost:3111
+      AUTH_TRUST_HOST: "1"
+      BASE_URL: http://localhost:3111
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm exec prisma generate
+      - run: pnpm run db:seed
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec next build
+      - name: Start the app
+        run: |
+          pnpm exec next start -p 3111 &
+          npx wait-on http://localhost:3111/login --timeout 90000
+      - run: pnpm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   deploy:
     needs: verify
     runs-on: ubuntu-latest

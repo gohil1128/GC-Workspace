@@ -213,7 +213,10 @@ export function CashEntry({
                       there is no total here to disagree with the list. */}
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Paid-out</Label>
-                    <div className="num flex h-8 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm">
+                    <div
+                      data-testid="paid-out-total"
+                      className="num flex h-8 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm"
+                    >
                       {fmt(payoutTotal)}
                     </div>
                     <span className="text-2xs text-muted-foreground">
@@ -497,14 +500,17 @@ function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, e
         <Row label="Cash collected" value={fmt(cash)} />
         <Row label="Credit / Debit" value={fmt(credit)} />
         <Row label="Total Cash + Credit" value={fmt(total)} bold />
-        <Row label="Deposits" value={fmt(deposits)} />
-        {payouts > 0 && <Row label="Paid out" value={`+ ${fmt(payouts)}`} />}
+        <Row label="Deposits" value={fmt(deposits)} testId="deposits" />
+        {payouts > 0 && <Row label="Paid out" value={`+ ${fmt(payouts)}`} testId="paid-out" />}
         {paidIn > 0 && <Row label="Paid in" value={`− ${fmt(paidIn)}`} />}
         <Row label="Opening till" value={fmt(opening)} />
         <Row label="Expected" value={fmt(expected)} />
         <div className="border-t pt-2 flex items-center justify-between">
           <span className="font-medium">Over / Short</span>
-          <span className={`font-semibold num ${overShort < 0 ? "text-destructive" : overShort > 0 ? "text-warning" : "text-success"}`}>
+          <span
+            data-testid="over-short"
+            className={`font-semibold num ${overShort < 0 ? "text-destructive" : overShort > 0 ? "text-warning" : "text-success"}`}
+          >
             {overShort >= 0 ? "+" : ""}{fmt(overShort)}
           </span>
         </div>
@@ -514,11 +520,13 @@ function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, e
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({
+  label, value, bold, testId,
+}: { label: string; value: string; bold?: boolean; testId?: string }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">{label}</span>
-      <span className={`num ${bold ? "font-semibold" : ""}`}>{value}</span>
+      <span className={`num ${bold ? "font-semibold" : ""}`} data-testid={testId}>{value}</span>
     </div>
   );
 }

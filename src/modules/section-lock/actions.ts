@@ -13,6 +13,7 @@ import {
   clearSectionPinFailures,
 } from "@/modules/auth/rate-limit";
 import { SECTION_KEYS, UNLOCK_TTL_MINUTES, type SectionKey } from "./sections";
+import { mintUnlockToken, unlockTokenIsValid } from "./unlock-token";
 
 /*
   Section lock.
@@ -30,14 +31,20 @@ const UNLOCKED_COOKIE = "sections-unlocked";
 
 const pinSchema = z.string().regex(/^\d{4}$/, "PIN must be exactly 4 digits");
 
-/** True while the current session's unlock is still inside its window. */
-async function unlockIsFresh(): Promise<boolean> {
+/**
+ * True while this business has a genuine, unexpired unlock.
+ *
+ * The cookie is a signed token now. It used to be the raw timestamp, which
+ * anyone could set by hand to open every locked section — see unlock-token.ts.
+ */
+async function unlockIsFresh(businessId: string): Promise<boolean> {
   const cookieStore = await cookies();
-  const raw = cookieStore.get(UNLOCKED_COOKIE)?.value;
-  if (!raw) return false;
-  const unlockedAt = Number(raw);
-  if (!Number.isFinite(unlockedAt)) return false;
-  return Date.now() - unlockedAt <= UNLOCK_TTL_MINUTES * 60 * 1000;
+  return unlockTokenIsValid(
+    cookieStore.get(UNLOCKED_COOKIE)?.value,
+    businessId,
+    UNLOCK_TTL_MINUTES,
+    Date.now(),
+  );
 }
 
 export async function setSectionPinAction(formData: FormData) {
@@ -144,7 +151,7 @@ export async function unlockSectionsAction(formData: FormData) {
 
   await clearSectionPinFailures(keys);
 
-  (await cookies()).set(UNLOCKED_COOKIE, String(Date.now()), {
+  (await cookies()).set(UNLOCKED_COOKIE, mintUnlockToken(scope.businessId, Date.now()), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -173,7 +180,7 @@ export async function isSectionLocked(businessId: string, section: SectionKey): 
   });
   if (!business?.sectionPinHash) return false;
   if (!business.lockedSections.includes(section)) return false;
-  return !(await unlockIsFresh());
+  return !(await unlockIsFresh(businessId));
 }
 
 /** Every section currently closed — one query, for the nav's lock badges. */
@@ -183,7 +190,7 @@ export async function lockedSectionsNow(businessId: string): Promise<SectionKey[
     select: { sectionPinHash: true, lockedSections: true },
   });
   if (!business?.sectionPinHash) return [];
-  if (await unlockIsFresh()) return [];
+  if (await unlockIsFresh(businessId)) return [];
   return business.lockedSections.filter((s): s is SectionKey =>
     SECTION_KEYS.includes(s),
   );
@@ -206,7 +213,7 @@ export async function isSectionUnlockedByPin(
   });
   if (!business?.sectionPinHash) return false;
   if (!business.lockedSections.includes(section)) return false;
-  return await unlockIsFresh();
+  return await unlockIsFresh(businessId);
 }
 
 /** What the settings card needs: the PIN's existence and the chosen sections. */
