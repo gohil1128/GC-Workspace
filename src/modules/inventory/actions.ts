@@ -256,11 +256,32 @@ export async function deleteIngredientAction(id: string) {
   const scope = await getScope();
   const ing = await prisma.ingredient.findFirst({ where: { id, businessId: scope.businessId } });
   if (!ing) throw new Error("Not found");
+  /*
+    Every cascade is scoped to this business, not just keyed on the ingredient.
+
+    These were `deleteMany({ where: { ingredientId: id } })` — correct only
+    while no other business's row could point at this ingredient. Deleting an
+    ingredient is an ordinary thing an owner does, and if a row elsewhere
+    referenced it, that row was destroyed with no error and no trace. The
+    ownership guards now stop such a reference being created, but a delete
+    should not depend on another file having done its job.
+
+    UnitConversion is the exception: it cascades on the Ingredient FK in the
+    schema, so it belongs to this ingredient by construction.
+  */
   await prisma.$transaction([
-    prisma.inventoryMovement.deleteMany({ where: { ingredientId: id } }),
-    prisma.inventoryCountLine.deleteMany({ where: { ingredientId: id } }),
-    prisma.recipeIngredient.deleteMany({ where: { ingredientId: id } }),
-    prisma.purchaseOrderItem.deleteMany({ where: { ingredientId: id } }),
+    prisma.inventoryMovement.deleteMany({
+      where: { ingredientId: id, location: { businessId: scope.businessId } },
+    }),
+    prisma.inventoryCountLine.deleteMany({
+      where: { ingredientId: id, count: { location: { businessId: scope.businessId } } },
+    }),
+    prisma.recipeIngredient.deleteMany({
+      where: { ingredientId: id, recipe: { businessId: scope.businessId } },
+    }),
+    prisma.purchaseOrderItem.deleteMany({
+      where: { ingredientId: id, purchaseOrder: { location: { businessId: scope.businessId } } },
+    }),
     prisma.unitConversion.deleteMany({ where: { ingredientId: id } }),
     prisma.ingredient.delete({ where: { id } }),
   ]);

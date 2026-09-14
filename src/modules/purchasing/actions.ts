@@ -183,10 +183,20 @@ export async function deleteSupplierAction(id: string) {
   const scope = await getScope();
   const s = await prisma.supplier.findFirst({ where: { id, businessId: scope.businessId } });
   if (!s) throw new Error("Not found");
-  // Unlink ingredients, delete POs (cascades items)
+  /*
+    Unlink ingredients, delete POs (which cascade their items) — both scoped to
+    this business rather than keyed on the supplier alone. Unscoped, deleting a
+    supplier would have wiped any other business's purchase orders that
+    referenced it, and silently blanked their ingredients' supplier links.
+  */
   await prisma.$transaction([
-    prisma.ingredient.updateMany({ where: { supplierId: id }, data: { supplierId: null } }),
-    prisma.purchaseOrder.deleteMany({ where: { supplierId: id } }),
+    prisma.ingredient.updateMany({
+      where: { supplierId: id, businessId: scope.businessId },
+      data: { supplierId: null },
+    }),
+    prisma.purchaseOrder.deleteMany({
+      where: { supplierId: id, location: { businessId: scope.businessId } },
+    }),
     prisma.supplier.delete({ where: { id } }),
   ]);
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "supplier.delete", entityType: "Supplier", entityId: id, diff: { name: s.name } });
