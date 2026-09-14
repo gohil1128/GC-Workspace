@@ -5,8 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { writeAudit } from "@/lib/audit";
 import { toCents } from "@/lib/money";
+import { validateImageDataUrl } from "./attachments";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { createInvoiceSchema, updateInvoiceTotalsSchema, addInvoiceItemSchema } from "./schemas";
+import { requireCan } from "@/lib/auth";
+import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
 async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
   const items = await tx.invoiceItem.findMany({ where: { invoiceId } });
@@ -26,21 +29,9 @@ async function recomputeInvoiceTotals(tx: any, invoiceId: string) {
 
 // Data-URL guard for invoice attachments: an image (client compresses first)
 // or a PDF, capped so a giant file can't blow up the row size.
-const MAX_IMAGE_DATAURL_CHARS = 3_000_000; // ~2.2 MB binary
-const MAX_PDF_DATAURL_CHARS = 6_000_000; // ~4.4 MB binary
-function validateImageDataUrl(raw: unknown): string | null {
-  const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return null;
-  if (s.startsWith("data:application/pdf")) {
-    if (s.length > MAX_PDF_DATAURL_CHARS) throw new Error("PDF too large — keep it under 4 MB");
-    return s;
-  }
-  if (!s.startsWith("data:image/")) throw new Error("Attachment must be an image or a PDF");
-  if (s.length > MAX_IMAGE_DATAURL_CHARS) throw new Error("Image too large — retake or crop the photo");
-  return s;
-}
 
 export async function createInvoiceAction(formData: FormData) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = createInvoiceSchema.parse({
     supplierId: formData.get("supplierId"),
@@ -63,6 +54,10 @@ export async function createInvoiceAction(formData: FormData) {
     if (!ev) throw new Error("Selected event not found");
   }
   const imageDataUrl = validateImageDataUrl(parsed.imageDataUrl);
+
+  // The supplier is written straight onto the invoice; an unowned id files this
+  // business's bill against another one's supplier record.
+  const supplierId = await requiredOwnedId("supplier", scope.businessId, parsed.supplierId);
   const subtotalCents = toCents(parsed.subtotalDollars);
   const gstCents = toCents(parsed.gstDollars);
   const pstCents = toCents(parsed.pstDollars);
@@ -75,7 +70,7 @@ export async function createInvoiceAction(formData: FormData) {
     const inv = await tx.invoice.create({
       data: {
         locationId: scope.locationId,
-        supplierId: parsed.supplierId,
+        supplierId,
         poId: parsed.poId || null,
         eventId,
         appliesToAllEvents,
@@ -128,6 +123,7 @@ export async function createInvoiceAction(formData: FormData) {
 }
 
 export async function updateInvoiceAction(id: string, formData: FormData) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = updateInvoiceTotalsSchema.parse({
     invoiceNumber: formData.get("invoiceNumber"),
@@ -181,6 +177,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
 }
 
 export async function addInvoiceItemAction(invoiceId: string, payload: unknown) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const parsed = addInvoiceItemSchema.parse(payload);
   const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, locationId: scope.locationId } });
@@ -240,6 +237,7 @@ export async function addInvoiceItemAction(invoiceId: string, payload: unknown) 
 }
 
 export async function removeInvoiceItemAction(invoiceId: string, itemId: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -279,6 +277,7 @@ export async function removeInvoiceItemAction(invoiceId: string, itemId: string)
 // Lightweight event tag for an existing invoice — works even on closed
 // invoices, since tagging doesn't change line items or totals.
 export async function setInvoiceEventAction(id: string, eventIdRaw: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -301,6 +300,7 @@ export async function setInvoiceEventAction(id: string, eventIdRaw: string | nul
 // Lightweight category tag for an existing invoice — same instant-save
 // pattern as the event tagger, works on closed invoices.
 export async function setInvoiceCategoryAction(id: string, categoryRaw: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -318,6 +318,7 @@ export async function setInvoiceCategoryAction(id: string, categoryRaw: string |
 // Attach, replace, or remove (null) the invoice photo. Allowed on closed
 // invoices too — a photo is documentation, not a financial edit.
 export async function setInvoiceImageAction(id: string, dataUrl: string | null) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -332,6 +333,7 @@ export async function setInvoiceImageAction(id: string, dataUrl: string | null) 
 }
 
 export async function closeInvoiceAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
   if (!inv) throw new Error("Not found");
@@ -345,6 +347,7 @@ export async function closeInvoiceAction(id: string) {
 }
 
 export async function deleteInvoiceAction(id: string) {
+  await requireCan("purchasing");
   const scope = await getScope();
   const inv = await prisma.invoice.findFirst({
     where: { id, locationId: scope.locationId },

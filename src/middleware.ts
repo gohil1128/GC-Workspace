@@ -12,6 +12,9 @@ import { authConfig } from "@/lib/auth.config";
 const PUBLIC_EXACT = new Set([
   "/login",
   "/forgot-password",
+  // Reached by someone who cannot sign in, so it cannot require a session.
+  // The token in the query string is the credential.
+  "/reset-password",
   "/manifest.webmanifest",
   "/sw.js",
   "/offline",

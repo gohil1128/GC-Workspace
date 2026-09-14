@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Users, BarChart3 } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { listShifts, listEmployees, getWeekStart } from "@/modules/labor/queries";
 import { addDays, fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +14,7 @@ export default async function LaborPage({ searchParams }: { searchParams: Promis
   const ref = sp.week ? new Date(sp.week) : new Date();
   const weekStart = getWeekStart(ref);
   const weekEnd = addDays(weekStart, 6);
-  const scope = await getScope();
+  const scope = await requireCapability("labor");
   const [shifts, employees] = await Promise.all([
     listShifts(scope.locationId, weekStart, addDays(weekEnd, 1)),
     listEmployees(scope.businessId),

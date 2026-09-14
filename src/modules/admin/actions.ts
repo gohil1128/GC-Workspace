@@ -89,8 +89,26 @@ export async function wipeBusinessDataAction() {
   revalidatePath("/", "layout");
 }
 
+/*
+  Valid IANA zone names only. Every business day in the app is derived from
+  this, so a typo here would file cash closes against the wrong date for the
+  whole business — Intl is the authority rather than a hand-kept list.
+*/
+const IANA_ZONE = z.string().refine(
+  (tz) => {
+    try {
+      new Intl.DateTimeFormat("en-CA", { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Not a recognised timezone" },
+);
+
 const businessSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  timezone: IANA_ZONE,
   foodTargetPct: z.coerce.number().int().min(0).max(100),
   laborTargetPct: z.coerce.number().int().min(0).max(100),
   ebitdaMultiplier: z.coerce.number().min(0).max(50).default(4),
@@ -102,6 +120,7 @@ export async function updateBusinessAction(formData: FormData) {
   const scope = await getScope();
   const parsed = businessSchema.parse({
     name: formData.get("name"),
+    timezone: formData.get("timezone"),
     foodTargetPct: formData.get("foodTargetPct"),
     laborTargetPct: formData.get("laborTargetPct"),
     ebitdaMultiplier: formData.get("ebitdaMultiplier"),
@@ -111,12 +130,13 @@ export async function updateBusinessAction(formData: FormData) {
     where: { id: scope.businessId },
     data: {
       name: parsed.name,
+      timezone: parsed.timezone,
       foodTargetPct: parsed.foodTargetPct,
       laborTargetPct: parsed.laborTargetPct,
       ebitdaMultiplier: parsed.ebitdaMultiplier,
       revenueMultiplier: parsed.revenueMultiplier,
     },
   });
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "business.update", entityType: "Business", entityId: scope.businessId, diff: { name: parsed.name } });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "business.update", entityType: "Business", entityId: scope.businessId, diff: { name: parsed.name, timezone: parsed.timezone } });
   revalidatePath("/", "layout");
 }

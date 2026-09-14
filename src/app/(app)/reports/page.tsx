@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { dailySummary, weeklyTrend, purchaseSpendByPeriod, supplierSpendByEvent, categorySpendByEvent, pnlByEvent } from "@/modules/reports/queries";
 import { getLaborReport } from "@/modules/labor/queries";
 import { getVarianceReport } from "@/modules/inventory/queries";
@@ -14,7 +14,7 @@ import { DeleteReportDayButton } from "./_components/delete-report-day-button";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const scope = await getScope();
+  const scope = await requireCapability("financials");
   const isOwner = scope.role === "OWNER";
   const [daily, weekly, labor, spend, variance, supplierMatrix, categoryMatrix, pnl] = await Promise.all([
     dailySummary(scope.locationId, 14),
@@ -269,7 +269,7 @@ export default async function ReportsPage() {
                     {supplierMatrix.hasUntagged && (
                       <TableCell className="text-right num font-semibold">{formatMoney(supplierMatrix.grandUntagged)}</TableCell>
                     )}
-                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
+                    <TableCell className="text-right num font-semibold text-brand-ink">{formatMoney(supplierMatrix.grandTotal)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -342,7 +342,7 @@ export default async function ReportsPage() {
                     {categoryMatrix.hasUntagged && (
                       <TableCell className="text-right num font-semibold">{formatMoney(categoryMatrix.grandUntagged)}</TableCell>
                     )}
-                    <TableCell className="text-right num font-semibold text-brand">{formatMoney(categoryMatrix.grandTotal)}</TableCell>
+                    <TableCell className="text-right num font-semibold text-brand-ink">{formatMoney(categoryMatrix.grandTotal)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
