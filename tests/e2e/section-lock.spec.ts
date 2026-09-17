@@ -95,33 +95,43 @@ test.describe("the PIN cannot be brute forced", () => {
   test("locks out after five wrong attempts", async ({ page }) => {
     test.skip(!process.env.E2E_SECTION_PIN, "needs a known PIN and a clean rate-limit table");
     await setLock(page, true);
-    await page.goto("/reports");
-    await page.waitForLoadState("networkidle");
-
-    const input = page.locator("#section-pin");
-
     /*
-      The limiter is shared, durable state: a lockout from an earlier run (or
-      from someone using the app) is still in force here. Skip rather than fail
-      on it — a red test that only means "the feature already worked five
-      minutes ago" trains people to ignore the suite.
+      try/finally, not a trailing call. This test locks sections before it can
+      probe anything, and it can end early in two ways — the skip below, and any
+      failed expectation — both of which used to leave every section locked for
+      whoever opened the app next, with the limiter still counting down.
     */
-    await input.fill("0000");
-    await page.waitForTimeout(1200);
-    if (/Too many incorrect PINs/.test(await bodyText(page))) {
-      test.skip(true, "already rate-limited from an earlier run; wait out the window");
-    }
+    try {
+      await page.goto("/reports");
+      await page.waitForLoadState("networkidle");
 
-    let lockedOut = false;
-    for (let i = 1; i <= 6; i++) {
-      await input.fill(String(1000 + i));
+      const input = page.locator("#section-pin");
+
+      /*
+        The limiter is shared, durable state: a lockout from an earlier run (or
+        from someone using the app) is still in force here. Skip rather than fail
+        on it — a red test that only means "the feature already worked five
+        minutes ago" trains people to ignore the suite.
+      */
+      await input.fill("0000");
       await page.waitForTimeout(1200);
       if (/Too many incorrect PINs/.test(await bodyText(page))) {
-        lockedOut = true;
-        expect(i, "should survive at least a few honest mistypes").toBeGreaterThan(2);
-        break;
+        test.skip(true, "already rate-limited from an earlier run; wait out the window");
       }
+
+      let lockedOut = false;
+      for (let i = 1; i <= 6; i++) {
+        await input.fill(String(1000 + i));
+        await page.waitForTimeout(1200);
+        if (/Too many incorrect PINs/.test(await bodyText(page))) {
+          lockedOut = true;
+          expect(i, "should survive at least a few honest mistypes").toBeGreaterThan(2);
+          break;
+        }
+      }
+      expect(lockedOut, "six wrong PINs did not trip the limiter").toBe(true);
+    } finally {
+      await setLock(page, false);
     }
-    expect(lockedOut, "six wrong PINs did not trip the limiter").toBe(true);
   });
 });

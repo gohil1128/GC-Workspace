@@ -69,7 +69,7 @@ export function OrderBoard({ events }: { events: BoardEvent[] }) {
                 <Ticket key={e.id} event={e} />
               ))}
               {rows.length === 0 && (
-                <p className="rounded-[22px] border border-dashed border-white/12 px-4 py-6 text-center text-xs text-board-dim">
+                <p className="rounded-[22px] border border-dashed border-white/15 px-4 py-6 text-center text-xs text-board-dim">
                   Nothing here.
                 </p>
               )}
@@ -91,13 +91,22 @@ function Ticket({ event }: { event: BoardEvent }) {
       href={`/events/${event.id}`}
       className={cn(
         "block rounded-[22px] border p-4 transition-colors",
-        // The board's ticket tints: a loss is the late ticket, stocking up is
-        // the one being worked on, a profitable event is ready to hand off.
-        status === "loss" && "border-board-red/45 bg-board-red/12 hover:bg-board-red/20",
-        status === "stocked" && "border-board-amber/40 bg-board-amber/10 hover:bg-board-amber/16",
-        status === "profit" && "border-board-green/40 bg-board-green/10 hover:bg-board-green/16",
+        /*
+          The board's ticket tints: a loss is the late ticket, stocking up is
+          the one being worked on, a profitable event is ready to hand off.
+
+          Every opacity here is a multiple of five. Tailwind's scale steps in
+          fives and silently emits NOTHING for a value off it — these were /12
+          and /16, so a loss ticket rendered with no red at all and the hover
+          states did nothing. Confirmed by grepping the compiled stylesheet:
+          zero rules for each. tests/unit/tailwind-opacity.test.ts now fails the
+          build rather than letting it happen a third time.
+        */
+        status === "loss" && "border-board-red/45 bg-board-red/15 hover:bg-board-red/20",
+        status === "stocked" && "border-board-amber/40 bg-board-amber/10 hover:bg-board-amber/15",
+        status === "profit" && "border-board-green/40 bg-board-green/10 hover:bg-board-green/15",
         (status === "upcoming" || status === "none") &&
-          "border-white/12 bg-white/5 hover:bg-white/10",
+          "border-white/15 bg-white/5 hover:bg-white/10",
       )}
     >
       <div className="flex items-start justify-between gap-3">
