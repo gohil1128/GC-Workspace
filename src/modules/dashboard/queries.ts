@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { lastNDays, fmtDate, isoFromBusinessDay, recentBusinessDays } from "@/lib/date";
+import { lastNDays, isoFromBusinessDay, recentBusinessDays } from "@/lib/date";
 import { safeDivide } from "@/lib/money";
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboard>>;
@@ -122,17 +122,6 @@ export async function getDashboard(params: {
   const expectedDays = recentBusinessDays(timezone, 7);
   const missingCloseDays = expectedDays.filter((d) => !closesByDay.has(d));
 
-  // trends
-  const trendSales = sales.map((s) => ({ x: fmtDate(s.businessDate, "MMM d"), y: s.netSalesCents / 100 }));
-  // Labor has to line up with the sales series point for point. Sales carries
-  // one entry per day that HAS sales; labor was bucketed over every calendar
-  // day in the range, so on any range with gaps the two lengths differed and
-  // the chart silently dropped the labor line while the legend still promised
-  // it. Keying labor off the sales days makes index i mean the same day in
-  // both, which is what the chart's shared x-axis assumes.
-  const laborByDay = new Map(bucketLaborByDay(shifts, from, to).map((d) => [d.x, d.y]));
-  const trendLaborByDay = trendSales.map((s) => ({ x: s.x, y: laborByDay.get(s.x) ?? 0 }));
-
   const foodPct = safeDivide(foodCostCents, netSalesCents) * 100;
   const laborPct = safeDivide(laborCostCents, netSalesCents) * 100;
   const primePct = foodPct + laborPct;
@@ -158,33 +147,12 @@ export async function getDashboard(params: {
       laborTarget,
       foodCostBasis,
     },
-    trends: {
-      sales: trendSales,
-      labor: trendLaborByDay,
-    },
     lowStockItems,
     openPos,
     missingCloseDays,
     ingredientsCount,
     lastCountAt: recentVariance?.countedAt ?? null,
   };
-}
-
-function bucketLaborByDay(
-  shifts: { start: Date; scheduledMinutes: number; timeEntry: { actualMinutes: number } | null; employee: { hourlyRateCents: number } }[],
-  from: Date,
-  to: Date
-) {
-  const out: Record<string, number> = {};
-  for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-    out[fmtDate(d, "MMM d")] = 0;
-  }
-  for (const s of shifts) {
-    const key = fmtDate(s.start, "MMM d");
-    const minutes = s.timeEntry?.actualMinutes ?? s.scheduledMinutes;
-    out[key] = (out[key] ?? 0) + (minutes / 60) * (s.employee.hourlyRateCents / 100);
-  }
-  return Object.entries(out).map(([x, y]) => ({ x, y: Math.round(y * 100) / 100 }));
 }
 
 /**
