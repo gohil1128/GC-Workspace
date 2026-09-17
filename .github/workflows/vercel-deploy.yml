@@ -74,6 +74,16 @@ jobs:
       - run: pnpm exec prisma migrate deploy
       - run: pnpm exec prisma generate
       - run: pnpm run db:seed
+      # Accounts the suite signs in with. Generated per run rather than written
+      # into the repo — they exist only on this ephemeral CI database. The first
+      # run of this job had none of this, fell back to an account that only ever
+      # existed on one laptop, and five failed sign-ins tripped the app's own
+      # login rate limiter: 6 tests passed, 23 never ran, 21 minutes burned.
+      - name: Create the e2e accounts
+        run: |
+          echo "E2E_PASSWORD=$(openssl rand -hex 16)" >> "$GITHUB_ENV"
+          echo "E2E_SECTION_PIN=$(shuf -i 1000-9999 -n 1)" >> "$GITHUB_ENV"
+      - run: pnpm run db:seed:e2e
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec next build
       - name: Start the app

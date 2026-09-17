@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { signIn } from "./helpers";
 
 /*
   The cash close is the screen this product exists for, and its arithmetic is
@@ -49,7 +48,6 @@ test.describe("payouts move the till arithmetic", () => {
   }
 
   test("adding, editing and removing a payout each move paid-out by the exact amount", async ({ page }) => {
-    await signIn(page, "owner");
     await openPayoutsTab(page, DATE);
     await clearOurPayouts(page);
 
@@ -98,7 +96,6 @@ test.describe("payouts move the till arithmetic", () => {
   });
 
   test("a payout requires a reason, so cash cannot leave the till unexplained", async ({ page }) => {
-    await signIn(page, "owner");
     await openPayoutsTab(page, DATE);
     await page.fill("#po-amt", "5.00");
     await page.fill("#po-reason", "   ");
@@ -110,7 +107,6 @@ test.describe("payouts move the till arithmetic", () => {
 
 test.describe("the business day follows the business", () => {
   test("a new close defaults to today where the business trades", async ({ page }) => {
-    await signIn(page, "owner");
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
     const tz = await page.locator("#biz-tz").inputValue();

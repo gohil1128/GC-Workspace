@@ -18,7 +18,8 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:seed:e2e": "tsx scripts/seed-e2e-users.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

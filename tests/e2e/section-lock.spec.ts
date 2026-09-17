@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { signIn, bodyText, statusOf } from "./helpers";
+import { bodyText, statusOf } from "./helpers";
 
 /*
   The section PIN, which is the only confidentiality boundary an owner controls
@@ -49,10 +49,6 @@ async function setLock(page: import("@playwright/test").Page, locked: boolean) {
 }
 
 test.describe("a locked section stays locked", () => {
-  test.beforeEach(async ({ page }) => {
-    await signIn(page, "owner");
-  });
-
   test("the overview chart does not print profit or margin while P&L is locked", async ({ page }) => {
     await setLock(page, true);
     await page.goto("/dashboard");
@@ -98,7 +94,6 @@ test.describe("a locked section stays locked", () => {
 test.describe("the PIN cannot be brute forced", () => {
   test("locks out after five wrong attempts", async ({ page }) => {
     test.skip(!process.env.E2E_SECTION_PIN, "needs a known PIN and a clean rate-limit table");
-    await signIn(page, "owner");
     await setLock(page, true);
     await page.goto("/reports");
     await page.waitForLoadState("networkidle");

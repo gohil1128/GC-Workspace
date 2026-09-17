@@ -1,4 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import { STATE_FILES as STATE } from "./tests/e2e/helpers";
+
+// Pre-installed in this environment; PLAYWRIGHT_BROWSERS_PATH points at it.
+const chromium = {
+  ...devices["Desktop Chrome"],
+  launchOptions: process.env.PW_CHROMIUM_PATH
+    ? { executablePath: process.env.PW_CHROMIUM_PATH }
+    : {},
+};
 
 /*
   End-to-end tests for the things that are expensive to get wrong: who can see
@@ -29,15 +38,25 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    // Signs in once per role and caches the session. Everything else reuses it:
+    // signing in per test is slow, and a burst of sign-ins looks exactly like a
+    // password-guessing run to the app's own login limiter.
+    { name: "setup", testMatch: /auth\.setup\.ts/, use: chromium },
+
     {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        // Pre-installed in this environment; PLAYWRIGHT_BROWSERS_PATH points at it.
-        launchOptions: process.env.PW_CHROMIUM_PATH
-          ? { executablePath: process.env.PW_CHROMIUM_PATH }
-          : {},
-      },
+      name: "owner",
+      use: { ...chromium, storageState: STATE.owner },
+      dependencies: ["setup"],
+      testIgnore: /auth\.setup\.ts/,
+      // The staff-only cases sign themselves in; everything else runs as owner.
+      testMatch: /(section-lock|cash-arithmetic)\.spec\.ts/,
+    },
+    {
+      name: "access-control",
+      // Signs in explicitly per role, because that is the thing under test.
+      use: chromium,
+      dependencies: ["setup"],
+      testMatch: /access-control\.spec\.ts/,
     },
   ],
 });
