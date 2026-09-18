@@ -21,6 +21,8 @@ import {
 } from "@/components/dashboard/ledger/rail-cards";
 import { EventRevenueChart } from "@/components/dashboard/event-revenue-chart";
 import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
+import { isCardVisible, type OverviewCardKey } from "@/modules/dashboard/cards";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +47,25 @@ export default async function DashboardPage({
   const [params, scope] = await Promise.all([searchParams, requireCapability("overview")]);
   const [activeEvent, business] = await Promise.all([
     getActiveEvent(scope.businessId),
-    prisma.business.findUnique({ where: { id: scope.businessId }, select: { timezone: true } }),
+    prisma.business.findUnique({
+      where: { id: scope.businessId },
+      select: { timezone: true, hiddenOverviewCards: true },
+    }),
   ]);
   const [range, eventOptions] = await Promise.all([
     resolveEventScope(scope.businessId, params, activeEvent),
     listEventOptions(scope.businessId),
   ]);
   const now = new Date();
+  /*
+    Which cards this business wants. Stored as the hidden ones, so a card added
+    to the registry later shows up for everybody rather than staying invisible
+    until each business enables it.
+  */
+  const show = (key: OverviewCardKey) => isCardVisible(business?.hiddenOverviewCards, key);
+  // How many of the three rail cards survive, so the statement can take the
+  // full width when the whole rail is switched off.
+  const railCards = (["topItems", "invoicesDue", "upcomingEvents"] as const).filter(show).length;
   // Locking "Profit & loss" has to cover the Overview too. The statement and
   // the profit figures live here as well, so gating only /reports would hide
   // the page while leaving the same margins on the landing screen.
@@ -190,10 +204,13 @@ export default async function DashboardPage({
       </div>
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
-      <KpiStrip items={kpis} />
+      {show("kpis") && <KpiStrip items={kpis} />}
 
-      {/* Statement + rail */}
-      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      {/* Statement + rail. The grid collapses to one column when a business has
+          turned off everything on one side, so a hidden card leaves no gap. */}
+      {(show("pnl") || railCards > 0) && (
+      <div className={cn("mt-7 grid gap-6", show("pnl") && railCards > 0 && "lg:grid-cols-[minmax(0,1fr)_300px]")}>
+        {show("pnl") && (
         <section className="min-w-0">
           <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <h2 className="font-display text-xl font-semibold">Profit &amp; loss statement</h2>
@@ -246,16 +263,22 @@ export default async function DashboardPage({
             )}
           </div>
         </section>
+        )}
 
+        {railCards > 0 && (
         <div className="flex min-w-0 flex-col gap-5">
-          <TopItemsCard items={topItems.items} />
-          <InvoicesDueCard invoices={dueInvoices} now={now} />
-          <UpcomingEventsCard events={upcoming} />
+          {show("topItems") && <TopItemsCard items={topItems.items} />}
+          {show("invoicesDue") && <InvoicesDueCard invoices={dueInvoices} now={now} />}
+          {show("upcomingEvents") && <UpcomingEventsCard events={upcoming} />}
         </div>
+        )}
       </div>
+      )}
 
       {/* Per-event and category views, below the statement. */}
-      <div className="mt-7 grid gap-[18px] [&>*]:min-w-0 lg:grid-cols-[minmax(0,1fr)_300px]">
+      {(show("revenueByEvent") || show("itemMix")) && (
+      <div className={cn("mt-7 grid gap-[18px] [&>*]:min-w-0", show("revenueByEvent") && show("itemMix") && "lg:grid-cols-[minmax(0,1fr)_300px]")}>
+        {show("revenueByEvent") && (
         <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-5">
@@ -275,7 +298,9 @@ export default async function DashboardPage({
           </div>
           <EventRevenueChart bars={eventBars} />
         </div>
+        )}
 
+        {show("itemMix") && (
         <div className="bento min-w-0 p-4 sm:p-[22px]">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">Item mix</h2>
@@ -297,7 +322,9 @@ export default async function DashboardPage({
             </p>
           )}
         </div>
+        )}
       </div>
+      )}
       </div>
     </div>
   );
