@@ -55,52 +55,73 @@ export async function getSalesBreakdown(params: {
   category?: string | null;
   sort?: SalesSort;
 }) {
-  const [rows, costs] = await Promise.all([
-    prisma.salesItem.findMany({
+  /*
+    Rolled up by the database, not in Node.
+
+    This used to read every SalesItem row in the window — and the window is
+    effectively all of history, because event scoping is by tag and deliberately
+    leaves the dates wide open. Three years of a sixty-item menu is tens of
+    thousands of rows, deserialised on every page view, to produce one line per
+    menu item.
+
+    groupBy returns one row per (item, category) pair instead: bounded by the
+    size of the menu, not by how long the customer has been trading. The rest of
+    this function is unchanged, because it only ever needed the totals.
+
+    Grouped by category as well as name so normalizeCategory still has its raw
+    input; an item that changed category mid-life arrives as two groups and is
+    merged below, exactly as it was when the rows were merged one by one.
+  */
+  const [groups, tradingDays, costs] = await Promise.all([
+    prisma.salesItem.groupBy({
+      by: ["itemName", "category"],
       where: {
         locationId: params.locationId,
         businessDate: { gte: params.from, lte: params.to },
         ...(params.eventId ? { eventId: params.eventId } : {}),
       },
-      select: {
-        itemName: true,
-        category: true,
-        qty: true,
-        netSalesCents: true,
-        taxCents: true,
-        txCount: true,
-        businessDate: true,
+      _sum: { qty: true, netSalesCents: true, taxCents: true, txCount: true },
+    }),
+    // One row per day that sold anything — bounded by days traded rather than
+    // by item-rows, which is what the headline "N days" actually means.
+    prisma.salesItem.groupBy({
+      by: ["businessDate"],
+      where: {
+        locationId: params.locationId,
+        businessDate: { gte: params.from, lte: params.to },
+        ...(params.eventId ? { eventId: params.eventId } : {}),
       },
     }),
     getItemCosts(params.locationId),
   ]);
 
-  // One row per item name; the same item appears once per business date.
-  const byItem = new Map<string, ItemRow & { days: Set<number> }>();
-  for (const r of rows) {
-    const category = normalizeCategory(r.category, r.itemName);
-    const existing = byItem.get(r.itemName);
+  const byItem = new Map<string, ItemRow>();
+  for (const g of groups) {
+    const category = normalizeCategory(g.category, g.itemName);
+    const existing = byItem.get(g.itemName);
+    const qty = g._sum.qty ?? 0;
+    const netSalesCents = g._sum.netSalesCents ?? 0;
+    const taxCents = g._sum.taxCents ?? 0;
+    const txCount = g._sum.txCount ?? 0;
     if (existing) {
-      existing.qty += r.qty;
-      existing.netSalesCents += r.netSalesCents;
-      existing.taxCents += r.taxCents;
-      existing.txCount += r.txCount;
-      existing.days.add(r.businessDate.getTime());
+      existing.qty += qty;
+      existing.netSalesCents += netSalesCents;
+      existing.taxCents += taxCents;
+      existing.txCount += txCount;
     } else {
-      byItem.set(r.itemName, {
-        itemName: r.itemName,
+      byItem.set(g.itemName, {
+        itemName: g.itemName,
         category,
-        qty: r.qty,
-        netSalesCents: r.netSalesCents,
-        taxCents: r.taxCents,
-        txCount: r.txCount,
+        qty,
+        netSalesCents,
+        taxCents,
+        txCount,
         sharePct: 0,
         recipeName: null,
         unitCostCents: null,
         costCents: null,
         profitCents: null,
         marginPct: null,
-        days: new Set([r.businessDate.getTime()]),
       });
     }
   }
@@ -170,7 +191,7 @@ export async function getSalesBreakdown(params: {
   const sort = params.sort ?? "revenue";
   const items = all
     .filter((i) => !params.category || i.category === params.category)
-    .map(({ days, ...i }) => ({ ...i, sharePct: totalCents > 0 ? (i.netSalesCents / totalCents) * 100 : 0 }))
+    .map((i) => ({ ...i, sharePct: totalCents > 0 ? (i.netSalesCents / totalCents) * 100 : 0 }))
     .sort((a, b) => {
       if (sort === "qty") return b.qty - a.qty;
       if (sort === "name") return a.itemName.localeCompare(b.itemName);
@@ -196,7 +217,7 @@ export async function getSalesBreakdown(params: {
       qty: totalQty,
       txCount: totalTx,
       itemCount: all.length,
-      dayCount: new Set(rows.map((r) => r.businessDate.getTime())).size,
+      dayCount: tradingDays.length,
       // Margin is reported over the costed slice only, with the count of what
       // is still missing shown beside it — a number that quietly treated
       // uncosted items as free would be flattering and wrong.
