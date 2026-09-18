@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { APP_NAME, APP_SHORT_NAME } from "@/lib/brand";
 
 // Self-hosted at build time and exposed as CSS variables that feed
 // --font-display / --font-sans in globals.css.
@@ -22,14 +23,14 @@ const sans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "God's Chai Operations",
+  title: APP_NAME,
   description: "Restaurant operations platform — inventory, labor, cash, reporting.",
-  applicationName: "God's Chai Operations",
+  applicationName: APP_NAME,
   // `capable: true` emits both apple-mobile-web-app-capable and the modern
   // mobile-web-app-capable, so older iOS web clips launch without Safari chrome.
   appleWebApp: {
     capable: true,
-    title: "God's Chai",
+    title: APP_SHORT_NAME,
     statusBarStyle: "default",
   },
   icons: {

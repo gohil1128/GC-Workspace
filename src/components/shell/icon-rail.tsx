@@ -9,6 +9,7 @@ import {
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { can, ROLE_LABELS, type Capability } from "@/lib/permissions";
+import { APP_NAME } from "@/lib/brand";
 
 /*
   The soft-glass icon rail: a floating frosted column of circular buttons.
@@ -66,7 +67,7 @@ export function IconRail({ role, userName }: { role: Role; userName: string }) {
       aria-label="Sections"
       className="glass-pill fixed left-[18px] top-[18px] z-40 hidden h-[calc(100dvh-36px)] w-16 flex-col items-center gap-2 rounded-[32px] px-3 py-4 lg:flex"
     >
-      <Link href="/dashboard" className="logo-plate mb-2 shrink-0" aria-label="God's Chai — Overview">
+      <Link href="/dashboard" className="logo-plate mb-2 shrink-0" aria-label={`${APP_NAME} — Overview`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="" aria-hidden className="h-7 w-auto" />
       </Link>

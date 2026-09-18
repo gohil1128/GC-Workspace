@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { loginAction } from "@/modules/auth/actions";
+import { APP_NAME } from "@/lib/brand";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -41,7 +42,7 @@ export default function LoginPage() {
         {!logoFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/logo.png" alt="God's Chai"
+            src="/logo.png" alt={APP_NAME}
             className="h-16 w-auto self-start"
             style={{ filter: "brightness(3.4) saturate(.4)" }}
             onError={() => setLogoFailed(true)}
@@ -61,7 +62,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="relative text-2xs opacity-50">God&apos;s Chai Operations</div>
+        <div className="relative text-2xs opacity-50">{APP_NAME}</div>
       </div>
 
       {/* Form side */}
@@ -72,7 +73,7 @@ export default function LoginPage() {
             // eslint-disable-next-line @next/next/no-img-element
             <span className="logo-plate mb-6 inline-block lg:hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="God's Chai" className="h-14 w-auto" />
+              <img src="/logo.png" alt={APP_NAME} className="h-14 w-auto" />
             </span>
           )}
           <h1 className="display-num text-[30px] font-medium">Welcome back</h1>

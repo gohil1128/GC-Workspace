@@ -14,6 +14,7 @@ import {
   recordLoginFailure,
 } from "@/modules/auth/rate-limit";
 import { headers } from "next/headers";
+import { APP_NAME } from "@/lib/brand";
 
 function waitText(sec: number): string {
   const mins = Math.ceil(sec / 60);
@@ -123,7 +124,7 @@ export async function requestPasswordResetAction(_prev: unknown, formData: FormD
 
     const result = await sendMail({
       to: email,
-      subject: "Reset your God's Chai Operations password",
+      subject: `Reset your ${APP_NAME} password`,
       text: `Hi ${user.name},\n\nOpen this link to choose a new password. It works once and expires in an hour.\n\n${link}\n\nIf you did not ask for this, you can ignore it — your current password still works.`,
     });
     // Never surfaced: telling this form that delivery failed would tell it the

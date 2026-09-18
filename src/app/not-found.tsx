@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/lib/brand";
 
 export default function NotFound() {
   return (
@@ -8,7 +9,7 @@ export default function NotFound() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <span className="logo-plate mx-auto mb-8 inline-block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="God's Chai" className="h-14 w-auto" />
+          <img src="/logo.png" alt={APP_NAME} className="h-14 w-auto" />
         </span>
         <div className="display-num text-[64px] font-medium leading-none text-brand">404</div>
         <h1 className="mt-4 text-xl font-semibold">This page doesn&apos;t exist</h1>
