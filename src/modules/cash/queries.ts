@@ -41,11 +41,22 @@ export async function listDepositsForDate(locationId: string, isoDate: string) {
   });
 }
 
-export async function listPayouts(locationId: string, days = 365) {
-  const { from, to } = lastNDays(days);
+/**
+ * The most recent payouts, newest first.
+ *
+ * Bounded. /cash asked for a ten-year window, which is every payout a business
+ * has ever recorded, and then rendered the whole array TWICE — once for the
+ * desktop table and once for the mobile list. A daily trader passes a thousand
+ * rows inside three years, none of which anyone scrolls to.
+ *
+ * The total beside the list does NOT come from here: getCashPosition sums it in
+ * the database, so capping the list cannot make the figure wrong.
+ */
+export async function listPayouts(locationId: string, limit = 50) {
   return prisma.cashPayout.findMany({
-    where: { locationId, businessDate: { gte: from, lte: to } },
+    where: { locationId },
     orderBy: [{ businessDate: "desc" }, { createdAt: "asc" }],
+    take: limit,
   });
 }
 
@@ -79,40 +90,69 @@ export async function listPayoutsForDate(locationId: string, isoDate: string) {
   many were skipped instead of hiding the gap.
 */
 export async function getCashPosition(locationId: string) {
-  const closes = await prisma.cashClose.findMany({
-    where: { locationId },
-    select: {
-      businessDate: true, cashCents: true, openingCents: true,
-      depositCents: true, safeCountCents: true, overShortCents: true,
-    },
-    orderBy: { businessDate: "desc" },
-  });
+  /*
+    Aggregated in the database, not in Node.
 
-  const counted = closes.filter((c) => c.cashCents > 0);
-  const inHandCents = counted.reduce((a, c) => a + (c.cashCents - c.openingCents), 0);
+    This used to `findMany` every CashClose a location had ever recorded — all
+    six columns of each — and then reduce the lot down to five scalars. The rows
+    were never shown; they were summed and thrown away. A customer three years
+    in was reading their entire history on every visit to /cash, and the page
+    got measurably slower every season they stayed.
 
-  const paidOut = await prisma.cashPayout.aggregate({
-    where: { locationId },
-    _sum: { amountCents: true },
-    _count: true,
-  });
+    SUM(cash) - SUM(opening) over the counted rows is the same number as
+    SUM(cash - opening), which is what lets this be an aggregate at all.
+
+    Five queries, all covered by the (locationId, businessDate) index, and the
+    cost no longer grows with tenure.
+  */
+  const countedWhere = { locationId, cashCents: { gt: 0 } };
+
+  const [counted, everything, paidOut, newest, oldest] = await Promise.all([
+    prisma.cashClose.aggregate({
+      where: countedWhere,
+      _sum: { cashCents: true, openingCents: true },
+      _count: true,
+    }),
+    prisma.cashClose.aggregate({
+      where: { locationId },
+      _sum: { depositCents: true, overShortCents: true },
+      _count: true,
+    }),
+    prisma.cashPayout.aggregate({
+      where: { locationId },
+      _sum: { amountCents: true },
+      _count: true,
+    }),
+    // The float and safe count belong to the most recent counted till, not to
+    // the most recent close — an uncounted entry has neither.
+    prisma.cashClose.findFirst({
+      where: countedWhere,
+      orderBy: { businessDate: "desc" },
+      select: { businessDate: true, openingCents: true, safeCountCents: true },
+    }),
+    prisma.cashClose.findFirst({
+      where: countedWhere,
+      orderBy: { businessDate: "asc" },
+      select: { businessDate: true },
+    }),
+  ]);
 
   return {
-    inHandCents,
-    countedTills: counted.length,
-    uncounted: closes.length - counted.length,
-    closes: closes.length,
+    inHandCents: (counted._sum.cashCents ?? 0) - (counted._sum.openingCents ?? 0),
+    countedTills: counted._count,
+    uncounted: everything._count - counted._count,
+    closes: everything._count,
     // The float is working change rather than takings, so it is netted out of
     // the figure above — but it is real cash in the box, so it is named.
-    floatCents: counted[0]?.openingCents ?? 0,
-    safeCents: counted[0]?.safeCountCents ?? 0,
-    bankedCents: closes.reduce((a, c) => a + c.depositCents, 0),
+    floatCents: newest?.openingCents ?? 0,
+    safeCents: newest?.safeCountCents ?? 0,
+    bankedCents: everything._sum.depositCents ?? 0,
     paidOutCents: paidOut._sum.amountCents ?? 0,
     payoutCount: paidOut._count,
-    overShortCents: closes.reduce((a, c) => a + c.overShortCents, 0),
+    overShortCents: everything._sum.overShortCents ?? 0,
     // The earliest till that was actually counted, not the earliest close —
     // the figure covers the counted ones, so that is the date it runs from.
-    firstCountedDate: counted.length ? counted[counted.length - 1].businessDate : null,
-    lastCountedDate: counted[0]?.businessDate ?? null,
+    firstCountedDate: oldest?.businessDate ?? null,
+    lastCountedDate: newest?.businessDate ?? null,
   };
 }

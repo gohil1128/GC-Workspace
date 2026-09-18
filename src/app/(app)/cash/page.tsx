@@ -15,6 +15,14 @@ import { fmtDate } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
+/*
+  How many payout rows the page renders. The list is a transparency aid, not an
+  archive: the total above it is summed in the database, and a day's own payouts
+  are on that day's entry. Rendering every row a business ever recorded — twice,
+  once per breakpoint — bought nothing.
+*/
+const PAYOUT_ROWS = 50;
+
 export default async function CashPage() {
   const scope = await requireCapability("cash");
   const activeEvent = await getActiveEvent(scope.businessId);
@@ -32,7 +40,7 @@ export default async function CashPage() {
   */
   const [closes, payouts, position] = await Promise.all([
     listCashCloses(scope.locationId, 30, activeEvent?.id ?? null),
-    listPayouts(scope.locationId, 3650),
+    listPayouts(scope.locationId, PAYOUT_ROWS),
     getCashPosition(scope.locationId),
   ]);
 
@@ -239,7 +247,10 @@ export default async function CashPage() {
             <h2 className="text-sm font-semibold">
               Payouts
               <span className="ml-2 text-2xs font-normal text-muted-foreground">
-                {payouts.length} across every event
+                {/* The true count comes from the aggregate, not from the array —
+                    the list is capped, the figure beside it is not. */}
+                {position.payoutCount} across every event
+                {position.payoutCount > payouts.length && ` · showing the latest ${payouts.length}`}
               </span>
             </h2>
             <span className="num text-sm font-semibold">{formatMoney(totalPaidOut)}</span>

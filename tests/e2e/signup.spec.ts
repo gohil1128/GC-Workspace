@@ -20,38 +20,34 @@ test.describe("a new business can sign itself up", () => {
     expect(page.url()).toContain("/signup");
   });
 
-  test("creates the business and lands the owner inside the app", async ({ page }) => {
+  /*
+    One signup, then everything that should be true of a brand-new tenant.
+
+    Deliberately not split into two tests. Signup is rate limited per address —
+    five an hour — and a suite that creates a business per assertion throttles
+    itself, which is how this file first failed: the limiter worked, and the
+    tests read it as a product bug.
+  */
+  test("provisions the tenant and every page works with zero data", async ({ page }) => {
     await page.goto("/signup");
     await page.fill("#businessName", "Harbourfront Chai");
     await page.fill("#name", "Sam Okafor");
     await page.fill("#email", unique());
     await page.fill("#password", "a-long-enough-password");
     await page.click("button[type=submit]");
-
     await page.waitForURL(/\/dashboard/, { timeout: 40_000 });
 
-    // Signed in, scoped to their OWN business — not the one that was seeded.
+    // Scoped to their OWN business, not the seeded one.
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("body")).toContainText("Harbourfront Chai");
-
     // And the timezone came from the browser, not the server.
     await expect(page.locator("#biz-tz")).toHaveValue("America/Vancouver");
-  });
-
-  test("a brand-new tenant can open every page without a crash or a NaN", async ({ page }) => {
-    await page.goto("/signup");
-    await page.fill("#businessName", "Zero Data Co");
-    await page.fill("#name", "Riley Chen");
-    await page.fill("#email", unique());
-    await page.fill("#password", "a-long-enough-password");
-    await page.click("button[type=submit]");
-    await page.waitForURL(/\/dashboard/, { timeout: 40_000 });
 
     /*
-      Every route, with nothing recorded anywhere. This is the first thing a
-      customer sees, and a division by zero or a stray "undefined" on day one
-      is the impression they keep.
+      Every route with nothing recorded anywhere. This is the first thing a
+      customer sees, and a division by zero or a stray "undefined" on day one is
+      the impression they keep.
     */
     for (const path of [
       "/dashboard", "/cash", "/cash/new", "/events", "/sales", "/reports",

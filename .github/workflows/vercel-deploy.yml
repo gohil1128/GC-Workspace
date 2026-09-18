@@ -61,6 +61,10 @@ jobs:
       NEXTAUTH_URL: http://localhost:3111
       AUTH_TRUST_HOST: "1"
       BASE_URL: http://localhost:3111
+      # The signup tests create several businesses in a row. Production keeps
+      # the default of five an hour per address; this ephemeral CI database is
+      # not a target worth throttling.
+      SIGNUP_MAX_PER_IP: "100"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

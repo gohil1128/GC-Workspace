@@ -159,7 +159,13 @@ export async function clearSectionPinFailures(keys: string[]): Promise<void> {
   Five an hour per address is well clear of anything a person does (nobody
   founds six businesses in an afternoon) and closes the door on a loop.
 */
-const SIGNUP_MAX_PER_IP = 5;
+/*
+  Overridable, because a test suite legitimately creates several businesses in a
+  row and would otherwise be throttled by the very control it is checking — the
+  same trap the login limiter set for CI. The default is the production value;
+  an environment that raises it is choosing to, in writing.
+*/
+const SIGNUP_MAX_PER_IP = Number(process.env.SIGNUP_MAX_PER_IP ?? 5);
 const SIGNUP_WINDOW_MS = 60 * 60 * 1000;
 
 export function signupKeys(ip: string | null): string[] {
