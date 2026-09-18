@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
+import { OVERVIEW_CARD_KEYS, sanitiseHiddenCards } from "@/modules/dashboard/cards";
 
 /**
  * Wipe all operational data for the current business: ingredients, suppliers,
@@ -89,8 +90,72 @@ export async function wipeBusinessDataAction() {
   revalidatePath("/", "layout");
 }
 
+/*
+  Valid IANA zone names only. Every business day in the app is derived from
+  this, so a typo here would file cash closes against the wrong date for the
+  whole business — Intl is the authority rather than a hand-kept list.
+*/
+const IANA_ZONE = z.string().refine(
+  (tz) => {
+    try {
+      new Intl.DateTimeFormat("en-CA", { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Not a recognised timezone" },
+);
+
+/*
+  Which Overview cards this business has turned off.
+
+  Owner-only, like every other business-wide setting. The list is filtered
+  against the cards this version actually knows about before it is stored, so a
+  hand-posted key cannot sit in the column matching nothing.
+*/
+export async function setHiddenOverviewCardsAction(keys: unknown) {
+  await requireOwner();
+  const scope = await getScope();
+  const parsed = z.array(z.string()).safeParse(keys);
+  if (!parsed.success) return { error: "Could not read that selection." };
+
+  const clean = sanitiseHiddenCards(parsed.data);
+  // Never let every card be hidden: an Overview with nothing on it looks
+  // broken rather than tidy, and there would be no control left on the page to
+  // undo it from.
+  if (clean.length >= OVERVIEW_CARD_KEYS.length) {
+    return { error: "Keep at least one card on the Overview." };
+  }
+
+  await prisma.business.update({
+    where: { id: scope.businessId },
+    data: { hiddenOverviewCards: clean },
+  });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "business.overview.cards", entityType: "Business", entityId: scope.businessId,
+    diff: { hidden: clean },
+  });
+  /*
+    Only the Overview is revalidated, not this page.
+
+    Revalidating /settings from an action invoked ON /settings re-renders the
+    page underneath the control while its transition is still open, and the
+    transition never settles — the fieldset stayed disabled and only one card
+    could be toggled per page load. Found by driving the real control; a single
+    toggle looks completely fine.
+
+    There is nothing here to refresh anyway: the checkbox already shows what the
+    person chose.
+  */
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}
+
 const businessSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  timezone: IANA_ZONE,
   foodTargetPct: z.coerce.number().int().min(0).max(100),
   laborTargetPct: z.coerce.number().int().min(0).max(100),
   ebitdaMultiplier: z.coerce.number().min(0).max(50).default(4),
@@ -102,6 +167,7 @@ export async function updateBusinessAction(formData: FormData) {
   const scope = await getScope();
   const parsed = businessSchema.parse({
     name: formData.get("name"),
+    timezone: formData.get("timezone"),
     foodTargetPct: formData.get("foodTargetPct"),
     laborTargetPct: formData.get("laborTargetPct"),
     ebitdaMultiplier: formData.get("ebitdaMultiplier"),
@@ -111,12 +177,13 @@ export async function updateBusinessAction(formData: FormData) {
     where: { id: scope.businessId },
     data: {
       name: parsed.name,
+      timezone: parsed.timezone,
       foodTargetPct: parsed.foodTargetPct,
       laborTargetPct: parsed.laborTargetPct,
       ebitdaMultiplier: parsed.ebitdaMultiplier,
       revenueMultiplier: parsed.revenueMultiplier,
     },
   });
-  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "business.update", entityType: "Business", entityId: scope.businessId, diff: { name: parsed.name } });
+  await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "business.update", entityType: "Business", entityId: scope.businessId, diff: { name: parsed.name, timezone: parsed.timezone } });
   revalidatePath("/", "layout");
 }

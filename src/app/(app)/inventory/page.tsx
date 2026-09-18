@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plus, FileBarChart, ClipboardList } from "lucide-react";
-import { getScope } from "@/lib/scope";
+import { requireCapability } from "@/lib/scope";
 import { listIngredients } from "@/modules/inventory/queries";
 import { PageHeader } from "@/components/page-header";
 import { TableOnDesktop, MobileList, MobileRow, MobileField, MobileEmpty } from "@/components/mobile-list";
@@ -16,7 +16,7 @@ import { deleteIngredientAction } from "@/modules/inventory/actions";
 export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
-  const scope = await getScope();
+  const scope = await requireCapability("inventory");
   const items = await listIngredients(scope.businessId);
   const lowCount = items.filter((i) => i.onHand <= i.reorderPoint && i.reorderPoint > 0).length;
   return (
