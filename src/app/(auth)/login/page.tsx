@@ -99,6 +99,11 @@ export default function LoginPage() {
 
             <Submit />
           </form>
+
+          <p className="mt-5 text-center text-xs text-muted-foreground">
+            New here?{" "}
+            <Link href="/signup" className="text-brand-ink hover:underline">Create an account</Link>
+          </p>
         </div>
       </main>
     </div>

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   businessDayFromIso, isoFromBusinessDay, todayIsoIn, fmtBusinessDate, startOfDay,
   endOfBusinessDay, businessDayOrNull, endOfBusinessDayOrNull, recentBusinessDays,
+  dayKeyInZone, timeInZone,
 } from "@/lib/date";
 
 /* Runs at TZ=America/Toronto — see vitest.config.ts. Under UTC these would all
@@ -141,5 +142,42 @@ describe("recentBusinessDays", () => {
   it("crosses a month boundary correctly", () => {
     const days = recentBusinessDays("UTC", 40);
     expect(new Set(days).size).toBe(40); // no duplicates from a bad rollover
+  });
+});
+
+describe("formatting in a named zone", () => {
+  /*
+    The bug these exist for: a client component formatting with date-fns renders
+    in UTC on the server and in the viewer's zone in the browser. React then
+    reports a hydration mismatch, and a late shift silently moves to a different
+    day column.
+  */
+  const EVENING_SHIFT = "2026-09-14T02:00:00Z"; // 7pm Sep 13 in Vancouver
+
+  it("puts an evening shift on the local day, not the UTC one", () => {
+    expect(dayKeyInZone(EVENING_SHIFT, "UTC")).toBe("2026-09-14");
+    expect(dayKeyInZone(EVENING_SHIFT, "America/Vancouver")).toBe("2026-09-13");
+    expect(dayKeyInZone(EVENING_SHIFT, "America/Toronto")).toBe("2026-09-13");
+  });
+
+  it("gives the same answer whatever the process timezone is", () => {
+    // The suite runs at America/Toronto; the result must not depend on that.
+    const saved = process.env.TZ;
+    const inToronto = dayKeyInZone(EVENING_SHIFT, "America/Vancouver");
+    process.env.TZ = "Asia/Tokyo";
+    expect(dayKeyInZone(EVENING_SHIFT, "America/Vancouver")).toBe(inToronto);
+    process.env.TZ = saved;
+  });
+
+  it("formats a wall-clock time in the zone asked for", () => {
+    expect(timeInZone(EVENING_SHIFT, "America/Vancouver")).toBe("7:00pm");
+    expect(timeInZone(EVENING_SHIFT, "America/Toronto")).toBe("10:00pm");
+    expect(timeInZone(EVENING_SHIFT, "UTC")).toBe("2:00am");
+  });
+
+  it("handles a DST changeover without shifting the hour", () => {
+    // Toronto falls back at 2am on 2026-11-01.
+    expect(timeInZone("2026-11-01T12:00:00Z", "America/Toronto")).toBe("7:00am");
+    expect(timeInZone("2026-06-01T12:00:00Z", "America/Toronto")).toBe("8:00am");
   });
 });

@@ -147,3 +147,45 @@ export function recentBusinessDays(timeZone: string, n: number): string[] {
   }
   return days;
 }
+
+/*
+  Formatting an instant in a named timezone, identically on server and client.
+
+  date-fns `format` works in whatever timezone the process is in. In a client
+  component that means the SERVER renders a shift in UTC and the BROWSER
+  re-renders it in the viewer's zone, so React finds different text on hydration
+  — and, worse than a warning, a 7pm Vancouver shift is bucketed under the next
+  calendar day on the server and the correct one in the browser, so it visibly
+  jumps to another column.
+
+  Intl with an explicit timeZone gives the same answer in both places. The zone
+  to pass is the business's own, not the viewer's: a schedule belongs to where
+  the business trades, so a manager checking it from another province should see
+  the same grid their staff do.
+*/
+
+/** The YYYY-MM-DD calendar day an instant falls on, in a named zone. */
+export function dayKeyInZone(value: Date | string, timeZone: string): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  // en-CA formats as YYYY-MM-DD, which is the key shape used everywhere else.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/** A short wall-clock time in a named zone, e.g. "7:30pm". */
+export function timeInZone(value: Date | string, timeZone: string): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+    .format(d)
+    .replace(/\s/g, "")
+    .toLowerCase();
+}

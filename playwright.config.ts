@@ -52,6 +52,12 @@ export default defineConfig({
       testMatch: /(section-lock|cash-arithmetic)\.spec\.ts/,
     },
     {
+      // Signup runs signed OUT, so it takes no stored session.
+      name: "signup",
+      use: chromium,
+      testMatch: /signup\.spec\.ts/,
+    },
+    {
       name: "access-control",
       // Signs in explicitly per role, because that is the thing under test.
       use: chromium,

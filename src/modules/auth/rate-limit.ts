@@ -147,3 +147,48 @@ export async function recordSectionPinFailure(keys: string[]): Promise<void> {
 export async function clearSectionPinFailures(keys: string[]): Promise<void> {
   await prisma.loginAttempt.deleteMany({ where: { key: { in: keys } } });
 }
+
+/*
+  Signup, throttled per address.
+
+  A public endpoint that CREATES rows needs a different limit from one that
+  merely checks a password: the abuse is not guessing, it is volume. So every
+  attempt is recorded, successful ones included — otherwise a script could
+  create businesses all day without ever tripping a failure counter.
+
+  Five an hour per address is well clear of anything a person does (nobody
+  founds six businesses in an afternoon) and closes the door on a loop.
+*/
+const SIGNUP_MAX_PER_IP = 5;
+const SIGNUP_WINDOW_MS = 60 * 60 * 1000;
+
+export function signupKeys(ip: string | null): string[] {
+  // No address means no bucket to count against — behind a proxy that strips
+  // the header this would otherwise lump every signup into one key and lock
+  // out the sixth honest customer.
+  return ip ? [`signup:ip:${ip}`] : [];
+}
+
+export async function checkSignupAllowed(keys: string[]): Promise<RateLimitState> {
+  if (keys.length === 0) return { locked: false };
+  return checkLoginAllowed(keys);
+}
+
+/** Counts an attempt whether or not it succeeded. */
+export async function recordSignupAttempt(keys: string[]): Promise<void> {
+  const now = new Date();
+  await Promise.all(
+    keys.map(async (key) => {
+      const existing = await prisma.loginAttempt.findUnique({ where: { key } });
+      const stale = existing ? now.getTime() - existing.updatedAt.getTime() > SIGNUP_WINDOW_MS : false;
+      const failures = (stale || !existing ? 0 : existing.failures) + 1;
+      const lockedUntil =
+        failures >= SIGNUP_MAX_PER_IP ? new Date(now.getTime() + SIGNUP_WINDOW_MS) : null;
+      await prisma.loginAttempt.upsert({
+        where: { key },
+        create: { key, failures, lockedUntil },
+        update: { failures, lockedUntil },
+      });
+    }),
+  );
+}

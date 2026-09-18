@@ -11,6 +11,8 @@ import { authConfig } from "@/lib/auth.config";
 // "/offline" or "/login" (e.g. /offline-report) silently public.
 const PUBLIC_EXACT = new Set([
   "/login",
+  // Creating an account cannot require an account.
+  "/signup",
   "/forgot-password",
   // Reached by someone who cannot sign in, so it cannot require a session.
   // The token in the query string is the credential.
