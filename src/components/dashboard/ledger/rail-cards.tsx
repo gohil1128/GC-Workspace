@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, APP_LOCALE } from "@/lib/money";
 import { fmtDate } from "@/lib/date";
 
 /*
@@ -12,7 +12,9 @@ import { fmtDate } from "@/lib/date";
 // SalesItem.qty is a Float — items can be sold by weight — and summing floats
 // leaves artefacts like 412.30000000000007. Whole counts stay whole; anything
 // genuinely fractional keeps one decimal.
-const qtyFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+// Quantities, not money — but the same locale, so grouping and decimals
+// match the figures beside them.
+const qtyFormatter = new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 1 });
 function formatQty(qty: number) {
   return qtyFormatter.format(qty);
 }

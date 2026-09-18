@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   toCents, fromCents, formatMoney, formatMoneyHeadline, formatPercent, safeDivide,
+  APP_CURRENCY, APP_LOCALE,
 } from "@/lib/money";
 
 /*
@@ -135,15 +136,33 @@ describe("safeDivide", () => {
 });
 
 /*
-  Currency. The business is Canadian and the product is to be sold to other
-  Canadian food businesses, but the formatter is hardcoded to en-US/USD. The
-  glyph is "$" either way, so this is invisible on screen and wrong in meaning —
-  and there is no way for a second customer to be in another currency.
+  Currency.
+
+  This used to assert the defect: the formatter was hardcoded to en-US/USD for a
+  business that trades in Canada. en-CA/CAD renders identically — "$1,234.56" —
+  so the mistake was invisible on screen and wrong everywhere the label is what
+  is read: by a screen reader, in an exported CSV, by an accounting package.
 */
 describe("currency configuration", () => {
-  it("is hardcoded to US dollars", () => {
-    // Documents the defect: en-CA/CAD would render "CA$12.34" for a foreign
-    // locale and, more to the point, the product cannot yet be sold outside the US.
+  it("formats in Canadian dollars", () => {
+    expect(APP_CURRENCY).toBe("CAD");
+    expect(APP_LOCALE).toBe("en-CA");
+  });
+
+  it("renders the same glyph and grouping it always did", () => {
+    // The change is semantic, not visual — nothing on screen should move.
     expect(formatMoney(1234)).toBe("$12.34");
+    expect(formatMoney(123456789)).toBe("$1,234,567.89");
+    expect(formatMoneyHeadline(4385012)).toBe("$43,850");
+  });
+
+  it("actually carries CAD, not just a dollar sign", () => {
+    // The part that was wrong before: what the number is LABELLED as.
+    const parts = new Intl.NumberFormat(APP_LOCALE, {
+      style: "currency",
+      currency: APP_CURRENCY,
+      currencyDisplay: "code",
+    }).formatToParts(12.34);
+    expect(parts.find((p) => p.type === "currency")?.value).toBe("CAD");
   });
 });

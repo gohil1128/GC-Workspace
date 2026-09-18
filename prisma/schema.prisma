@@ -79,7 +79,7 @@ model Business {
   id        String   @id @default(cuid())
   name      String
   timezone  String   @default("America/New_York")
-  currency  String   @default("USD")
+  currency  String   @default("CAD")
   laborTargetPct Int @default(30) // labor cost target as percent
   foodTargetPct  Int @default(32)
   // One PIN guards every protected section; `lockedSections` says which ones
@@ -797,7 +797,7 @@ model Vendor {
   role            String?    // e.g. "Graphic Designer", "Accountant"
   country         String?    // free-text country for tax/jurisdiction context
   monthlyFeeCents Int        @default(0)
-  currency        String     @default("USD")
+  currency        String     @default("CAD")
   defaultCategory ExpenseCategory @default(CONTRACTOR)
   isFlatFee       Boolean    @default(true)  // true = no tax withholding
   notes           String?
