@@ -40,6 +40,8 @@ type Line = {
   label: string;
   /** Sub-lines of net sales are indented and set in muted ink. */
   indent?: boolean;
+  /** A running total drawn off the lines above it, not a cost of its own. */
+  subtotal?: boolean;
   /** Costs render as negatives. */
   negate?: boolean;
   value: (c: PnlColumn) => number;
@@ -49,7 +51,10 @@ type Line = {
 const LINES: Line[] = [
   { key: "txns", label: "Transactions", value: (c) => c.txns, format: (n) => n.toLocaleString() },
   { key: "net", label: "Net sales", value: (c) => c.netSalesCents },
-  { key: "cogs", label: "Supplier invoices (COGS)", indent: true, negate: true, value: (c) => c.cogsCents },
+  { key: "cogs", label: "Cost of goods", indent: true, negate: true, value: (c) => c.cogsCents },
+  // The line the split exists to make honest: everything above it was consumed
+  // making what was sold, everything below it is the cost of being open.
+  { key: "gross", label: "Gross profit", subtotal: true, value: (c) => c.grossProfitCents },
   { key: "labor", label: "Labor", indent: true, negate: true, value: (c) => c.laborCents },
   { key: "opex", label: "Operating expenses", indent: true, negate: true, value: (c) => c.opexCents },
   { key: "fees", label: "Event fees", indent: true, negate: true, value: (c) => c.feeCents },
@@ -186,7 +191,10 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
                 key={line.key}
                 role="row"
                 {...rowProps(line.key)}
-                className="ledger-row border-b border-input py-[11px]"
+                className={cn(
+                  "ledger-row border-b border-input py-[11px]",
+                  line.subtotal && "border-t border-espresso",
+                )}
               >
                 <SortLabel
                   line={line.key}
@@ -321,7 +329,12 @@ export function PnlStatement({ columns }: { columns: PnlColumn[] }) {
               <MobileLine label="Net sales" value={money(c.netSalesCents)} strong />
               {/* Lines with nothing recorded are dropped on phones, where four
                   rows of em-dashes was most of the card's height. */}
-              {c.cogsCents > 0 && <MobileLine label="Supplier invoices" value={neg(c.cogsCents)} muted />}
+              {c.cogsCents > 0 && <MobileLine label="Cost of goods" value={neg(c.cogsCents)} muted />}
+              {/* Only where there is a cost of goods to have taken off — on a
+                  card with none it would just repeat net sales. */}
+              {c.cogsCents > 0 && (
+                <MobileLine label="Gross profit" value={formatMoney(c.grossProfitCents)} strong />
+              )}
               {c.laborCents > 0 && <MobileLine label="Labor" value={neg(c.laborCents)} muted />}
               {c.opexCents > 0 && <MobileLine label="Operating expenses" value={neg(c.opexCents)} muted />}
               {c.feeCents > 0 && <MobileLine label="Event fees" value={neg(c.feeCents)} muted />}

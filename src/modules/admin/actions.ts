@@ -6,6 +6,7 @@ import { getScope } from "@/lib/scope";
 import { requireOwner } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { OVERVIEW_CARD_KEYS, sanitiseHiddenCards } from "@/modules/dashboard/cards";
+import { CLASSIFIABLE_INVOICE_CATEGORIES } from "@/modules/reports/cost-classes";
 
 /**
  * Wipe all operational data for the current business: ingredients, suppliers,
@@ -106,6 +107,45 @@ const IANA_ZONE = z.string().refine(
   },
   { message: "Not a recognised timezone" },
 );
+
+/*
+  Which supplier-invoice categories this business books below the gross-profit
+  line rather than against cost of goods.
+
+  Stored as the operating-expense side, so a category nobody has classified —
+  an invoice with none, or one a business invented — stays in cost of goods,
+  which is where every invoice already was. The alternative would move unknown
+  bills out of COGS and improve the margin without anybody deciding it should.
+
+  Owner-only, like the rest of the business-wide settings, and filtered against
+  the categories this version knows so a hand-posted value cannot sit in the
+  column matching nothing.
+*/
+export async function setOpexInvoiceCategoriesAction(categories: unknown) {
+  await requireOwner();
+  const scope = await getScope();
+  const parsed = z.array(z.string()).safeParse(categories);
+  if (!parsed.success) return { error: "Could not read that selection." };
+
+  const known = new Set(CLASSIFIABLE_INVOICE_CATEGORIES);
+  const clean = Array.from(new Set(parsed.data.filter((c) => known.has(c))));
+
+  await prisma.business.update({
+    where: { id: scope.businessId },
+    data: { opexInvoiceCategories: clean },
+  });
+  await writeAudit({
+    businessId: scope.businessId, userId: scope.userId,
+    action: "business.cost.classes", entityType: "Business", entityId: scope.businessId,
+    diff: { opexInvoiceCategories: clean },
+  });
+  // Every page that prints a margin, but not this one — revalidating /settings
+  // from an action invoked on /settings leaves the control's transition open.
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  revalidatePath("/events", "layout");
+  return { ok: true as const };
+}
 
 /*
   Which Overview cards this business has turned off.

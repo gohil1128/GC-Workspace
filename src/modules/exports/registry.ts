@@ -188,14 +188,17 @@ export const EXPORTS: ExportDef[] = [
       const cols = await pnlByEvent(scope.businessId, scope.locationId);
       return {
         columns: [
-          "column", "transactions", "netSales", "supplierInvoicesCOGS", "labor",
-          "operatingExpenses", "eventFees", "profit", "marginPct", "tips",
+          "column", "transactions", "netSales", "costOfGoods", "grossProfit",
+          "grossMarginPct", "labor", "operatingExpenses", "eventFees", "profit",
+          "marginPct", "tips",
         ],
         rows: cols.map((c) => ({
           column: c.key === "overall" ? "Overall" : c.name,
           transactions: c.txns,
           netSales: money(c.netSalesCents),
-          supplierInvoicesCOGS: money(c.cogsCents),
+          costOfGoods: money(c.cogsCents),
+          grossProfit: money(c.grossProfitCents),
+          grossMarginPct: c.netSalesCents > 0 ? c.grossMarginPct.toFixed(2) : "",
           labor: money(c.laborCents),
           operatingExpenses: money(c.opexCents),
           eventFees: money(c.feeCents),

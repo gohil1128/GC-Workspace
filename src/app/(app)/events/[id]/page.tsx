@@ -92,7 +92,17 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   printed as a column of em-dashes. Net sales and profit always
                   show, so the card never loses its anchors. */}
               {column.cogsCents > 0 && (
-                <PnlLine label="Supplier invoices (COGS)" value={formatMoney(-column.cogsCents)} muted />
+                <PnlLine label="Cost of goods" value={formatMoney(-column.cogsCents)} muted />
+              )}
+              {/* The line between what the chai cost and what the day cost.
+                  Only where there is a cost of goods to subtract — otherwise
+                  it would just restate net sales. */}
+              {column.cogsCents > 0 && (
+                <PnlLine
+                  label="Gross profit"
+                  value={`${formatMoney(column.grossProfitCents)} (${formatPercent(column.grossMarginPct)})`}
+                  strong
+                />
               )}
               {column.laborCents > 0 && (
                 <PnlLine label="Labor" value={formatMoney(-column.laborCents)} muted />

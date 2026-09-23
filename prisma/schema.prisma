@@ -79,6 +79,10 @@ model Business {
   id        String   @id @default(cuid())
   name      String
   timezone  String   @default("America/New_York")
+  // Invoice categories this business books below the gross-profit line
+  // rather than against cost of goods. Anything not listed stays in
+  // COGS — see src/modules/reports/cost-classes.ts for why.
+  opexInvoiceCategories String[] @default(["Rent / Venue", "Marketing", "Equipment & Smallwares", "Repairs & Maintenance", "Cleaning"])
   currency  String   @default("CAD")
   laborTargetPct Int @default(30) // labor cost target as percent
   foodTargetPct  Int @default(32)

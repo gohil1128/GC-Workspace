@@ -91,10 +91,22 @@ export default async function ReportsPage() {
                     ))}
                   </TableRow>
                   <TableRow>
-                    <TableCell className="text-muted-foreground">Supplier invoices (COGS)</TableCell>
+                    <TableCell className="text-muted-foreground">Cost of goods</TableCell>
                     {pnl.map((c) => (
                       <TableCell key={c.key} className="text-right num text-muted-foreground">
                         {c.cogsCents ? <>−{formatMoney(c.cogsCents)}</> : "—"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {/* Everything above this line was consumed making what was
+                      sold; everything below it is the cost of being open. */}
+                  <TableRow>
+                    <TableCell className="font-medium">Gross profit</TableCell>
+                    {pnl.map((c) => (
+                      <TableCell key={c.key} className="text-right num font-medium">
+                        {c.netSalesCents
+                          ? `${formatMoney(c.grossProfitCents)} (${formatPercent(c.grossMarginPct)})`
+                          : "—"}
                       </TableCell>
                     ))}
                   </TableRow>

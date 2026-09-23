@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { splitInvoiceCosts } from "./cost-classes";
 import { lastNDays, dayRange, fmtDate, startOfDay } from "@/lib/date";
 import { safeDivide } from "@/lib/money";
 
@@ -227,10 +228,17 @@ export type PnlColumn = {
   txns: number;
   netSalesCents: number;
   tipsCents: number;
-  cogsCents: number; // supplier invoices
+  // Supplier invoices for goods — what was consumed making what was sold.
+  cogsCents: number;
   laborCents: number;
-  opexCents: number; // expenses
+  // Recorded expenses, plus the supplier invoices this business books below
+  // the gross-profit line: rent, marketing, equipment and the like.
+  opexCents: number;
   feeCents: number; // event fees
+  // Net sales less cost of goods — what the recipe itself earns, before any
+  // cost of being open. The figure that says whether the menu works.
+  grossProfitCents: number;
+  grossMarginPct: number;
   profitCents: number;
   marginPct: number;
 };
@@ -249,7 +257,11 @@ export async function pnlByEvent(
   range?: { start: Date; end: Date } | null,
 ): Promise<PnlColumn[]> {
   const within = range ? { gte: range.start, lte: range.end } : undefined;
-  const [allEvents, sales, invoices, expenses, shifts] = await Promise.all([
+  const [business, allEvents, sales, invoices, expenses, shifts] = await Promise.all([
+    prisma.business.findUnique({
+      where: { id: businessId },
+      select: { opexInvoiceCategories: true },
+    }),
     prisma.event.findMany({
       where: { businessId },
       select: { id: true, name: true, color: true, startDate: true, endDate: true, feeCents: true },
@@ -261,7 +273,7 @@ export async function pnlByEvent(
     }),
     prisma.invoice.findMany({
       where: { locationId, ...(within ? { invoiceDate: within } : {}) },
-      select: { eventId: true, totalCents: true, appliesToAllEvents: true },
+      select: { eventId: true, totalCents: true, appliesToAllEvents: true, category: true },
     }),
     prisma.expense.findMany({
       where: { locationId, ...(within ? { businessDate: within } : {}) },
@@ -292,6 +304,7 @@ export async function pnlByEvent(
   const shiftCost = (s: (typeof shifts)[number]) =>
     Math.round(((s.timeEntry?.actualMinutes ?? s.scheduledMinutes) / 60) * s.employee.hourlyRateCents);
 
+  const opexCategories = business?.opexInvoiceCategories ?? [];
   const shareDiv = Math.max(1, events.length);
   const build = (key: string, name: string, color: string | null, filter: {
     eventId?: string;
@@ -316,15 +329,22 @@ export async function pnlByEvent(
     const netSalesCents = s.reduce((a, r) => a + r.netSalesCents, 0);
     const tipsCents = s.reduce((a, r) => a + r.tipsCents, 0);
     const txns = s.reduce((a, r) => a + r.guestCount, 0);
-    const cogsCents = inv.reduce((a, r) => a + r.totalCents, 0);
-    const opexCents = exp.reduce((a, r) => a + r.amountCents, 0);
+    // Rent, marketing and a new urn are costs of being open, not costs of the
+    // chai. Charging them against gross margin made the recipe look worse than
+    // it is — see cost-classes.ts.
+    const split = splitInvoiceCosts(inv, opexCategories);
+    const cogsCents = split.cogsCents;
+    const opexCents = exp.reduce((a, r) => a + r.amountCents, 0) + split.opexCents;
     const laborCents = lab.reduce((a, r) => a + shiftCost(r), 0);
+    const grossProfitCents = netSalesCents - cogsCents;
+    const grossMarginPct = netSalesCents > 0 ? (grossProfitCents / netSalesCents) * 100 : 0;
     const profitCents = netSalesCents - cogsCents - laborCents - opexCents - filter.feeCents;
     const marginPct = netSalesCents > 0 ? (profitCents / netSalesCents) * 100 : 0;
 
     return {
       key, name, color, txns, netSalesCents, tipsCents,
       cogsCents, laborCents, opexCents, feeCents: filter.feeCents,
+      grossProfitCents, grossMarginPct,
       profitCents, marginPct,
     };
   };

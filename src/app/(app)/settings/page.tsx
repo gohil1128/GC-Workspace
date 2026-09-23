@@ -10,6 +10,7 @@ import { LocationsManager } from "./_components/locations-manager";
 import { DangerZone } from "./_components/danger-zone";
 import { BusinessForm } from "./_components/business-form";
 import { OverviewCardsCard } from "./_components/overview-cards-card";
+import { CostClassesCard } from "./_components/cost-classes-card";
 import { SectionLockCard } from "./_components/section-lock-card";
 import { sectionLockSettings } from "@/modules/section-lock/actions";
 import { EventsManager } from "./_components/events-manager";
@@ -72,6 +73,8 @@ export default async function SettingsPage() {
         </Card>
 
         {business && <OverviewCardsCard hidden={business.hiddenOverviewCards} />}
+
+        {business && <CostClassesCard opex={business.opexInvoiceCategories} />}
 
         <Card>
           <CardHeader>
