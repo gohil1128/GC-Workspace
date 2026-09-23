@@ -12,7 +12,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 import { setItemCategoryAction, deleteItemSalesAction, setItemRecipeAction } from "@/modules/items/actions";
-import { ITEM_CATEGORIES, categoryStyle } from "@/modules/items/categories";
+import { categoriesInUse, categoryStyle } from "@/modules/items/categories";
 
 type Item = {
   itemName: string;
@@ -40,6 +40,17 @@ export function ItemsManager({ items, recipes }: { items: Item[]; recipes: Recip
   const [cats, setCats] = React.useState<Record<string, string>>(
     () => Object.fromEntries(items.map((i) => [i.itemName, i.category]))
   );
+  /*
+    Every category in play: the ones on the business's items, plus whatever has
+    been picked in this session, plus the two universal buckets. Recomputed as
+    `cats` changes so a category typed on one row is immediately offered on the
+    next.
+  */
+  const categoryOptions = React.useMemo(
+    () => categoriesInUse([...items.map((i) => i.category), ...Object.values(cats)]),
+    [items, cats],
+  );
+
   const [links, setLinks] = React.useState<Record<string, string>>(
     () => Object.fromEntries(items.map((i) => [i.itemName, i.recipeId ?? NO_RECIPE]))
   );
@@ -149,11 +160,14 @@ export function ItemsManager({ items, recipes }: { items: Item[]; recipes: Recip
                       <Select value={cur} onValueChange={(v) => onCategory(i.itemName, v)} disabled={busy === `cat:${i.itemName}`}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {ITEM_CATEGORIES.map((c) => (
+                          {/* The categories THIS business uses, not a preset
+                              menu. The list used to be Hot Chai / Cold Chais /
+                              Food, so a bakery could only file a croissant
+                              under somebody else's drinks. */}
+                          {categoryOptions.map((c) => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
-                          {/* Keep any custom category Square sent that isn't a preset */}
-                          {!ITEM_CATEGORIES.includes(cur as any) && (
+                          {!categoryOptions.includes(cur) && (
                             <SelectItem value={cur}>{cur}</SelectItem>
                           )}
                         </SelectContent>
