@@ -8,6 +8,7 @@ import { toCents } from "@/lib/money";
 import { validateImageDataUrl } from "./attachments";
 import { newAvgCostCents } from "@/modules/inventory/costing";
 import { createInvoiceSchema, updateInvoiceTotalsSchema, addInvoiceItemSchema } from "./schemas";
+import { impossibleInvoiceReason } from "./checks";
 import { requireCan } from "@/lib/auth";
 import { ownedId, requiredOwnedId, assertAllOwned } from "@/lib/ownership";
 
@@ -122,7 +123,15 @@ export async function createInvoiceAction(formData: FormData) {
   redirect(`/purchasing/invoices/${invoice.id}`);
 }
 
-export async function updateInvoiceAction(id: string, formData: FormData) {
+/*
+  Returns its refusal rather than throwing it: production redacts the message
+  on a thrown Server Action and the operator gets a digest, which is no use
+  when the whole point is to say which figure is wrong.
+*/
+export async function updateInvoiceAction(
+  id: string,
+  formData: FormData,
+): Promise<{ ok: true } | { error: string }> {
   await requireCan("purchasing");
   const scope = await getScope();
   const parsed = updateInvoiceTotalsSchema.parse({
@@ -142,12 +151,34 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
   const eventId = parsed.eventId && parsed.eventId !== "none" && !appliesToAllEvents ? parsed.eventId : null;
   if (eventId) {
     const ev = await prisma.event.findFirst({ where: { id: eventId, businessId: scope.businessId } });
-    if (!ev) throw new Error("Selected event not found");
+    if (!ev) return { error: "That event is no longer there — reload the page." };
   }
 
   const inv = await prisma.invoice.findFirst({ where: { id, locationId: scope.locationId } });
-  if (!inv) throw new Error("Not found");
-  if (inv.closedAt) throw new Error("Invoice is closed");
+  if (!inv) return { error: "That invoice is no longer there — reload the page." };
+  if (inv.closedAt) return { error: "This invoice is closed. Reopen it before changing the figures." };
+
+  /*
+    Checked against the subtotal that will actually be stored. With line items
+    the typed subtotal is ignored — recomputeInvoiceTotals replaces it with
+    their sum — so validating the typed one would pass a bill that then saves
+    as impossible.
+  */
+  const items = await prisma.invoiceItem.findMany({
+    where: { invoiceId: id },
+    select: { lineTotalCents: true },
+  });
+  const effectiveSubtotalCents = items.length > 0
+    ? items.reduce((a, it) => a + it.lineTotalCents, 0)
+    : toCents(parsed.subtotalDollars);
+  const refusal = impossibleInvoiceReason({
+    subtotalCents: effectiveSubtotalCents,
+    gstCents: toCents(parsed.gstDollars),
+    pstCents: toCents(parsed.pstDollars),
+    shippingCents: toCents(parsed.shippingDollars),
+    rebateCents: toCents(parsed.rebateDollars),
+  });
+  if (refusal) return { error: refusal };
 
   await prisma.$transaction(async (tx) => {
     await tx.invoice.update({
@@ -174,6 +205,7 @@ export async function updateInvoiceAction(id: string, formData: FormData) {
   await writeAudit({ businessId: scope.businessId, userId: scope.userId, action: "invoice.update", entityType: "Invoice", entityId: id });
   revalidatePath("/purchasing/invoices");
   revalidatePath(`/purchasing/invoices/${id}`);
+  return { ok: true };
 }
 
 export async function addInvoiceItemAction(invoiceId: string, payload: unknown) {

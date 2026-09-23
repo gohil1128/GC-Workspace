@@ -87,3 +87,44 @@ describe("overShortCentsFor", () => {
     expect(overShortCentsFor(negated)).toBe(-overShortCentsFor(args));
   });
 });
+
+/*
+  The day that did not add up.
+
+  A live close read +$720 over on a market where $620 was counted in the till
+  and $300 had been paid out of it. The arithmetic was right; the Expected
+  takings box was empty, so nothing was being subtracted for the sales and the
+  whole drawer was landing in the surplus.
+
+  These pin that down, because the answer was never "the formula is wrong" —
+  it was "you cannot see the formula". The page prints its terms and their
+  signs now, and an empty Expected box says so on the card.
+*/
+describe("a close with nothing in Expected", () => {
+  const day = {
+    cashCents: 62_000,   // counted in the till, float included
+    creditCents: 0,
+    depositCents: 0,
+    paidOutCents: 30_000,
+    paidInCents: 0,
+    openingCents: 20_000, // the float
+    expectedCents: 0,     // never filled in
+  };
+
+  it("reads the entire drawer as a surplus", () => {
+    expect(overShortCentsFor(day)).toBe(72_000);
+  });
+
+  it("balances once the sales are entered", () => {
+    // 620 counted + 300 paid out − 200 float = 720 of takings to account for.
+    expect(overShortCentsFor({ ...day, expectedCents: 72_000 })).toBe(0);
+  });
+
+  it("is the empty box and not the payout: dropping it does not explain the gap", () => {
+    // A tempting reading of +720 is that the $300 payout was added when it
+    // should have been taken off. Taking it off instead lands on +120 — it
+    // moves the answer by twice the payout — and +120 is not a figure anybody
+    // expected either, so the payout is not what is wrong here.
+    expect(overShortCentsFor({ ...day, paidOutCents: -30_000 })).toBe(12_000);
+  });
+});

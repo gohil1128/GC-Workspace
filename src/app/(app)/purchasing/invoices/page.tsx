@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { AlertTriangle, Camera, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { requireCapability } from "@/lib/scope";
 import { getActiveEvent, listAllEvents } from "@/modules/events/queries";
 import { listInvoices, listSuppliersForInvoice } from "@/modules/invoices/queries";
@@ -15,6 +15,7 @@ import { InvoiceFilters } from "./_components/invoice-filters";
 import { ExportInvoicesButton } from "./_components/export-invoices-button";
 import { StatTile, StatTileRow } from "@/components/stat-tile";
 import { formatMoney } from "@/lib/money";
+import { isBelowSubtotal } from "@/modules/invoices/checks";
 import { fmtDate, safeDateParam } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,14 @@ export default async function InvoicesPage({
   const openInvoices = sorted.filter((i) => !i.closedAt);
   const openTotal = openInvoices.reduce((a, i) => a + i.totalCents, 0);
   const untaggedCount = allInvoices.filter((i) => !i.event && !i.appliesToAllEvents).length;
+  /*
+    Bills that came to less than the goods on them. Almost always a rebate in
+    the wrong box, and until now completely invisible: the total is computed,
+    so nothing ever compared it to the subtotal it was derived from. Counted
+    across every invoice rather than the filtered set, because a figure that
+    only appears under the right filter is a figure nobody finds.
+  */
+  const belowSubtotal = allInvoices.filter(isBelowSubtotal);
   // Oldest still-open bill — the schema has no due date, so this is the real
   // stand-in for "what has been sitting unpaid longest".
   const oldestOpen = [...openInvoices].sort(
@@ -167,6 +176,36 @@ export default async function InvoicesPage({
           />
         </StatTileRow>
 
+        {belowSubtotal.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-xs">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">
+                {belowSubtotal.length} invoice{belowSubtotal.length === 1 ? "" : "s"} total less
+                than the goods on {belowSubtotal.length === 1 ? "it" : "them"}
+              </p>
+              <p className="leading-relaxed text-muted-foreground">
+                The total is worked out as amount before tax, plus GST, PST and shipping, less the
+                rebate — so a total under the subtotal means the rebate is bigger than the tax and
+                shipping put together. Right for a discounted bill, wrong for a rebate typed into
+                the wrong box, and these go into cost of goods either way.{" "}
+                {belowSubtotal.slice(0, 6).map((i, n) => (
+                  <span key={i.id}>
+                    {n > 0 && ", "}
+                    <Link
+                      href={`/purchasing/invoices/${i.id}`}
+                      className="font-medium text-foreground underline underline-offset-2"
+                    >
+                      {i.supplier.name}
+                    </Link>
+                  </span>
+                ))}
+                {belowSubtotal.length > 6 && <> and {belowSubtotal.length - 6} more</>}.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Keyed to the resolved event: if the header's cookie changes (its
             own switcher does a router.refresh(), not a URL change), this
             form's mounted state wouldn't otherwise pick up the new default —
@@ -233,7 +272,17 @@ export default async function InvoicesPage({
                   <TableCell className="text-muted-foreground">{fmtDate(i.dateReceived)}</TableCell>
                   <TableCell className="text-right num">{i._count.items}</TableCell>
                   <TableCell className="text-right num">{formatMoney(i.subtotalCents)}</TableCell>
-                  <TableCell className="text-right num font-medium">{formatMoney(i.totalCents)}</TableCell>
+                  <TableCell className="text-right num font-medium">
+                    {isBelowSubtotal(i) ? (
+                      <span className="inline-flex items-center gap-1.5 text-warning" title="Total is under the amount before tax — check the rebate">
+                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                        <span className="sr-only">Under the amount before tax — </span>
+                        {formatMoney(i.totalCents)}
+                      </span>
+                    ) : (
+                      formatMoney(i.totalCents)
+                    )}
+                  </TableCell>
                   <TableCell>
                     {i.closedAt ? (
                       <div className="flex items-center gap-1.5">

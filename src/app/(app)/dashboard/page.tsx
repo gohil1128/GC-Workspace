@@ -13,6 +13,7 @@ import { fmtDate } from "@/lib/date";
 import { formatMoney, formatMoneyHeadline, formatPercent, safeDivide } from "@/lib/money";
 import { KpiStrip, type Kpi } from "@/components/dashboard/ledger/kpi-strip";
 import { EventControl } from "@/components/dashboard/event-control";
+import { TimezoneNotice } from "@/components/dashboard/timezone-notice";
 import { PnlStatement } from "@/components/dashboard/ledger/pnl-statement";
 import {
   TopItemsCard,
@@ -22,6 +23,7 @@ import {
 import { EventRevenueChart } from "@/components/dashboard/event-revenue-chart";
 import { ItemMixDonut } from "@/components/dashboard/bento/item-mix-donut";
 import { isCardVisible, type OverviewCardKey } from "@/modules/dashboard/cards";
+import { can } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +58,7 @@ export default async function DashboardPage({
     resolveEventScope(scope.businessId, params, activeEvent),
     listEventOptions(scope.businessId),
   ]);
+  const canChangeSettings = can(scope.role, "settings");
   const now = new Date();
   /*
     Which cards this business wants. Stored as the hidden ones, so a card added
@@ -204,6 +207,15 @@ export default async function DashboardPage({
       </div>
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+      {/* Above the figures, not in Settings: a business on the wrong timezone
+          has no symptom to go looking for, so the only place the warning can
+          do any good is in front of the numbers it is quietly bending. Only
+          shown to somebody who could act on it. */}
+      {canChangeSettings && business?.timezone && (
+        <div className="mt-5">
+          <TimezoneNotice businessTimezone={business.timezone} />
+        </div>
+      )}
       {show("kpis") && <KpiStrip items={kpis} />}
 
       {/* Statement + rail. The grid collapses to one column when a business has

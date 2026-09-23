@@ -123,3 +123,60 @@ test.describe("the business day follows the business", () => {
     expect(shown![1]).toBe(expected);
   });
 });
+
+/*
+  The balancing panel used to print seven figures with no operators between
+  them, and two of those seven are subtracted. A live close came out $720 over
+  on a day where $620 was counted and $300 had been paid out, and nothing on
+  the screen said why: the Expected takings box was empty, so nothing was being
+  taken off for the sales.
+
+  These walk that exact day. They are about what the screen says, not only what
+  it computes — the arithmetic was never wrong.
+*/
+test.describe("the balancing panel shows its working", () => {
+  const DATE = "2026-09-29";
+
+  test("prints every term with the sign it is applied with", async ({ page }) => {
+    await page.goto(`/cash/new?date=${DATE}`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("#opening").fill("200");
+    await page.locator("#cash").fill("620");
+    await page.locator("#expected").fill("0");
+    await page.waitForTimeout(400);
+
+    const text = await page.getByTestId("balancing").innerText();
+
+    // The two that are taken off have to be readable as such. Before this,
+    // both looked identical to the five that are added.
+    for (const line of ["Opening float", "Expected takings", "Paid into the till"]) {
+      expect(text, `${line} should be marked as subtracted`).toMatch(
+        new RegExp(`minus\\s*\\n?\\s*${line}`),
+      );
+    }
+    for (const line of ["Card takings", "Banked during the day", "Paid out of the till"]) {
+      expect(text, `${line} should be marked as added`).toMatch(
+        new RegExp(`plus\\s*\\n?\\s*${line}`),
+      );
+    }
+
+    // 620 − 200, and the column as printed sums to it.
+    expect(money(await page.getByTestId("over-short").innerText())).toBe(420);
+  });
+
+  test("says so when Expected takings is the reason the drawer reads over", async ({ page }) => {
+    await page.goto(`/cash/new?date=${DATE}`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("#opening").fill("200");
+    await page.locator("#cash").fill("620");
+    await page.locator("#expected").fill("0");
+    await page.waitForTimeout(400);
+    await expect(page.getByText(/Expected takings is .*so nothing is being subtracted/)).toBeVisible();
+
+    // And stops saying it once there is a figure to subtract.
+    await page.locator("#expected").fill("420");
+    await page.waitForTimeout(400);
+    await expect(page.getByText(/so nothing is being subtracted/)).toHaveCount(0);
+    expect(money(await page.getByTestId("over-short").innerText())).toBe(0);
+  });
+});

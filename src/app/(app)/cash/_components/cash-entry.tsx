@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Pencil, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -204,15 +204,15 @@ export function CashEntry({
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Field id="opening" label="Opening till" value={opening} setter={setOpening} />
-                  <Field id="cash" label="Cash collected" value={cash} setter={setCash} />
-                  <Field id="credit" label="Credit / Debit" value={credit} setter={setCredit} />
+                  <Field id="opening" label="Opening float" value={opening} setter={setOpening} hint="Change you started with" />
+                  <Field id="cash" label="Cash in till" value={cash} setter={setCash} hint="Counted at close, float included" />
+                  <Field id="credit" label="Card takings" value={credit} setter={setCredit} />
                   <Field id="safe" label="Safe count" value={safe} setter={setSafe} />
-                  <Field id="paidIn" label="Paid-in" value={paidIn} setter={setPaidIn} />
+                  <Field id="paidIn" label="Paid into till" value={paidIn} setter={setPaidIn} />
                   {/* Read-only on purpose: it adds up the Payouts tab, so
                       there is no total here to disagree with the list. */}
                   <div className="grid gap-1.5">
-                    <Label className="text-xs">Paid-out</Label>
+                    <Label className="text-xs">Paid out of till</Label>
                     <div
                       data-testid="paid-out-total"
                       className="num flex h-8 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm"
@@ -223,7 +223,7 @@ export function CashEntry({
                       {payouts.length === 0 ? "From the Payouts tab" : `${payouts.length} payout${payouts.length === 1 ? "" : "s"}`}
                     </span>
                   </div>
-                  <Field id="expected" label="Expected" value={expected} setter={setExpected} hint={`Suggested ${fmt(expectedSuggestion)}`} />
+                  <Field id="expected" label="Expected takings" value={expected} setter={setExpected} hint={expectedSuggestion > 0 ? `Sales recorded: ${fmt(expectedSuggestion)}` : "The day's net sales"} />
                 </div>
 
                 <div className="grid gap-1.5">
@@ -249,6 +249,7 @@ export function CashEntry({
               expected={Number(expected) || 0}
               overShort={overShort}
               flag={flag}
+              expectedSuggestion={expectedSuggestion}
             />
           </div>
 
@@ -327,6 +328,7 @@ export function CashEntry({
               expected={Number(expected) || 0}
               overShort={overShort}
               flag={flag}
+              expectedSuggestion={expectedSuggestion}
             />
           </div>
         </TabsContent>
@@ -396,6 +398,7 @@ export function CashEntry({
               expected={Number(expected) || 0}
               overShort={overShort}
               flag={flag}
+              expectedSuggestion={expectedSuggestion}
             />
           </div>
         </TabsContent>
@@ -491,20 +494,42 @@ function Field({ id, label, value, setter, hint }: { id: string; label: string; 
   );
 }
 
-function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, expected, overShort, flag }: { cash: number; credit: number; deposits: number; payouts: number; paidIn: number; opening: number; expected: number; overShort: number; flag: boolean }) {
-  const total = cash + credit;
+/*
+  The arithmetic, written out.
+
+  This used to be a list of seven figures with no operators between them, and
+  the two that are taken off — the opening float and the expected takings —
+  looked exactly like the five that are added. Somebody reading it could not
+  tell which way any line pushed the answer, so when the over/short came out
+  wrong there was no way to see which number was to blame. It was: an
+  expected-takings box left at zero makes the entire drawer read as a surplus,
+  and nothing on the card said so.
+
+  So every line now carries its sign, and the total is the sum of the column
+  as printed. Whatever the figure turns out to be, the reason for it is on
+  the card.
+*/
+function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, expected, overShort, flag, expectedSuggestion }: { cash: number; credit: number; deposits: number; payouts: number; paidIn: number; opening: number; expected: number; overShort: number; flag: boolean; expectedSuggestion: number }) {
+  /*
+    Nothing typed in the Expected box. Worth saying out loud rather than
+    leaving as a zero among the other zeros: it is the one blank that turns
+    the whole count into a false surplus, and it is blank far more often
+    than it is genuinely nil.
+  */
+  const expectedMissing = expected === 0 && (cash > 0 || credit > 0);
   return (
     <Card>
       <CardHeader><CardTitle>Balancing overview</CardTitle></CardHeader>
-      <CardContent className="space-y-1.5 text-sm">
-        <Row label="Cash collected" value={fmt(cash)} />
-        <Row label="Credit / Debit" value={fmt(credit)} />
-        <Row label="Total Cash + Credit" value={fmt(total)} bold />
-        <Row label="Deposits" value={fmt(deposits)} testId="deposits" />
-        {payouts > 0 && <Row label="Paid out" value={`+ ${fmt(payouts)}`} testId="paid-out" />}
-        {paidIn > 0 && <Row label="Paid in" value={`− ${fmt(paidIn)}`} />}
-        <Row label="Opening till" value={fmt(opening)} />
-        <Row label="Expected" value={fmt(expected)} />
+      <CardContent className="space-y-3 text-sm" data-testid="balancing">
+        <div className="space-y-1.5">
+          <Row label="Cash counted in the till" value={fmt(cash)} />
+          <Row op="+" label="Card takings" value={fmt(credit)} />
+          <Row op="+" label="Banked during the day" value={fmt(deposits)} testId="deposits" />
+          <Row op="+" label="Paid out of the till" value={fmt(payouts)} testId="paid-out" />
+          <Row op="−" label="Paid into the till" value={fmt(paidIn)} />
+          <Row op="−" label="Opening float" value={fmt(opening)} />
+          <Row op="−" label="Expected takings" value={fmt(expected)} />
+        </div>
         <div className="border-t pt-2 flex items-center justify-between">
           <span className="font-medium">Over / Short</span>
           <span
@@ -514,6 +539,26 @@ function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, e
             {overShort >= 0 ? "+" : ""}{fmt(overShort)}
           </span>
         </div>
+        <p className="text-2xs leading-relaxed text-muted-foreground">
+          Everything the till should be holding, less what the sales say it should have taken.
+          Money paid out with a receipt is added back — it left the drawer, so the drawer is
+          short by exactly that much and is not actually missing it. The opening float comes
+          off because it was change to start with, not takings.
+        </p>
+        {expectedMissing && (
+          <p className="flex items-start gap-2 text-2xs leading-relaxed text-warning">
+            <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              Expected takings is {fmt(0)}, so nothing is being subtracted for the sales — the
+              whole drawer is showing up as a surplus.
+              {expectedSuggestion > 0 ? (
+                <> The day&rsquo;s recorded sales come to {fmt(expectedSuggestion)}.</>
+              ) : (
+                <> Enter the day&rsquo;s net sales in the Expected takings box.</>
+              )}
+            </span>
+          </p>
+        )}
         {flag && <Badge variant="danger">Over $20 — review</Badge>}
       </CardContent>
     </Card>
@@ -521,12 +566,22 @@ function BalancingOverview({ cash, credit, deposits, payouts, paidIn, opening, e
 }
 
 function Row({
-  label, value, bold, testId,
-}: { label: string; value: string; bold?: boolean; testId?: string }) {
+  op, label, value, testId,
+}: { op?: string; label: string; value: string; testId?: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`num ${bold ? "font-semibold" : ""}`} data-testid={testId}>{value}</span>
+    <div className="flex items-baseline gap-2">
+      {/* Fixed width so the figures line up under one another and the column
+          reads as a sum rather than as seven unrelated numbers. */}
+      <span aria-hidden className="w-3 shrink-0 text-muted-foreground">{op ?? ""}</span>
+      <span className="text-muted-foreground">
+        {/* Spoken, the operator has to reach the label it belongs to — a
+            screen reader announcing "minus" on its own row would attach it
+            to whatever came before. */}
+        {op && <span className="sr-only">{op === "+" ? "plus " : "minus "}</span>}
+        {label}
+      </span>
+      <span className="flex-1 border-b border-dotted border-border/60" aria-hidden />
+      <span className="num" data-testid={testId}>{value}</span>
     </div>
   );
 }
