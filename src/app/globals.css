@@ -582,3 +582,138 @@
     .animate-page, .animate-fade, .cascade > * { animation: none; opacity: 1; }
   }
 }
+
+/*
+  Paper.
+
+  Exports were CSV only, which is fine for getting figures into a spreadsheet
+  and no use at all for the thing a small business actually has to do with a
+  P&L: hand it to an accountant, a landlord or a lender. This makes every page
+  printable — and "Save as PDF" is a print destination on every browser worth
+  the name, so it is the PDF export without a library, a server renderer or a
+  second copy of the layout to keep in step with the real one.
+
+  Outside @layer on purpose. Tailwind's layers are ordered, and these rules
+  have to beat utility classes that set a colour or a background on the
+  element itself; a layered block would lose to them.
+
+  What is stripped is everything that is navigation rather than content — the
+  rail, the header, the tab bar, buttons — plus the two things that only work
+  on a screen: the photograph behind the masthead, whose type is white and
+  would print invisibly, and the frosted glass, which renders as a grey smear
+  on a page that has no gradient behind it.
+*/
+@media print {
+  /* Chrome, not content. */
+  nav,
+  header,
+  .app-photo,
+  [data-print="hide"],
+  [data-ui="button"]:not([data-print="keep"]),
+  button:not([data-print="keep"]) {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  /* The fixed cream gradient would otherwise be asked for as a full-bleed
+     background on every sheet. */
+  body::before { display: none !important; }
+
+  /* The masthead is light type over a photograph. With the photograph gone
+     it has to become ordinary black-on-white, headline included. */
+  [data-on-photo],
+  [data-on-photo] * {
+    color: #000 !important;
+  }
+
+  /* Cards become ruled blocks. Frosted glass has nothing to frost on paper,
+     and a drop shadow prints as a grey band. */
+  .bento,
+  .bento-dark,
+  .panel,
+  .glass,
+  .glass-pill {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #999 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Keep a card whole where it fits on the sheet, and never split a row of
+     figures across the fold. */
+  .bento,
+  .panel,
+  tr,
+  li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A table running over the page break repeats its headings, so the second
+     sheet of a long P&L is still readable on its own. */
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+
+  /*
+    Wide matrices scroll sideways on a screen and cannot on paper — a sheet
+    has one width and everything past it is simply gone. So they are made to
+    fit: the content-sized minimum is dropped, the nowrap that keeps event
+    names on one line is released, and the type comes down a couple of points,
+    which is what a P&L with six event columns needs to land on A4 at all.
+  */
+  .report-matrix table,
+  [role="table"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 8.5pt !important;
+  }
+  .report-matrix th,
+  .report-matrix td {
+    /* Released so a long event name wraps onto a second line instead of
+       forcing the table wider than the sheet. Wrapping only — deliberately
+       no word-break, which splits inside a word when there is no space to
+       break at, and a column heading reading "DELET E" is a nuisance while
+       a figure reading "$53,812.9 8" is a lie. */
+    white-space: normal !important;
+    padding: 4px 6px !important;
+  }
+  .report-matrix thead th:first-child,
+  .report-matrix tbody td:first-child {
+    position: static !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  /* The scrollports those matrices live in would clip at their own edge. */
+  [class*="overflow-"] {
+    overflow: visible !important;
+  }
+  /* Nothing casts a shadow on paper, and a frosted surface has nothing to
+     frost — both print as grey smears. */
+  * {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Muted ink is a screen affordance; on paper it is just faint. */
+  .text-muted-foreground { color: #444 !important; }
+
+  /* Printed from a running app, so nothing should still be mid-animation. */
+  .animate-page,
+  .animate-fade,
+  .cascade > * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

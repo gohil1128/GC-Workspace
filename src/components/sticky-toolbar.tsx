@@ -20,6 +20,7 @@ export function StickyToolbar({
 }) {
   return (
     <div
+      data-print="hide"
       className={cn("sticky z-30 border-b border-border/70 glass", className)}
       style={{ top: "var(--app-header-h, 57px)" }}
     >

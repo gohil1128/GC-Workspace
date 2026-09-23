@@ -37,7 +37,22 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    /*
+      data-ui="button" so the print stylesheet can drop controls from a
+      printed sheet. Element selectors are not enough: asChild renders a
+      Link, so half the buttons in this app are anchors carrying button
+      classes and nothing else to recognise them by. A caller that wants to
+      keep one — the button that starts the print — passes data-print="keep",
+      which the spread below lets through.
+    */
+    return (
+      <Comp
+        data-ui="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
   }
 );
 Button.displayName = "Button";

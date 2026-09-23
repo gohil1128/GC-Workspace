@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatMoney, formatPercent } from "@/lib/money";
 import { DeleteReportDayButton } from "./_components/delete-report-day-button";
+import { PrintButton } from "@/components/print-button";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function ReportsPage() {
         description="Daily, weekly, labor, variance, and purchase spend"
         actions={
           <>
+            <PrintButton />
             <Button asChild variant="outline" size="sm">
               <Link href="/settings/exports"><Download className="h-3.5 w-3.5" />Download CSV</Link>
             </Button>

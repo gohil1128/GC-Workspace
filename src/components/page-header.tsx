@@ -55,7 +55,12 @@ export function PageHeader({
             toolbar uses — dark button labels straight on the photo were the
             other half of this problem. */}
         {actions && (
-          <div className="glass-pill flex flex-wrap items-center gap-2 self-start rounded-full p-1 sm:self-auto">
+          /* Navigation and export controls, not content — gone from the
+             printed sheet, including whichever button started the print. */
+          <div
+            data-print="hide"
+            className="glass-pill flex flex-wrap items-center gap-2 self-start rounded-full p-1 sm:self-auto"
+          >
             {actions}
           </div>
         )}
