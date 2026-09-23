@@ -107,7 +107,7 @@ export async function getCashPosition(locationId: string) {
   */
   const countedWhere = { locationId, cashCents: { gt: 0 } };
 
-  const [counted, everything, paidOut, newest, oldest] = await Promise.all([
+  const [counted, everything, paidOut, byKind, newest, oldest] = await Promise.all([
     prisma.cashClose.aggregate({
       where: countedWhere,
       _sum: { cashCents: true, openingCents: true },
@@ -119,6 +119,25 @@ export async function getCashPosition(locationId: string) {
       _count: true,
     }),
     prisma.cashPayout.aggregate({
+      where: { locationId },
+      _sum: { amountCents: true },
+      _count: true,
+    }),
+    /*
+      The same total, split by what the money was for.
+
+      Every payout already records its kind, and nothing ever added them up —
+      so reimbursing somebody who bought cups on their own card sat in one
+      undifferentiated "Paid out" figure next to cash handed straight to a
+      supplier. They leave the till the same way and belong in the same
+      reconciliation, but they are not the same thing to look at: one is money
+      owed to a person and settled, the other is a purchase.
+
+      Grouped rather than three aggregates, so a kind added later needs no
+      query.
+    */
+    prisma.cashPayout.groupBy({
+      by: ["kind"],
       where: { locationId },
       _sum: { amountCents: true },
       _count: true,
@@ -149,6 +168,13 @@ export async function getCashPosition(locationId: string) {
     bankedCents: everything._sum.depositCents ?? 0,
     paidOutCents: paidOut._sum.amountCents ?? 0,
     payoutCount: paidOut._count,
+    paidOutByKind: byKind
+      .map((k) => ({
+        kind: k.kind,
+        amountCents: k._sum.amountCents ?? 0,
+        count: k._count,
+      }))
+      .sort((a, b) => b.amountCents - a.amountCents),
     overShortCents: everything._sum.overShortCents ?? 0,
     // The earliest till that was actually counted, not the earliest close —
     // the figure covers the counted ones, so that is the date it runs from.

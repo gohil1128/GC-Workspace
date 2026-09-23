@@ -256,6 +256,36 @@ export default async function CashPage() {
             <span className="num text-sm font-semibold">{formatMoney(totalPaidOut)}</span>
           </div>
 
+          {/*
+            Split by what the money was for.
+
+            Every payout has recorded its kind for a while and nothing ever
+            added them up, so paying someone back for cups they bought on
+            their own card sat in the same undifferentiated total as cash
+            handed straight to a supplier. Both leave the till and both belong
+            in the day's reconciliation — but one is a debt to a person being
+            settled and the other is a purchase, and only one of them is a
+            supplier relationship anybody would want to look at.
+
+            Under the header rather than on the tile above: that row is four
+            across, and a figure that has to share its width with three
+            labelled amounts truncates the one thing on it that has to be
+            exact.
+          */}
+          {position.paidOutByKind.length > 1 && (
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 border-b border-border px-4 py-2.5 text-2xs text-muted-foreground sm:px-5">
+              {position.paidOutByKind.map((k) => (
+                <span key={k.kind}>
+                  {payoutKindLabel(k.kind)}{" "}
+                  <span className="num text-foreground">{formatMoney(k.amountCents)}</span>{" "}
+                  <span className="text-muted-foreground">
+                    ({k.count} payout{k.count === 1 ? "" : "s"})
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+
           {payouts.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-muted-foreground sm:px-5">
               Nothing has ever been taken out of the drawer. Record one from a day&rsquo;s
