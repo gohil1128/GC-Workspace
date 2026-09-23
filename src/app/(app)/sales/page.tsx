@@ -122,19 +122,56 @@ export default async function SalesPage({
             the costed items, presented without that, invites reading it as the
             whole business. */}
         {data.totals.uncostedItemCount > 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Profit and margin cover the{" "}
-            <span className="text-foreground">{data.totals.costedItemCount}</span> item
-            {data.totals.costedItemCount === 1 ? "" : "s"} with a recipe against{" "}
-            {data.totals.costedItemCount === 1 ? "it" : "them"} —{" "}
-            <span className="text-foreground">{formatMoney(data.totals.costedNetSalesCents)}</span> of{" "}
-            {formatMoney(data.totals.netSalesCents)} in sales.{" "}
-            <span className="text-foreground">{data.totals.uncostedItemCount}</span> item
-            {data.totals.uncostedItemCount === 1 ? " is" : "s are"} not costed yet;{" "}
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {data.totals.costedItemCount > 0 ? (
+              <>
+                Profit and margin cover the{" "}
+                <span className="text-foreground">{data.totals.costedItemCount}</span> item
+                {data.totals.costedItemCount === 1 ? "" : "s"} with a recipe against{" "}
+                {data.totals.costedItemCount === 1 ? "it" : "them"} —{" "}
+                <span className="text-foreground">{formatMoney(data.totals.costedNetSalesCents)}</span>{" "}
+                of {formatMoney(data.totals.netSalesCents)} in sales.{" "}
+              </>
+            ) : (
+              /* Nothing is costed at all, so there is no slice to describe —
+                 the columns are simply blank, and saying which items would
+                 fill them is the only useful thing left to say. */
+              <>
+                Nothing here is costed yet, so the cost, profit and margin columns are blank on{" "}
+                <span className="text-foreground">{formatMoney(data.totals.netSalesCents)}</span> of
+                sales.{" "}
+              </>
+            )}
+            {/* The item worth doing first, by name and by what it is worth.
+                A bare count is the same sentence whether the missing recipes
+                add up to $40 or $15,000. */}
+            {data.totals.topUncosted.length > 0 && (
+              <>
+                <span className="text-foreground">{data.totals.uncostedItemCount}</span> item
+                {data.totals.uncostedItemCount === 1 ? "" : "s"} still{" "}
+                {data.totals.uncostedItemCount === 1 ? "has" : "have"} no recipe, worth{" "}
+                <span className="text-foreground">
+                  {formatMoney(data.totals.uncostedNetSalesCents)}
+                </span>{" "}
+                between {data.totals.uncostedItemCount === 1 ? "it" : "them"}. Start with{" "}
+                {data.totals.topUncosted.map((u, n) => (
+                  <span key={u.itemName}>
+                    {n > 0 && (n === data.totals.topUncosted.length - 1 ? " and " : ", ")}
+                    <span className="text-foreground">{u.itemName}</span> (
+                    {formatMoney(u.netSalesCents)})
+                  </span>
+                ))}
+                .{" "}
+              </>
+            )}
+            <Link href="/recipes" className="text-brand-ink hover:underline">
+              Build the recipe
+            </Link>
+            , then{" "}
             <Link href="/settings/integrations" className="text-brand-ink hover:underline">
-              link {data.totals.uncostedItemCount === 1 ? "it" : "them"} to a recipe
-            </Link>{" "}
-            to include {data.totals.uncostedItemCount === 1 ? "it" : "them"}.
+              link it to the item
+            </Link>
+            .
           </p>
         ) : (
           data.totals.itemCount > 0 && (

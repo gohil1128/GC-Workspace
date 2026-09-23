@@ -209,6 +209,28 @@ export async function getSalesBreakdown(params: {
   const costedNetCents = costed.reduce((a, i) => a + i.netSalesCents, 0);
   const costedCostCents = costed.reduce((a, i) => a + (i.costCents ?? 0), 0);
 
+  /*
+    The uncosted items worth doing something about, biggest first.
+
+    "60 items are not costed" is true and useless — it is the same sentence
+    whether the missing recipes are worth $40 or $15,000, and a business
+    reading it has no way to know where to start. Naming the largest three,
+    with what each is worth, turns the notice into an afternoon's work with an
+    obvious first step.
+
+    Taken from the whole scope rather than the filtered list, so it matches the
+    totals beside it and a category filter cannot hide the item that matters
+    most.
+  */
+  const topUncosted = all
+    .filter((i) => i.costCents === null)
+    .sort((a, b) => b.netSalesCents - a.netSalesCents)
+    .slice(0, 3)
+    .map((i) => ({ itemName: i.itemName, netSalesCents: i.netSalesCents, qty: i.qty }));
+  const uncostedNetSalesCents = all
+    .filter((i) => i.costCents === null)
+    .reduce((a, i) => a + i.netSalesCents, 0);
+
   return {
     items,
     byCategory,
@@ -223,6 +245,8 @@ export async function getSalesBreakdown(params: {
       // uncosted items as free would be flattering and wrong.
       costedItemCount: costed.length,
       uncostedItemCount: all.length - costed.length,
+      uncostedNetSalesCents,
+      topUncosted,
       costedNetSalesCents: costedNetCents,
       costCents: costedCostCents,
       profitCents: costedNetCents - costedCostCents,
