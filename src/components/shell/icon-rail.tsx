@@ -89,7 +89,11 @@ export function IconRail({ role, userName }: { role: Role; userName: string }) {
       )}
 
       <span
-        className="mt-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-sm font-semibold text-brand-foreground"
+        /* brand-strong, not brand. White on the logo rust is 4.47:1 — a hair under
+           the 4.5 this 14px initial needs. The darker step exists for exactly
+           this and clears 5.5:1. Long-standing, found by measuring every page
+           rather than by looking at it. */
+        className="mt-auto grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-strong text-sm font-semibold text-brand-foreground"
         title={`${userName} · ${ROLE_LABELS[role]}`}
       >
         {initial}

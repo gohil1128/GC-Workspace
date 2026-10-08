@@ -39,11 +39,19 @@ type Axis = "x" | "y";
 
 export function LiquidIndicator({
   activeKey,
+  activeSelector,
   axis = "y",
   className,
 }: {
   /** Changes when the selection changes. Null hides the indicator. */
-  activeKey: string | null;
+  activeKey?: string | null;
+  /*
+    An alternative to activeKey, for a nav whose selection this component
+    cannot be told about. Radix Tabs marks the current trigger with
+    data-state="active" and keeps that state to itself, so there is no value
+    for the list to pass down — the indicator has to watch the DOM instead.
+  */
+  activeSelector?: string;
   axis?: Axis;
   className?: string;
 }) {
@@ -62,18 +70,24 @@ export function LiquidIndicator({
   */
   React.useLayoutEffect(() => {
     const host = selfRef.current?.parentElement;
-    if (!host || !activeKey) {
+    const selector =
+      activeSelector ?? (activeKey ? `[data-lg-item="${CSS.escape(activeKey)}"]` : null);
+    if (!host || !selector) {
       setBox(null);
       previous.current = null;
       return;
     }
-    const el = host.querySelector<HTMLElement>(`[data-lg-item="${CSS.escape(activeKey)}"]`);
-    if (!el) {
-      setBox(null);
-      return;
-    }
 
     const measure = () => {
+      /* Re-resolved on every measure rather than captured once: under
+         activeSelector the element that matches IS the thing that changes, so
+         a closed-over reference would keep measuring whichever tab happened to
+         be active when the effect first ran. */
+      const el = host.querySelector<HTMLElement>(selector);
+      if (!el) {
+        setBox(null);
+        return;
+      }
       const hb = host.getBoundingClientRect();
       const eb = el.getBoundingClientRect();
       /* A hidden container measures as a zero box — the mobile tab bar is in
@@ -113,9 +127,24 @@ export function LiquidIndicator({
     */
     const ro = new ResizeObserver(measure);
     ro.observe(host);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [activeKey, axis]);
+    const first = host.querySelector<HTMLElement>(selector);
+    if (first) ro.observe(first);
+
+    /*
+      Under activeSelector nothing re-renders this component when the selection
+      moves — the change is an attribute on a sibling, which React never sees.
+      So watch for it directly.
+    */
+    let mo: MutationObserver | undefined;
+    if (activeSelector) {
+      mo = new MutationObserver(measure);
+      mo.observe(host, { attributes: true, subtree: true, attributeFilter: ["data-state"] });
+    }
+    return () => {
+      ro.disconnect();
+      mo?.disconnect();
+    };
+  }, [activeKey, activeSelector, axis]);
 
   return (
     <span

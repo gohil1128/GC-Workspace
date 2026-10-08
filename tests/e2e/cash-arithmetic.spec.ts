@@ -137,13 +137,37 @@ test.describe("the business day follows the business", () => {
 test.describe("the balancing panel shows its working", () => {
   const DATE = "2026-09-29";
 
-  test("prints every term with the sign it is applied with", async ({ page }) => {
+  /*
+    Put the day into a known state and report what it already contained.
+
+    These tests used to assume the chosen date was empty, and asserted a bare
+    +$420. That held until the database was reseeded and "today" moved on —
+    the seed is relative to the current date, so the same date acquired real
+    deposits and payouts and the assertion failed by exactly their total. The
+    test was reading a coincidence rather than the arithmetic.
+
+    So now it zeroes every field it controls and READS the two it does not:
+    banked and paid-out are derived from rows on the day, not typed. The
+    assertion then covers the formula itself, which is the thing worth
+    protecting, and holds whatever that day happens to hold.
+  */
+  async function prime(page: import("@playwright/test").Page) {
     await page.goto(`/cash/new?date=${DATE}`);
     await page.waitForLoadState("networkidle");
     await page.locator("#opening").fill("200");
     await page.locator("#cash").fill("620");
+    await page.locator("#credit").fill("0");
+    await page.locator("#paidIn").fill("0");
     await page.locator("#expected").fill("0");
     await page.waitForTimeout(400);
+    return {
+      deposits: money(await page.getByTestId("deposits").innerText()),
+      paidOut: money(await page.getByTestId("paid-out").innerText()),
+    };
+  }
+
+  test("prints every term with the sign it is applied with", async ({ page }) => {
+    const day = await prime(page);
 
     const text = await page.getByTestId("balancing").innerText();
 
@@ -160,23 +184,23 @@ test.describe("the balancing panel shows its working", () => {
       );
     }
 
-    // 620 − 200, and the column as printed sums to it.
-    expect(money(await page.getByTestId("over-short").innerText())).toBe(420);
+    // The column as printed sums to the figure at the bottom of it: 620
+    // counted, less the 200 float, plus whatever the day already had banked
+    // and paid out — both of which are added, which is the point of the signs.
+    expect(money(await page.getByTestId("over-short").innerText()))
+      .toBeCloseTo(620 - 200 + day.deposits + day.paidOut, 2);
   });
 
   test("says so when Expected takings is the reason the drawer reads over", async ({ page }) => {
-    await page.goto(`/cash/new?date=${DATE}`);
-    await page.waitForLoadState("networkidle");
-    await page.locator("#opening").fill("200");
-    await page.locator("#cash").fill("620");
-    await page.locator("#expected").fill("0");
-    await page.waitForTimeout(400);
+    const day = await prime(page);
     await expect(page.getByText(/Expected takings is .*so nothing is being subtracted/)).toBeVisible();
 
-    // And stops saying it once there is a figure to subtract.
-    await page.locator("#expected").fill("420");
+    // And stops saying it once there is a figure to subtract. Entering exactly
+    // the takings the rest of the column implies must balance the day to zero.
+    const balancing = 620 - 200 + day.deposits + day.paidOut;
+    await page.locator("#expected").fill(String(balancing));
     await page.waitForTimeout(400);
     await expect(page.getByText(/so nothing is being subtracted/)).toHaveCount(0);
-    expect(money(await page.getByTestId("over-short").innerText())).toBe(0);
+    expect(money(await page.getByTestId("over-short").innerText())).toBeCloseTo(0, 2);
   });
 });
