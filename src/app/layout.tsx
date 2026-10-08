@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { GlassDensityScript } from "@/components/glass-density";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/brand";
 
 // Self-hosted at build time and exposed as CSS variables that feed
@@ -55,6 +56,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${display.variable} ${sans.variable}`}>
+      <head>
+        {/* Before the first paint. As an effect it would run after the page
+            had already been painted with the full material, so anyone who
+            asked for Solid would watch the glass appear and be taken away
+            again on every navigation. */}
+        <GlassDensityScript />
+      </head>
       <body className="min-h-screen antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

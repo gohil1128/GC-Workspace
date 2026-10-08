@@ -802,7 +802,22 @@
     --lg-blur: 28px;
     --lg-blur-rim: 8px;
     --lg-sat: 180%;
-    --lg-bright: 1.06;
+    /*
+      Below one, on a light canvas — and this was measured rather than chosen.
+
+      The instinctive value here is a lift: glass catches light, so brighten
+      what is behind it. Over a cream ground that is actively destructive.
+      brightness(1.05) on this palette clips essentially the whole panel to
+      L>=250 and drops how much of the backdrop survives from roughly a quarter
+      to under a tenth — the pane goes white and stops being a pane. It is the
+      single reason the rail read as a painted rectangle rather than as glass.
+
+      Apple's adaptive luminosity layer darkens over bright content for exactly
+      this reason. So light mode takes a fraction off, and only dark mode —
+      where there is headroom above the backdrop rather than below it — has any
+      business lifting at all, and still does not.
+    */
+    --lg-bright: 0.97;
     --lg-lens-scale: 22;
 
     /* The tint, and its alpha.
@@ -1383,6 +1398,43 @@
     switch-off, not a softening: somebody who has asked for less transparency
     has asked for the effect to stop, not to be reduced by a fifth.
   */
+  /*
+    The same two outcomes as the system settings below, reachable by anyone.
+
+    Written as attribute selectors rather than folded into the media queries
+    because they have to WIN over them in one direction: somebody whose system
+    asks for reduced transparency, who then explicitly chooses Regular here,
+    has made the more specific statement and should get it.
+  */
+  :root[data-lg-density="reduced"] {
+    --lg-tint-a: 0.92;
+    --lg-tint-a-clear: 0.80;
+    --lg-blur: 18px;
+  }
+  /* The rail sets its own alpha, being the one surface with no text on it, so
+     a value inherited from the root would never reach it. Named explicitly
+     rather than left to lose quietly — a transparency control that visibly
+     skips the most transparent thing on the page is worse than none. */
+  :root[data-lg-density="reduced"] .lg-thin {
+    background-color: hsl(var(--lg-tint) / 0.90);
+  }
+  :root[data-lg-density="solid"] .lg,
+  :root[data-lg-density="solid"] .lg-clear,
+  :root[data-lg-density="solid"] .glass-pill,
+  :root[data-lg-density="solid"] .glass {
+    background-color: hsl(var(--card));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  :root[data-lg-density="solid"] .glass-pill::after,
+  :root[data-lg-density="solid"] .lg-rim::after,
+  :root[data-lg-density="solid"] .lg-clear::before {
+    display: none;
+  }
+  :root[data-lg-density="solid"] .lg-edge {
+    display: none;
+  }
+
   @media (prefers-reduced-transparency: reduce) {
     .lg,
     .lg-clear {
@@ -1432,6 +1484,19 @@
     the press stops squishing.
   */
   @media (prefers-reduced-motion: reduce) {
+    /*
+      Apple lists "avoiding animating into and out of blurs" under Reduce
+      Motion specifically, and animating a blur is the most obvious way to
+      make glass materialize — which makes it the thing most likely to be
+      left in. The overlay still scales into place; what stops is the
+      material thickening, so the blur is simply at its final value
+      throughout.
+    */
+    .lg-overlay[data-state="open"],
+    .lg-overlay[data-state="closed"],
+    .lg-materialize {
+      animation-name: none;
+    }
     :root {
       --lg-ease-snappy: var(--lg-ease-micro);
       --lg-ease-bouncy: var(--lg-ease-micro);
