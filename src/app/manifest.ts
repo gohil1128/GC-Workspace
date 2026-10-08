@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { APP_NAME, APP_SHORT_NAME, APP_DESCRIPTION } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "God's Chai Operations",
-    short_name: "God's Chai",
-    description: "Sales, invoices, cash and labor for every event.",
+    name: APP_NAME,
+    short_name: APP_SHORT_NAME,
+    description: APP_DESCRIPTION,
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
