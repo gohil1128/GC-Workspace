@@ -459,7 +459,7 @@
     box-shadow:
       inset 0 var(--lg-rim-w) 0 0 hsl(var(--lg-rim-light)),
       inset 0 calc(-1 * var(--lg-rim-w)) 0 0 hsl(var(--lg-rim-dark)),
-      var(--lg-shadow);
+      var(--lg-shadow-chrome);
   }
   .lg-probe-ok .glass-pill {
     backdrop-filter: url(#lg-lens) blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
@@ -738,6 +738,24 @@
   behind an overlay that condenses out of the background rather than appearing
   as a ghost of itself.
 */
+/*
+  How far the page has scrolled under the chrome, 0 to 1.
+
+  Apple does not publish a shadow scale for this material; what it publishes is
+  the behaviour — depth comes from the optics plus a shadow that DEEPENS as
+  content passes beneath. At rest on an unscrolled page the chrome is nearly
+  flush, and it lifts as something goes under it. That is the cue that says the
+  bar is a separate plane rather than part of the page, and it only reads when
+  it changes.
+
+  Registered so it interpolates: unregistered it would be a string, and the
+  shadow would step between values instead of deepening.
+*/
+@property --lg-scrolled {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
 @property --lg-blur {
   syntax: "<length>";
   inherits: true;
@@ -871,6 +889,12 @@
        the previous system's rule, kept, because it is right. */
     --lg-shadow: 0 10px 30px -12px hsl(var(--ink-800) / 0.30), 0 2px 8px -4px hsl(var(--ink-800) / 0.18);
     --lg-shadow-high: 0 24px 60px -20px hsl(var(--ink-800) / 0.42), 0 4px 14px -6px hsl(var(--ink-800) / 0.22);
+    /* The chrome's own shadow, which rides --lg-scrolled. Nearly flush on an
+       unscrolled page, lifting as content passes under it. */
+    --lg-shadow-chrome:
+      0 calc(4px + var(--lg-scrolled) * 10px) calc(14px + var(--lg-scrolled) * 20px) -10px
+        hsl(var(--ink-800) / calc(0.14 + var(--lg-scrolled) * 0.20)),
+      0 2px 8px -4px hsl(var(--ink-800) / calc(0.08 + var(--lg-scrolled) * 0.12));
 
     /* The scroll edge: how deep the band is where content passes under chrome. */
     --lg-edge-h: 84px;
@@ -939,6 +963,10 @@
         hsl(19 60% 3% / 0.45) 100%
       );
     --lg-veil: 0.86;
+    --lg-shadow-chrome:
+      0 calc(4px + var(--lg-scrolled) * 10px) calc(14px + var(--lg-scrolled) * 20px) -10px
+        hsl(19 60% 3% / calc(0.30 + var(--lg-scrolled) * 0.34)),
+      0 2px 8px -4px hsl(19 60% 3% / calc(0.22 + var(--lg-scrolled) * 0.24));
     --lg-shadow: 0 10px 30px -12px hsl(19 60% 3% / 0.60), 0 2px 8px -4px hsl(19 60% 3% / 0.45);
     --lg-shadow-high: 0 24px 60px -20px hsl(19 60% 3% / 0.72), 0 4px 14px -6px hsl(19 60% 3% / 0.50);
   }

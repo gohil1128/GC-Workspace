@@ -152,9 +152,35 @@ export function LiquidGlass() {
       window.addEventListener("pointermove", onMove, { passive: true });
     }
 
+    /*
+      How far the page has gone under the chrome.
+
+      Apple's chrome is nearly flush at rest and lifts as content passes
+      beneath it — the shadow is the cue that says the bar is a separate plane,
+      and a cue that never changes is not a cue. Eighty pixels is the ramp:
+      long enough that the lift is a movement rather than a switch, short
+      enough to be complete before anyone has finished their first flick.
+
+      Same frame throttle as the pointer, for the same reason, and passive so
+      it can never hold up a scroll.
+    */
+    let scrollFrame = 0;
+    const commitScroll = () => {
+      scrollFrame = 0;
+      const t = Math.min(1, Math.max(0, window.scrollY / 80));
+      root.style.setProperty("--lg-scrolled", t.toFixed(3));
+    };
+    const onScroll = () => {
+      if (!scrollFrame) scrollFrame = requestAnimationFrame(commitScroll);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    commitScroll();
+
     return () => {
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
+      if (scrollFrame) cancelAnimationFrame(scrollFrame);
     };
   }, []);
 

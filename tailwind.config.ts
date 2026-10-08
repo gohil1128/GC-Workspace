@@ -109,13 +109,29 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
+      /*
+        One radius scale, and it is the Liquid Glass one.
+
+        There were two, and they disagreed. The .bento CLASS moved onto the
+        --lg-r scale while the Card COMPONENT — the same surface, in component
+        form — stayed on Tailwind's own tokens, so the identical concept
+        rendered at 32px in one place and 24px in the other. Worse, it made the
+        concentric arithmetic unreachable: .lg-nested subtracts from its
+        container's radius, and nothing in src/components/ui was on a radius it
+        could subtract from.
+
+        Pointing these at the custom properties means there is exactly one
+        place a radius is decided, and a Tailwind utility and a hand-written
+        rule can no longer drift apart. The values go up a little, which is the
+        right direction — iOS 26 is rounder than what it replaced.
+      */
       borderRadius: {
-        bento: "1.5rem",      /* 24px — standard bento card */
-        "bento-lg": "1.75rem", /* 28px — outer / hero cards */
-        "2xl": "1.25rem",
-        xl: "1rem",
-        lg: "0.75rem",
-        md: "0.5rem",
+        bento: "var(--lg-r-xl)",      /* 32px — the primary surface */
+        "bento-lg": "var(--lg-r-xl)",
+        "2xl": "var(--lg-r-lg)",      /* 26px */
+        xl: "var(--lg-r-md)",         /* 18px */
+        lg: "var(--lg-r-sm)",         /* 12px */
+        md: "var(--lg-r-xs)",         /*  8px */
         sm: "0.375rem",
       },
       fontSize: {

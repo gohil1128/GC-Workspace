@@ -46,7 +46,11 @@ export function PageHeader({
             off the scale generates no rule at all and the text silently falls
             back to the inherited dark ink — invisible on the photograph. */}
         {eyebrow && <div className="text-xs text-white/80">{eyebrow}</div>}
-        <h1 className="display-num mt-1 text-[26px] font-medium text-white sm:text-[40px] sm:font-light sm:tracking-[-0.025em]">
+        <h1 /* font-normal, not font-light. The display face is loaded at 400-700, so
+            a 300 request was already falling back to 400 and the class said
+            something the page did not do. Apple is also explicit that Ultralight,
+            Thin and Light have no place in this language. */
+        className="display-num mt-1 text-[26px] font-medium text-white sm:text-[40px] sm:font-normal sm:tracking-[-0.025em]">
           {title}
         </h1>
         {description && <p className="mt-1.5 text-sm text-white/85">{description}</p>}
