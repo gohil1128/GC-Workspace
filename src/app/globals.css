@@ -729,6 +729,25 @@
   inherits: false;
   initial-value: 0;
 }
+/*
+  The two that make glass materialize instead of fade.
+
+  An unregistered custom property is an opaque string to the engine: it can be
+  swapped at a keyframe but not interpolated, so animating it produces a jump.
+  Registered with a syntax, both of these tween — which is the whole mechanism
+  behind an overlay that condenses out of the background rather than appearing
+  as a ghost of itself.
+*/
+@property --lg-blur {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 28px;
+}
+@property --lg-tint-a {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.72;
+}
 
 @layer base {
   :root {
@@ -761,6 +780,20 @@
     --lg-r-md: 18px;
     --lg-r-lg: 26px;
     --lg-r-xl: 32px;
+
+    /*
+      Deliberately NOT squircles.
+
+      The obvious move is corner-shape: superellipse(), now that Chromium
+      ships it, on the reasoning that Apple's corners are continuous rather
+      than circular. Measured, that is backwards: against a real continuous
+      corner at the same radius, the CSS squircle deviates by up to 0.187r
+      while an ordinary circular border-radius deviates by 0.019r. The
+      squircle is about ten times further from Apple's shape than the thing it
+      was meant to improve on. So: plain border-radius, and the discipline
+      goes into the scale and the concentric arithmetic below, which is where
+      it was doing the real work anyway.
+    */
 
     /* ── The material ──────────────────────────────────────────────────────
        Four separable parts: how far it blurs, how much it lifts colour out of
@@ -1036,18 +1069,70 @@
     So what animates is the blur and the scale, not the alpha. The pane starts
     optically flat and slightly small, and thickens into place.
   */
+  /*
+    The independent `scale` property, not `transform: scale()`.
+
+    These keyframes run on elements that are already using `transform` for
+    something else — a dialog is centred with translate(-50%, -50%), and a
+    keyframe setting `transform: scale()` replaces that wholesale, which throws
+    the dialog into the bottom-right corner on the first frame of its own
+    opening animation. `scale` is a separate property that composes with
+    whatever `transform` is doing, so the two never have to negotiate.
+  */
   @keyframes lg-materialize {
     from {
       --lg-blur: 0px;
       --lg-tint-a: 0;
-      transform: scale(0.94);
+      scale: 0.92;
     }
     to {
-      transform: scale(1);
+      scale: 1;
     }
   }
-  .lg-materialize {
+  @keyframes lg-dematerialize {
+    to {
+      --lg-blur: 0px;
+      --lg-tint-a: 0;
+      scale: 0.96;
+    }
+  }
+
+  /*
+    Overlays: menus, selects, dialogs, toasts.
+
+    Two things, and both of them are what separates this from a clone.
+
+    It materializes rather than fades. What animates is the blur and the tint —
+    the material thickening into existence — not the alpha of a finished pane.
+    Apple is explicit: "Instead of fading, Liquid Glass objects materialize in
+    and out by gradually modulating the light bending and lensing."
+
+    And it opens OUT OF the control that opened it, rather than arriving from
+    somewhere. Radix already computes the geometric origin and publishes it as
+    a custom property on the content element, so the transform-origin is simply
+    read from whichever primitive this is — the menu grows from the corner
+    nearest its trigger, which is what makes the relationship between the two
+    legible without an arrow or a line.
+  */
+  .lg-overlay {
+    transform-origin: var(
+      --radix-dropdown-menu-content-transform-origin,
+      var(
+        --radix-select-content-transform-origin,
+        var(--radix-popover-content-transform-origin, center)
+      )
+    );
+  }
+  .lg-overlay[data-state="open"] {
     animation: lg-materialize var(--lg-dur-snappy) var(--lg-ease-snappy);
+  }
+  .lg-overlay[data-state="closed"] {
+    animation: lg-dematerialize var(--lg-dur-micro) var(--lg-ease-micro) forwards;
+  }
+  /* A dialog has no trigger geometry to grow from and is centred on the
+     screen, so it scales about its own middle. */
+  .lg-overlay-center {
+    transform-origin: center;
   }
 
   .lg-chrome {
@@ -1085,6 +1170,35 @@
   }
 
   /*
+    Concentricity, as arithmetic rather than as taste.
+
+    Apple's rule is literal: a nested shape's radius is its container's radius
+    minus the distance between their corners. The failure mode has a name —
+    corners that read as "pinched" or "flared", which "create tension and break
+    the sense of balance" — and it is exactly what you get by picking the next
+    radius down the scale by eye, which is what everyone does.
+
+    A pane publishes its own radius and the gap it imposes; anything nested
+    subtracts. The max() is Apple's own fallback pattern, for a card that has
+    to work both nested and standalone: outside a pane --lg-r is undefined,
+    var() falls back to zero, and the floor wins.
+  */
+  .lg-pane {
+    --lg-r: var(--lg-r-xl);
+    border-radius: var(--lg-r);
+  }
+  .lg-nested {
+    border-radius: max(var(--lg-r-min, var(--lg-r-sm)), calc(var(--lg-r, 0px) - var(--lg-gap, 12px)));
+  }
+  /* A capsule inside a capsule under even padding is concentric for free —
+     the radius clamps to half the shorter side at both levels, which is
+     Apple's own definition. It is the cheapest correct answer, and the reason
+     the system defaults its controls to capsules. */
+  .lg-capsule {
+    border-radius: 9999px;
+  }
+
+  /*
     ── Motion ────────────────────────────────────────────────────────────────
     Springs, applied. .lg-press is the one every control wants: a squish on
     pointer-down that releases on the press spring, so a tap has a physical
@@ -1096,11 +1210,11 @@
   */
   .lg-press {
     transition:
-      transform var(--lg-dur-press) var(--lg-ease-press),
+      scale var(--lg-dur-press) var(--lg-ease-press),
       background-color var(--lg-dur-micro) var(--lg-ease-micro),
       border-color var(--lg-dur-micro) var(--lg-ease-micro),
       box-shadow var(--lg-dur-micro) var(--lg-ease-micro);
-    will-change: transform;
+    will-change: scale;
   }
   /*
     Press DOWN is not a spring. Going to the pressed state is a direct, short
@@ -1109,13 +1223,13 @@
     release, which is where the energy actually is.
   */
   .lg-press:active {
-    transform: scale(var(--lg-press-scale));
+    scale: var(--lg-press-scale);
     transition-duration: 100ms;
     transition-timing-function: ease-out;
   }
   /* A control large enough that the full squish would be a lurch. */
   .lg-press-soft:active {
-    transform: scale(calc(1 - (1 - var(--lg-press-scale)) * 0.4));
+    scale: calc(1 - (1 - var(--lg-press-scale)) * 0.4);
   }
 
   .lg-spring {

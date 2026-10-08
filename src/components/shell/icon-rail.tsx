@@ -111,14 +111,24 @@ function RailButton({ item, current }: { item: Item; current: boolean }) {
       // Measured by the indicator, which finds its target by this attribute.
       data-lg-item={item.href}
       className={cn(
-        // No background of its own when current: the travelling indicator is
-        // the background, and it sits behind this. Giving the item one too
-        // would paint a second pill on top of the one that just arrived.
-        // relative + z-10 keeps the glyph above it.
-        "lg-press relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border",
+        /*
+          No fill and no border of its own, in either state.
+
+          Apple says this twice in two different sessions: remove any extra
+          background or darkening layer behind the items in a glass bar. The
+          reason is both aesthetic and technical — a pill inside a pane of
+          glass is a second surface competing with the first, and glass cannot
+          sample other glass, so the inner fills were quietly flattening the
+          one surface that was supposed to be refracting. The rail is one pane;
+          the items are glyphs on it.
+
+          The current item's fill is the travelling indicator, which sits
+          behind this. relative + z-10 keeps the glyph above it.
+        */
+        "lg-press relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full",
         current
-          ? "border-transparent text-espresso-foreground"
-          : "border-white/70 bg-white/50 text-secondary-foreground hover:bg-white/80 dark:border-white/10 dark:bg-white/10 dark:hover:bg-white/20",
+          ? "text-espresso-foreground"
+          : "text-secondary-foreground hover:bg-foreground/[0.06]",
       )}
     >
       <Icon className="h-[17px] w-[17px]" aria-hidden />
