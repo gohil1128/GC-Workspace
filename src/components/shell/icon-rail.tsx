@@ -10,6 +10,7 @@ import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { can, ROLE_LABELS, type Capability } from "@/lib/permissions";
 import { APP_NAME } from "@/lib/brand";
+import { LiquidIndicator } from "@/components/liquid-indicator";
 
 /*
   The soft-glass icon rail: a floating frosted column of circular buttons.
@@ -65,8 +66,12 @@ export function IconRail({ role, userName }: { role: Role; userName: string }) {
   return (
     <nav
       aria-label="Sections"
-      className="glass-pill fixed left-[18px] top-[18px] z-40 hidden h-[calc(100dvh-36px)] w-16 flex-col items-center gap-2 rounded-[32px] px-3 py-4 lg:flex"
+      className="glass-pill lg-thin fixed left-[18px] top-[18px] z-40 hidden h-[calc(100dvh-36px)] w-16 flex-col items-center gap-2 rounded-[32px] px-3 py-4 lg:flex"
     >
+      {/* One object that travels between items, rather than a background
+          switched on and off per item. See LiquidIndicator for why that
+          distinction is the whole effect. */}
+      <LiquidIndicator activeKey={current ?? null} axis="y" />
       <Link href="/dashboard" className="logo-plate mb-2 shrink-0" aria-label={`${APP_NAME} — Overview`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="" aria-hidden className="h-7 w-auto" />
@@ -103,10 +108,16 @@ function RailButton({ item, current }: { item: Item; current: boolean }) {
       href={item.href}
       title={item.label}
       aria-current={current ? "page" : undefined}
+      // Measured by the indicator, which finds its target by this attribute.
+      data-lg-item={item.href}
       className={cn(
-        "grid h-10 w-10 shrink-0 place-items-center rounded-full border transition-colors",
+        // No background of its own when current: the travelling indicator is
+        // the background, and it sits behind this. Giving the item one too
+        // would paint a second pill on top of the one that just arrived.
+        // relative + z-10 keeps the glyph above it.
+        "lg-press relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border",
         current
-          ? "border-espresso bg-espresso text-espresso-foreground shadow-[0_10px_20px_-10px_hsl(var(--ink-800)/0.85)]"
+          ? "border-transparent text-espresso-foreground"
           : "border-white/70 bg-white/50 text-secondary-foreground hover:bg-white/80 dark:border-white/10 dark:bg-white/10 dark:hover:bg-white/20",
       )}
     >

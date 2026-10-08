@@ -13,6 +13,7 @@ import { PageTransition } from "@/components/shell/page-transition";
 import { MobileTabBar } from "@/components/shell/mobile-tab-bar";
 import { IconRail } from "@/components/shell/icon-rail";
 import { HeaderHeightVar } from "@/components/shell/header-height";
+import { LiquidGlass } from "@/components/liquid-glass";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -41,6 +42,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
+      {/* The material's runtime: the lens filter every glass surface refracts
+          through, the capability probe that decides whether this engine can
+          run it, and the single pointer listener that moves the light. Mounted
+          once, here, because all three are page-wide. */}
+      <LiquidGlass />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-espresso focus:px-4 focus:py-2 focus:text-sm focus:text-espresso-foreground"

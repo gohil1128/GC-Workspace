@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { LiquidIndicator } from "@/components/liquid-indicator";
 import { can, type Capability } from "@/lib/permissions";
 
 /*
@@ -128,6 +129,14 @@ export function MobileTabBar({ role }: { role: Role }) {
   const isCurrent = (href: string) => href === bestMatch;
   const moreActive = moreItems.some((m) => isActive(m.href)) && !tabs.some((t) => isActive(t.href));
 
+  /* Which item the indicator sits under. "More" counts as a destination for
+     this purpose: when the current page lives behind it, the bar should still
+     show where you are rather than going blank. Null on a page that is in no
+     tab at all, which hides the indicator rather than parking it at zero. */
+  const activeTabKey = moreActive || moreOpen
+    ? "__more"
+    : (tabs.find((t) => isActive(t.href))?.href ?? null);
+
   return (
     <>
       {moreOpen && (
@@ -186,12 +195,20 @@ export function MobileTabBar({ role }: { role: Role }) {
         </div>
       </div>
 
+      {/* Scroll edge: the page dissolves into the bar instead of being cut
+          off at a hard line where it passes beneath. */}
+      <div className="lg-edge lg:hidden" aria-hidden>
+        <i><i><i><i><i><i /></i></i></i></i></i>
+      </div>
+
       {/* Fixed bottom bar — hidden once the desktop pill nav has room. */}
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border glass px-2 pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
         aria-label="Primary"
       >
-        <div className="mx-auto flex max-w-lg items-stretch">
+        <div className="relative mx-auto flex max-w-lg items-stretch">
+          {/* Travels along the bar rather than lighting up in place. */}
+          <LiquidIndicator activeKey={activeTabKey} axis="x" className="lg-indicator-soft" />
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = isActive(t.href);
@@ -205,7 +222,10 @@ export function MobileTabBar({ role }: { role: Role }) {
                   active ? "text-brand-ink" : "text-muted-foreground",
                 )}
               >
-                <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", active && "bg-brand/10")}>
+                <span
+                  data-lg-item={t.href}
+                  className="relative z-10 grid h-8 w-14 place-items-center rounded-full"
+                >
                   <Icon className="h-[18px] w-[18px]" />
                 </span>
                 {t.label}
@@ -224,7 +244,10 @@ export function MobileTabBar({ role }: { role: Role }) {
                 moreActive || moreOpen ? "text-brand-ink" : "text-muted-foreground",
               )}
             >
-              <span className={cn("grid h-8 w-14 place-items-center rounded-full transition-colors", (moreActive || moreOpen) && "bg-brand/10")}>
+              <span
+                data-lg-item="__more"
+                className="relative z-10 grid h-8 w-14 place-items-center rounded-full"
+              >
                 <Menu className="h-[18px] w-[18px]" />
               </span>
               More
